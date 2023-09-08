@@ -33,18 +33,11 @@
    ],
    "Aggregates": [],
    "Filters": [
-      {
-         "Column": "FISCAL_YEAR",
-         "Value": "2015,2016,2017,2018,2019,2020,2021,2022"
-      },
-      {
-         "Column": "SBJ_ID",
-         "Value": "5"
-      },
-      {
-         "Column": "LIFE_HISTORY_STAGE",
-         "Value": "'Adult'"
-      }
+     {
+       "Column": "SPECIES",
+       "Value": "CHINOOK SALMON"
+     }
+
    ],
    "Orders": []
 }

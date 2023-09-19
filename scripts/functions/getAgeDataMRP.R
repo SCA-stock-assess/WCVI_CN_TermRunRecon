@@ -85,6 +85,7 @@ PADS_batch_ids <- httr::GET('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2
   jsonlite::fromJSON() %>%
   # Filter batch list to keep only South Coast samples:
   filter(Sector == "SC"#,
+         # --- If query is too slow, you can add a filter for year(s) here: ---
          #SampleYear == analysis_year
          ) %>%
   pull(Id)           # Extract column of age batch Ids from resulting dataframe
@@ -115,9 +116,6 @@ allPADS <-
               purrr::map_dfr(get_age_data) %>%
               rename(BatchId = Id),
             by=c("BatchId", "ProjectName", "Region", "Area", "Species", "RecoveryYear", "LifeHistory", "ContainerId")) %>%    # DO NOT join by all fields as there are entry inconsistencies, e.g., "ProjectPriority==H vs ==High")
-  mutate(`(R) SCALE BOOK NUM` = ContainerId,
-         `(R) SCALE CELL NUM` = FishNumber,
-         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(ContainerId) & !is.na(FishNumber) ~ paste0(ContainerId,sep="-",FishNumber))) %>%
   select(-c(AgingStructure)) %>%       # remove duplicate column 
   print()
 

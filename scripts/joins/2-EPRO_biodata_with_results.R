@@ -15,7 +15,8 @@
 # 6.   Export to git and Sharepoint for subsequent use in run reconstructions (Step VIII)
 
 
-rm(list = ls(all.names = TRUE)) #will clear all objects includes hidden objects.
+# Set up ----------------
+rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects.
 gc() #free up memory and report the memory usage.
 
 # Load packages ----------------
@@ -32,14 +33,9 @@ analysis_year <- 2022
 
 
 
-
-
-
 ################################################################################################################################################
 
-
 #                                                                           I. EPRO FILES LOAD 
-
 
 
 # Load files from Sharepoint -------------
@@ -82,7 +78,6 @@ wcviCNepro2022 <- do.call("rbind", epro.files) %>%
 remove(epro.files)
 
 
-
 # Export to git and SP as a backup for future use---------------------------
 # To git:
 writexl::write_xlsx(wcviCNepro2022, path=paste0(here("outputs"), sep="/", "R_OUT - All EPRO facilities master.xlsx"))
@@ -91,7 +86,6 @@ writexl::write_xlsx(wcviCNepro2022, path=paste0(here("outputs"), sep="/", "R_OUT
 # To SP: 
 writexl::write_xlsx(wcviCNepro2022, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/", 
                                                 "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/EPRO/R_OUT - All EPRO facilities master.xlsx"))
-
 
 
 
@@ -145,6 +139,7 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
   print()
 
 
+
 #############################################################################################################################################################
 
 #                                                                           III. JOIN EPRO + NPAFC
@@ -160,10 +155,10 @@ wcviCNepro_w_NPAFC2022 <- left_join(wcviCNepro2022 ,
 
 
 
-
 #############################################################################################################################################################
 
 #                                                                           IV. CWT LOAD
+
 
 # Load function to query MRPIS CWT releases --------------------------- 
 source(here("scripts","functions","getCWTData.R"))
@@ -189,7 +184,6 @@ CWT_rel_10yr <- getCWTData(paste0(here("scripts","json"), "/CWT_Releases_CN_last
   print()
 
 
-
 #############################################################################################################################################################
 
 #                                                                           V. JOIN EPRO+NPAFC + CWT
@@ -208,6 +202,7 @@ wcviCNepro_w_NPAFC.MRP2022 <- left_join(wcviCNepro_w_NPAFC2022 ,
 
 #                                                                           VI. ASSIGN FINAL STOCK ID
 
+
 wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022 %>%
   mutate(`(R) RESOLVED STOCK` = case_when(!is.na(`MRP_Stock Site Name`) ~ `MRP_Stock Site Name`,
                                           is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag" & !is.na(NPAFC_STOCK) ~ NPAFC_STOCK,
@@ -216,11 +211,6 @@ wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022 %>%
                                               !grepl("S-", `(R) RESOLVED STOCK`) & !is.na(`(R) RESOLVED STOCK`) ~ "CWT",
                                               TRUE ~ NA)) %>% 
   print()
-
-
-
-
-
 
 
 #############################################################################################################################################################
@@ -233,11 +223,12 @@ readme <- data.frame(`1` = c("date rendered:",
                               "source R code:", 
                               "source EPRO files:",
                               "source NPAFC file:",
+                              "CWT source:",
                               "assumptions made:", 
                               "",
                               "",
                               "sheet name:",
-                              "AllFacilities w NPAFC",
+                              "AllFacilities w RESULTS",
                               "QC summary",
                               "qc1 - No stock ID",
                               "qc2 - No Oto result",
@@ -248,17 +239,17 @@ readme <- data.frame(`1` = c("date rendered:",
                              "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/2-EPRO_biodata_with_results.R", 
                              "https://086gc.sharepoint.com/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=QSeYb8&cid=a94075b0%2D307f%2D43b2%2D96e6%2D02a093c68a9a&FolderCTID=0x01200009EB148EBFDA544E816AF000384149AC&id=%2Fsites%2FPAC%2DSCAStockAssessmentSTAD%2FShared%20Documents%2FWCVI%20STAD%2FTerminal%20CN%20Run%20Recon%2F2022%2FCommunal%20data%2FEPRO&viewid=931f98e0%2Da6b1%2D48c6%2D9fee%2D65ba9363ce0e",
                              "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
+                             "http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
                              "Removed AK and Kamchatka marks from NPAFC file to avoid duplicates, assuming strays are only BC/SUS",
                              "Ignored one case where RCH and Nanaimo hatchery applied the H5 same mark in 2018; assume it was a RCH mark that showed up in 2022 Burman broodstock",
                              "",
                              "sheet description:",
-                             "All EPRO facilities with 2022 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to the NPAFC mark file to give stock ID",
+                             "All EPRO facilities 2022 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID.",
                              "Summary of QC flags and # of entries belonging to that flag.",
                              "QC flag 1 tab. See QC summary for details.",
                              "QC flag 2 tab. See QC summary for details.",
                              "QC flag 3 tab. See QC summary for details.",
                              "QC flag 4 tab. See QC summary for details."))
-
 
 
 # QC flags ---------------------------
@@ -282,7 +273,6 @@ qc4_noRslvdID <- wcviCNepro_w_Results2022 %>%
   print()
 
 
-
 # QC Summary ---------------------------
 qc_summary <- data.frame(qc_flagName = c("qc1_noID",
                                          "qc2_noResults",
@@ -299,11 +289,9 @@ qc_summary <- data.frame(qc_flagName = c("qc1_noID",
   print()
 
 
-
 #############################################################################################################################################################
 
 #                                                                           VIII. EXPORT 
-
 
 
 # Export ---------------------------
@@ -312,7 +300,7 @@ R_OUT_EPRO.NPAFC <- openxlsx::createWorkbook()
 
 # Add sheets to the workbook
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "readme")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "AllFacilities w NPAFC")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "AllFacilities w RESULTS")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC summary")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc1 - No Oto stock ID")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc2 - No Oto result")
@@ -321,7 +309,7 @@ openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc4 - No Reslvd ID")
 
 # Write data to the sheets
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="AllFacilities w NPAFC", x=wcviCNepro_w_Results2022)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="AllFacilities w RESULTS", x=wcviCNepro_w_Results2022)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="QC summary", x=qc_summary)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc1 - No Oto stock ID", x=qc1_noOtoID)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)

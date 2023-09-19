@@ -1,0 +1,21 @@
+{
+   "Schema": "NUSEDS_RPT",
+   "DataSource": "ALL_SPECIES_CU_DATA",
+   "Fields": [
+      "ACT_ID",
+      "AREA",
+      "GEOGRAPHICAL_EXTNT_OF_ESTIMATE"
+   ],
+   "Aggregates": [],
+   "Filters": [
+      {
+         "Column": "AREA",
+         "Value": "1,2E,2W,3A,3B,4A,4B,4C,4D,5,6,7,8,9,10,11,12,13,14N,14S,15,16,17,18,19,20,21,22,23,24,25,26,27,28A,28B,29B,29C,29D,29E,29F,29G,29H,29I,29J,29K,110,120,130"
+      },
+      {
+         "Column": "SPECIES",
+         "Value": "Chinook"
+      }
+   ],
+   "Orders": []
+}

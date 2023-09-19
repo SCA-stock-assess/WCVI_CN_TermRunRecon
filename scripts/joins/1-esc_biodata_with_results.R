@@ -1,13 +1,22 @@
 
-# Chinook escapement biodata WITH results for Terminal run recon
+# WCVI Chinook escapement biodata WITH results for Terminal run recon
 
+# Work flow is:
+# 1.     Load escapement biodata file off of DFO network  (Step I)
+# 2.1.   Load age data via function in source R script (direct query to MPRIS PADS database online)  (Step II)
+#   2.2. Export to git/SP for records (used for other run reconstruction purposes)
+# 3.1.   Join Escapement biodata to PADS results (Step III)
+#   3.2. Calculate brood year
+#   3.3. Determine anti-joins (samples that did not connect to escapement biodata records; "bad records/orphans")
+# 4.     Load Otolith data from Sharepoint (queried previously to OtoManager)  (Step IV)
+# 5.1.   Join Esc+PADS file to OtoManager results  (Step V)
+#   5.2. Determine anti-joins (samples that did not connect to escapement biodata records; "bad records/orphans")
+# 6.     Load NPAFC mark master file  (Step VI)
+# 7.1.   Join ESc+PADS+OtoMgr to NPAFC mark master file  (Step VII)
+#   7.2. Create final resolved stock ID 
+# 8.     Run QC report(s)  (Step VIII)
+# 9.     Export to git and Sharepoint for subsequent use in run reconstructions (Step X)
 
-# this file: esc data links
-# OUTLINE:
-# 1. escapement data - load from network drive. 
-# 2. age data - direct query is chinook all years, then filtered to current year. source to function script. 
-# 3. otolith data - load from SharePoint; query is chinook all areas current year already so no filtering needed. 
-# 4. 
 
 # Set up ----------------
 rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects.
@@ -27,15 +36,7 @@ analysis_year <- 2022
 
 
 
-
-
-#************** NEXT DAY: 
-#*##  >> case_when change esc bio scale cell #s to PADS format in R code 
-#* Look for outliers in the 10A format  (mayb not needed idk )
-
-
-
-################################################################################################################################################
+#############################################################################################################################################################
 
 #                                                                           I. ESCAPEMENT BIODATA LOAD 
 
@@ -92,10 +93,7 @@ wcviCNesc2022 <- cbind(
 
 
 
-
-
-
-################################################################################################################################################
+#############################################################################################################################################################
 
 #                                                                           II. AGE DATA LOAD 
 
@@ -130,8 +128,6 @@ writexl::write_xlsx(wcviCNPADS2022, path=paste0("C:/Users", sep="/", Sys.info()[
 
 
 
-
-
 #############################################################################################################################################################
 
 #                                                                           III. JOIN ESCAPEMENT BIODATA to PADS, CALC BY
@@ -153,10 +149,6 @@ esc_biodata_PADS <- left_join(wcviCNesc2022,
   print()
 
 
-
-
-
-
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
 esc_scaleIDs <- esc_biodata_PADS %>%
   filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`)) %>% 
@@ -171,7 +163,6 @@ antijoin_PADS <- wcviCNPADS2022 %>%
 #############################################################################################################################################################
 
 #                                                                           IV. OTOLITH DATA LOAD 
-
 
 wcviCNOtos2022 <- readxl::read_excel(path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
                                                  "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/OtoManager_RecoverySpecimens_Area20-27_121-127_CN_2022_28Aug2023.xlsx"),
@@ -188,7 +179,6 @@ wcviCNOtos2022 <- readxl::read_excel(path=paste0("C:/Users", sep="/", Sys.info()
 
 
 
-
 #############################################################################################################################################################
 
 #                                                                           V. JOIN ESC+PADS to OTOMGR 
@@ -200,8 +190,6 @@ intersect(colnames(esc_biodata_PADS), colnames(wcviCNOtos2022))
 
 esc_biodata_PADS_oto <- left_join(esc_biodata_PADS,
                                   wcviCNOtos2022)
-
-
 
 
 # ANTI JOINS: Oto samples that didn't make it in to the escapement biodata basefile ---------------------------
@@ -217,8 +205,7 @@ antijoin_OM <- wcviCNOtos2022 %>%
 
 #############################################################################################################################################################
 
-#                                                                           VII. LOAD NPAFC
-
+#                                                                           VI. LOAD NPAFC
 
 NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
@@ -241,11 +228,9 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
 
 
 
-
 #############################################################################################################################################################
 
-#                                                                           VIII. JOIN BIODATA+PADS+OTO to NPAFC
-
+#                                                                           VII. JOIN BIODATA+PADS+OTO to NPAFC
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTOMGR to NPAFC ========================  
 intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFC))
@@ -260,11 +245,9 @@ esc_biodata_w_RESULTS <- left_join(esc_biodata_PADS_oto,
 
 
 
-
-
 #############################################################################################################################################################
 
-#                                                                           X. QC and README
+#                                                                           VIII. QC and README
 
 
 # QC flags ---------------------------
@@ -272,17 +255,14 @@ qc1_noOtoID <- esc_biodata_w_RESULTS %>%
   filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK)) %>%
   print()
 
-
 qc2_noOtoResults <- esc_biodata_w_RESULTS %>%
   filter(!is.na(`(R) OTOLITH LBV CONCAT`) & !is.na(`(R) BROOD YEAR`) & is.na(`(R) HATCHCODE`) & `OM_READ STATUS`!="Not Marked") %>%
   print()
-
 
 # PLACEHOLDER: NO CWT DATA YET
  qc3_noCWTID <- data.frame(val="Empty")   #esc_biodata_w_RESULTS %>%
    #filter(!is.na(`(R) TAGCODE`) & `(R) TAGCODE`!="No Tag" & is.na(`MRP_Stock Site Name`)) %>% 
    filter()
-
 
 qc4_noRslvdID <- esc_biodata_w_RESULTS %>% 
   filter(is.na(`(R) RESOLVED STOCK`) & !is.na(NPAFC_STOCK)) %>% 
@@ -303,8 +283,6 @@ qc_summary <- data.frame(qc_flagName = c("qc1_noID",
                                          "There is a CWT available but no Stock ID.",
                                          "There is a CWT or an NPAFC ID but no Resolved stock ID.")) %>% 
   print()
-
-
 
 
 # Create readme ---------------------------
@@ -352,8 +330,7 @@ readme <- data.frame(`1` = c("date rendered:",
 
 #############################################################################################################################################################
 
-#                                                                           VIII. EXPORT 
-
+#                                                                           X. EXPORT 
 
 # Export ---------------------------
 # Create a blank workbook
@@ -396,22 +373,9 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
                        file=paste0("C:/Users", sep="/", 
                                    Sys.info()[6], 
                                    sep="/",
-                                   "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/EPRO/R_OUT - Escapement biodata WITH RESULTS.xlsx"),
+                                   "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - Escapement biodata WITH RESULTS.xlsx"),
                        overwrite=T,
                        returnValue=T)
-
-
-
-
-#############################################################################################################################################################
-
-#                                                                          ANTI JOINS
-
-antijoin_PADS
-
-antijoin_OM
-
-
 
 
 

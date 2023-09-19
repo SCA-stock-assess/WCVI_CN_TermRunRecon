@@ -89,7 +89,6 @@ writexl::write_xlsx(wcviCNepro2022, path=paste0("C:/Users", sep="/", Sys.info()[
 
 
 
-
 ################################################################################################################################################
 
 #                                                                           (ignore). OTOLITH DATA LOAD 
@@ -110,7 +109,6 @@ writexl::write_xlsx(wcviCNepro2022, path=paste0("C:/Users", sep="/", Sys.info()[
 # 
 # writexl::write_xlsx(wcviCNOtos2022, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/", 
 #                                                 "Desktop/ototest.xlsx"))
-
 
 
 

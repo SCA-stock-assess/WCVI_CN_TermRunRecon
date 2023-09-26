@@ -140,11 +140,12 @@ esc_biodata_PADS <- left_join(wcviCNesc2022,
                               wcviCNPADS2022 %>% 
                                 filter(PADS_ProjectName != "WCVI Creel Survey" & !grepl("Fisher", PADS_ProjectName))) %>%
   mutate(`(R) RESOLVED TOTAL AGE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
-                                              `PADS_GrAge`=="2M" ~ 2,
-                                              `PADS_GrAge`=="3M" ~ 3,
-                                              `PADS_GrAge`=="4M" ~ 4,
-                                              `PADS_GrAge`=="5M" ~ 5,
-                                              `PADS_GrAge`=="6M" ~ 6),
+                                              `PADS_GrAge`=="1M" ~ 2,
+                                              `PADS_GrAge`=="2M" ~ 3,
+                                              `PADS_GrAge`=="3M" ~ 4,
+                                              `PADS_GrAge`=="4M" ~ 5,
+                                              `PADS_GrAge`=="5M" ~ 6,
+                                              `PADS_GrAge`=="6M" ~ 7),
          `(R) BROOD YEAR` = analysis_year-`(R) RESOLVED TOTAL AGE`) %>% 
   print()
 

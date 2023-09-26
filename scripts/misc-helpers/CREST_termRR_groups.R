@@ -207,9 +207,7 @@ left_join(wcviCNcrest,
 # Create readme ---------------------------
 readme <- data.frame(`1` = c("date rendered:", 
                              "source R code:", 
-                             "source EPRO files:",
-                             "source NPAFC file:",
-                             "CWT source:",
+                             "source CREST files:",
                              "assumptions made:", 
                              "",
                              "",
@@ -229,17 +227,16 @@ readme <- data.frame(`1` = c("date rendered:",
                              "qc11_ageDisagree",
                              "qc12_nonstdSex"),
 `2` = c(as.character(Sys.Date()), 
-        "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/2-EPRO_biodata_with_results.R", 
-        "https://086gc.sharepoint.com/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=QSeYb8&cid=a94075b0%2D307f%2D43b2%2D96e6%2D02a093c68a9a&FolderCTID=0x01200009EB148EBFDA544E816AF000384149AC&id=%2Fsites%2FPAC%2DSCAStockAssessmentSTAD%2FShared%20Documents%2FWCVI%20STAD%2FTerminal%20CN%20Run%20Recon%2F2022%2FCommunal%20data%2FEPRO&viewid=931f98e0%2Da6b1%2D48c6%2D9fee%2D65ba9363ce0e",
-        "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
-        "http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
-        "Removed AK and Kamchatka marks from NPAFC file to avoid duplicates, assuming strays are only BC/SUS",
-        "Ignored one case where RCH and Nanaimo hatchery applied the H5 same mark in 2018; assume it was a RCH mark that showed up in 2022 Burman broodstock",
+        "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/CREST_termRR_groups.R", 
+        "download from CREST stored on https://086gc.sharepoint.com/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=QSeYb8&cid=a94075b0%2D307f%2D43b2%2D96e6%2D02a093c68a9a&FolderCTID=0x01200009EB148EBFDA544E816AF000384149AC&id=%2Fsites%2FPAC%2DSCAStockAssessmentSTAD%2FShared%20Documents%2FWCVI%20STAD%2FTerminal%20CN%20Run%20Recon%2F2022%2FCommunal%20data%2FCREST&viewid=931f98e0%2Da6b1%2D48c6%2D9fee%2D65ba9363ce0e",
+        "Removed Salmon River from Fraser watershed in stream aux file because duplicate river on VI.",
+        "Changed the terminology and made some manual adjustments to Robertson, Toquart/Toquaht, Big Q, Tranquil and Omega Pacific in stream aux file.",
         "",
         "sheet description:",
         "All EPRO facilities 2022 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID.",
         "Summary of QC flags and # of entries belonging to that flag.",
-        "QC flags subsequent tabs. See QC Summary page for details."))
+        "QC flags subsequent tabs. See QC Summary page for details.", 
+        rep("", 11)))
 
 
 # QC flags ---------------------------
@@ -259,44 +256,40 @@ qc4_CWTzero <- wcviCNcrest_coded %>%
   filter(CWT_HEAD_LABEL==0)
 
 
-qc5_WmanNoSample <- crest_biodata %>% 
+qc5_WmanNoSample <- wcviCNcrest_coded %>% 
   filter(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE" ) 
 
 
-qc6_CWTDNAdisagree <- crest_biodata %>% 
+qc6_CWTDNAdisagree <- wcviCNcrest_coded %>% 
   filter(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
 
 
-qc7_otoDNAdisagree <- crest_biodata %>% 
+qc7_otoDNAdisagree <- wcviCNcrest_coded %>% 
   filter(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
 
 
-qc8_DNAuncert <- crest_biodata %>% 
+qc8_DNAuncert <- wcviCNcrest_coded %>% 
   filter(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8)
 
 
-qc9_PBTmaybe <- crest_biodata %>% 
+qc9_PBTmaybe <- wcviCNcrest_coded %>% 
   filter(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2))
 
 
-qc10_susSUS <- crest_biodata %>% 
+qc10_susSUS <- wcviCNcrest_coded %>% 
   filter(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
            !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
            !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
            !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE") 
 
 
-qc11_ageDisagree <- crest_biodata %>%
+qc11_ageDisagree <- wcviCNcrest_coded %>%
   filter((YEAR-CWT_BROOD_YEAR)!=RESOLVED_AGE) 
 
 
-qc12_nonstdSex <- crest_biodata %>%
+qc12_nonstdSex <- wcviCNcrest_coded %>%
   filter(SEX %notin% c("M","F"))
 
-
-
-
-## non-matching IDs
 
 
 # QC Summary ---------------------------
@@ -311,12 +304,13 @@ qc_summary <- data.frame(qc_flagName = c("qc1_otoNoSample",
                                          "qc9_PBTmaybe",
                                          "qc10_susSUS",
                                          "qc11_ageDisagree",
-                                         "qc12_nonstdSex"
-                                         ),
-                         number_records = c(nrow(qc1_noOtoID),
-                                            nrow(qc2_noOtoResults),
-                                            nrow(qc3_noCWTID),
-                                            nrow(qc4_noRslvdID),
+                                         "qc12_nonstdSex",
+                                         "",
+                                         "total CREST records:"),
+                         number_records = c(nrow(qc1_otoNoSample),
+                                            nrow(qc2_scaleNoAge),
+                                            nrow(qc3_CWTnoID),
+                                            nrow(qc4_CWTzero),
                                             nrow(qc5_WmanNoSample),
                                             nrow(qc6_CWTDNAdisagree),
                                             nrow(qc7_otoDNAdisagree),
@@ -324,8 +318,9 @@ qc_summary <- data.frame(qc_flagName = c("qc1_otoNoSample",
                                             nrow(qc9_PBTmaybe),
                                             nrow(qc10_susSUS),
                                             nrow(qc11_ageDisagree),
-                                            nrow(qc12_nonstdSex)
-                                            ),
+                                            nrow(qc12_nonstdSex),
+                                            "",
+                                            nrow(wcviCNcrest_coded)),
                          description = c("Otolith box/vial numbers exist but there is 'No Sample'",
                                          "Scale book and number but no age, and no explanation given (e.g., resorbed etc)",
                                          "A CWT head label was submitted but the stock ID result is blank",
@@ -337,8 +332,9 @@ qc_summary <- data.frame(qc_flagName = c("qc1_otoNoSample",
                                          "Hatchery origin given as a blank, but some possibility for PBT (PROB=1.00). Note this should be approached with lots of caution and is stock-specific.",
                                          "SUS (assumed) that have ID methods available - A CWT head label was submitted but the stock ID result is blank",
                                          "Cases where the RESOLVED_AGE does not match the catch YEAR minus the CWT_BROOD_YEAR",
-                                         "Sex designation does not fall as M or F - propose changing all other designations to 'unk'"
-                                         )) %>% 
+                                         "Sex designation does not fall as M or F - propose changing all other designations to 'unk'",
+                                         "",
+                                         paste0("for ", paste(unique(wcviCNcrest$YEAR), collapse = " ") ))) %>% 
   print()
 
 
@@ -349,43 +345,60 @@ qc_summary <- data.frame(qc_flagName = c("qc1_otoNoSample",
 
 # Export ---------------------------
 # Create a blank workbook
-R_OUT_EPRO.NPAFC <- openxlsx::createWorkbook()
+R_OUT_CREST.CODED <- openxlsx::createWorkbook()
 
 # Add sheets to the workbook
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "readme")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "AllFacilities w RESULTS")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC summary")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc1 - No Oto stock ID")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc2 - No Oto result")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc3 - No CWT ID")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc4 - No Reslvd ID")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "readme")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "WCVI CN CREST Biodata CODED")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC summary")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc1_otoNoSample")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc2_scaleNoAge")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc3_CWTnoID")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc4_CWTzero")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc5_WmanNoSample")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc6_CWTDNAdisagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc7_otoDNAdisagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc8_DNAuncert")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc9_PBTmaybe")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc10_susSUS")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc11_ageDisagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc12_nonstdSex")
 
 # Write data to the sheets
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="AllFacilities w RESULTS", x=wcviCNepro_w_Results2022)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="QC summary", x=qc_summary)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc1 - No Oto stock ID", x=qc1_noOtoID)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc3 - No CWT ID", x=qc3_noCWTID)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc4 - No Reslvd ID", x=qc4_noRslvdID)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=wcviCNcrest_coded)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC summary", x=qc_summary)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc1_otoNoSample", x=qc1_otoNoSample)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc2_scaleNoAge", x=qc2_scaleNoAge)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc3_CWTnoID", x=qc3_CWTnoID)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc4_CWTzero", x=qc4_CWTzero)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc5_WmanNoSample", x=qc5_WmanNoSample)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc6_CWTDNAdisagree", x=qc6_CWTDNAdisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc7_otoDNAdisagree", x=qc7_otoDNAdisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc8_DNAuncert", x=qc8_DNAuncert)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc9_PBTmaybe", x=qc9_PBTmaybe)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc10_susSUS", x=qc10_susSUS)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc11_ageDisagree", x=qc11_ageDisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc12_nonstdSex", x=qc12_nonstdSex)
+
 
 
 # Export to git and SP ---------------------------
 # To git:
-openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
                        file=paste0(here("outputs"), 
                                    sep="/", 
-                                   "R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+                                   "R_OUT - WCVI CN CREST Biodata CODED.xlsx"),
                        overwrite=T,
                        returnValue=T)
 
 
 # To SP: 
-openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
                        file=paste0("C:/Users", sep="/", 
                                    Sys.info()[6], 
                                    sep="/",
-                                   "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/EPRO/R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+                                   "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/CREST/R_OUT - WCVI CN CREST Biodata CODED.xlsx"),
                        overwrite=T,
                        returnValue=T)
 

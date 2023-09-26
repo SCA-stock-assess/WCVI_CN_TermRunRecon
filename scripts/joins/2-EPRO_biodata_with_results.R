@@ -66,11 +66,12 @@ wcviCNepro2022 <- do.call("rbind", epro.files) %>%
          `(R) TAGCODE` = `CWT Tag Code`,
          `(R) HATCHCODE` = `Hatch Code`,
          `(R) RESOLVED TOTAL AGE` = case_when(!is.na(`Total Age (yrs)`) ~ `Total Age (yrs)`,
-                                              `Scale Part Age`=="2M" ~ 2,
-                                              `Scale Part Age`=="3M" ~ 3,
-                                              `Scale Part Age`=="4M" ~ 4,
-                                              `Scale Part Age`=="5M" ~ 5,
-                                              `Scale Part Age`=="6M" ~ 6),
+                                              `Scale Part Age`=="1M" ~ 2,
+                                              `Scale Part Age`=="2M" ~ 3,
+                                              `Scale Part Age`=="3M" ~ 4,
+                                              `Scale Part Age`=="4M" ~ 5,
+                                              `Scale Part Age`=="5M" ~ 6,
+                                              `Scale Part Age`=="6M" ~ 7),
          `(R) BROOD YEAR` = analysis_year-`Total Age (yrs)`,
          UEID = paste0("2022", "-", seq(1:nrow(.)))) %>%
   mutate_at(c("(R) SCALE BOOK NUM", "Book No"), as.character) %>%

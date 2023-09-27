@@ -121,7 +121,7 @@ left_join(wcviCNcrest,
           streamAreas) %>% 
   
   mutate(
-    #1. Create 'Hat/Nat' column ---------------------------
+    #--- 1. Create 'Hat/Nat' column ---
     `Hat/Nat (R)` = case_when(
       #1.1 If HATCHERY ORIGIN is a "Y", make it "Hatchery"
       HATCHERY_ORIGIN=="Y" ~ "Hatchery",
@@ -130,7 +130,7 @@ left_join(wcviCNcrest,
       #1.3 If it's neither of these scenarios, make it "Unknown"
       TRUE ~ "Unknown"),
     
-    #2. Create 'Term RR Roll Ups' column ---------------------------
+    #--- 2. Create 'Term RR Roll Ups' column ---
     `Term RR Roll Ups (R)` = case_when(
       #2.0 Base case if is.na(RESOLVED_STOCK_ORIGIN) make it "Unknown"
       is.na(RESOLVED_STOCK_ORIGIN) ~ "Unknown", 
@@ -142,10 +142,10 @@ left_join(wcviCNcrest,
       RESOLVED_STOCK_ROLLUP%in%c("NWVI", "SWVI") ~ toupper(gsub(paste0("\\b(",paste(stopwords, collapse="|"),")\\b"), "", RESOLVED_STOCK_ORIGIN))),
     
     
-    #3. Create 'TermSum' column ---------------------------
+    #--- 3. Create 'TermSum' column ---
     `Term Sum (R)` = paste(`Hat/Nat (R)`, `Term RR Roll Ups (R)`, sep=" "),
     
-    #4. Create 'TermCON' column ---------------------------
+    #--- 4. Create 'TermCON' column ---
     `TermCON (R)` = case_when(
       #4.0 Base case unknown stock ID
       is.na(RESOLVED_STOCK_ORIGIN) ~ `Term Sum (R)`,
@@ -160,7 +160,7 @@ left_join(wcviCNcrest,
       #4.5 Identify all systems NOT IN focal_a25, and also NOT assigned to "NON-WCVI", "Other Area 25", or "Other Area 23" 
       `Term RR Roll Ups (R)`%notin%focal_a25 & statarea.origin%notin%c(23,25) ~ paste(`Hat/Nat (R)`, "Other WCVI", sep=" ")),
     
-    #5. Create TermNIT column ---------------------------
+    #--- 5. Create TermNIT column ---
     `TermNIT (R)` = case_when(
       #5.0 Base case unknown stock ID
       is.na(RESOLVED_STOCK_ORIGIN) ~ `Term Sum (R)`,
@@ -175,7 +175,7 @@ left_join(wcviCNcrest,
       #5.5 same as 4.5 but area 22
       `Term RR Roll Ups (R)`%notin%focal_a22 & statarea.origin%notin%c(23,25) ~ paste(`Hat/Nat (R)`, "Other WCVI", sep=" ")),
     
-    #6. Create TermArea23 column ---------------------------
+    #--- 6. Create TermArea23 column ---
     `TermArea23 (R)` = case_when(
       #6.0 Base case unknown stock ID
       is.na(RESOLVED_STOCK_ORIGIN) ~ `Term Sum (R)`,
@@ -190,10 +190,10 @@ left_join(wcviCNcrest,
       #6.5 same as 4.5
       `Term RR Roll Ups (R)`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`Hat/Nat (R)`, "Other WCVI", sep=" ")) ,
     
-    # Create QC flag columns to see cases where Term labels don't match ---------------------------
-    `qcFlag_TermCON=TermNIT?` = case_when(`TermCON (R)` == `TermNIT (R)` ~ "TRUE"),
-    `qcFlag_TermCON=Term23?` = case_when(`TermCON (R)` == `TermArea23 (R)` ~ "TRUE"),
-    `qcFlag_TermNIT=Term23?` = case_when(`TermNIT (R)` == `TermArea23 (R)` ~ "TRUE")
+    # --- Create QC flag columns to see cases where Term labels don't match --- (not needed)
+      #`qcFlag_TermCON=TermNIT?` = case_when(`TermCON (R)` == `TermNIT (R)` ~ "TRUE"),
+      #`qcFlag_TermCON=Term23?` = case_when(`TermCON (R)` == `TermArea23 (R)` ~ "TRUE"),
+      #`qcFlag_TermNIT=Term23?` = case_when(`TermNIT (R)` == `TermArea23 (R)` ~ "TRUE")
   ) %>%
   print()
 
@@ -204,92 +204,36 @@ left_join(wcviCNcrest,
 #                                                                           VII. QC 
 
 
-# Create readme ---------------------------
-readme <- data.frame(`1` = c("date rendered:", 
-                             "source R code:", 
-                             "source CREST files:",
-                             "assumptions made:", 
-                             "",
-                             "",
-                             "sheet name:",
-                             "WCVI CN CREST Biodata CODED",
-                             "QC summary",
-                             "qc1_otoNoSample",
-                             "qc2_scaleNoAge",
-                             "qc3_CWTnoID",
-                             "qc4_CWTzero",
-                             "qc5_WmanNoSample",
-                             "qc6_CWTDNAdisagree",
-                             "qc7_otoDNAdisagree",
-                             "qc8_DNAuncert",
-                             "qc9_PBTmaybe",
-                             "qc10_susSUS",
-                             "qc11_ageDisagree",
-                             "qc12_nonstdSex"),
-`2` = c(as.character(Sys.Date()), 
-        "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/CREST_termRR_groups.R", 
-        "download from CREST stored on https://086gc.sharepoint.com/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=QSeYb8&cid=a94075b0%2D307f%2D43b2%2D96e6%2D02a093c68a9a&FolderCTID=0x01200009EB148EBFDA544E816AF000384149AC&id=%2Fsites%2FPAC%2DSCAStockAssessmentSTAD%2FShared%20Documents%2FWCVI%20STAD%2FTerminal%20CN%20Run%20Recon%2F2022%2FCommunal%20data%2FCREST&viewid=931f98e0%2Da6b1%2D48c6%2D9fee%2D65ba9363ce0e",
-        "Removed Salmon River from Fraser watershed in stream aux file because duplicate river on VI.",
-        "Changed the terminology and made some manual adjustments to Robertson, Toquart/Toquaht, Big Q, Tranquil and Omega Pacific in stream aux file.",
-        "",
-        "sheet description:",
-        "All EPRO facilities 2022 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID.",
-        "Summary of QC flags and # of entries belonging to that flag.",
-        "QC flags subsequent tabs. See QC Summary page for details.", 
-        rep("", 11)))
-
-
-# QC flags ---------------------------
-qc1_otoNoSample <- wcviCNcrest_coded %>% 
-  filter(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & THERMALMARK=="No Sample")
-
-
-qc2_scaleNoAge <- wcviCNcrest_coded %>% 
-  filter(is.na(RESOLVED_AGE) & is.na(PART_AGE_CODE) & !is.na(SCALE_BOOK))
-
-
-qc3_CWTnoID <- wcviCNcrest_coded %>% 
-  filter(!is.na(CWT_HEAD_LABEL) & is.na(CWT_RESULT))
-
-
-qc4_CWTzero <- wcviCNcrest_coded %>% 
-  filter(CWT_HEAD_LABEL==0)
-
-
-qc5_WmanNoSample <- wcviCNcrest_coded %>% 
-  filter(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE" ) 
-
-
-qc6_CWTDNAdisagree <- wcviCNcrest_coded %>% 
-  filter(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
-
-
-qc7_otoDNAdisagree <- wcviCNcrest_coded %>% 
-  filter(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
-
-
-qc8_DNAuncert <- wcviCNcrest_coded %>% 
-  filter(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8)
-
-
-qc9_PBTmaybe <- wcviCNcrest_coded %>% 
-  filter(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2))
-
-
-qc10_susSUS <- wcviCNcrest_coded %>% 
-  filter(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
-           !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
-           !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
-           !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE") 
-
-
-qc11_ageDisagree <- wcviCNcrest_coded %>%
-  filter((YEAR-CWT_BROOD_YEAR)!=RESOLVED_AGE) 
-
-
-qc12_nonstdSex <- wcviCNcrest_coded %>%
-  filter(SEX %notin% c("M","F"))
-
+# Add QC flag columns ---------------------------
+wcviCNcrest_coded_qc <- wcviCNcrest_coded %>% 
+  mutate(qc1_otoNoSample = case_when(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & THERMALMARK=="No Sample" ~ 1,
+                                     TRUE ~ 0),
+         qc2_scaleNoAge = case_when(is.na(RESOLVED_AGE) & is.na(PART_AGE_CODE) & !is.na(SCALE_BOOK) ~ 1,
+                                    TRUE ~ 0),
+         qc3_CWTnoID = case_when(!is.na(CWT_HEAD_LABEL) & is.na(CWT_RESULT) ~ 1,
+                                 TRUE ~ 0),
+         qc4_CWTzero = case_when(CWT_HEAD_LABEL==0 ~ 1,
+                                 TRUE ~ 0),
+         qc5_WmanNoSample = case_when(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE" ~ 1,
+                                      TRUE ~ 0),
+         qc6_CWTDNAdisagree = case_when(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME ~ 1,
+                                        TRUE ~ 0),
+         qc7_otoDNAdisagree = case_when(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME ~ 1,
+                                        TRUE ~ 0),
+         qc8_DNAuncert = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8 ~ 1,
+                                   TRUE ~ 0),
+         qc9_PBTmaybe = case_when(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2) ~ 1,
+                                  TRUE ~ 0),
+         qc10_susSUS = case_when(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
+                                   !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
+                                   !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
+                                   !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE" ~ 1,
+                                 TRUE ~ 0),
+         qc11_ageDisagree = case_when((YEAR-CWT_BROOD_YEAR)!=RESOLVED_AGE ~ 1,
+                                      TRUE ~ 0),
+         qc12_nonstdSex = case_when(SEX %notin% c("M","F") ~ 1,
+                                    TRUE ~ 0)) %>% 
+  print()
 
 
 # QC Summary ---------------------------
@@ -307,18 +251,18 @@ qc_summary <- data.frame(qc_flagName = c("qc1_otoNoSample",
                                          "qc12_nonstdSex",
                                          "",
                                          "total CREST records:"),
-                         number_records = c(nrow(qc1_otoNoSample),
-                                            nrow(qc2_scaleNoAge),
-                                            nrow(qc3_CWTnoID),
-                                            nrow(qc4_CWTzero),
-                                            nrow(qc5_WmanNoSample),
-                                            nrow(qc6_CWTDNAdisagree),
-                                            nrow(qc7_otoDNAdisagree),
-                                            nrow(qc8_DNAuncert),
-                                            nrow(qc9_PBTmaybe),
-                                            nrow(qc10_susSUS),
-                                            nrow(qc11_ageDisagree),
-                                            nrow(qc12_nonstdSex),
+                         number_records = c(nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc1_otoNoSample==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc2_scaleNoAge==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc3_CWTnoID==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc4_CWTzero==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc5_WmanNoSample==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc6_CWTDNAdisagree==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc7_otoDNAdisagree==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc8_DNAuncert==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc9_PBTmaybe==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc10_susSUS==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc11_ageDisagree==1,]),
+                                            nrow(wcviCNcrest_coded_qc[wcviCNcrest_coded_qc$qc12_nonstdSex==1,]),
                                             "",
                                             nrow(wcviCNcrest_coded)),
                          description = c("Otolith box/vial numbers exist but there is 'No Sample'",
@@ -338,6 +282,33 @@ qc_summary <- data.frame(qc_flagName = c("qc1_otoNoSample",
   print()
 
 
+
+
+# Create readme ---------------------------
+readme <- data.frame(`1` = c("date rendered:", 
+                             "source R code:", 
+                             "source CREST files:",
+                             "assumptions made:", 
+                             "",
+                             "",
+                             "sheet name:",
+                             "WCVI CN CREST Biodata CODED",
+                             "QC summary"),
+                     `2` = c(as.character(Sys.Date()), 
+                             "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/CREST_termRR_groups.R", 
+                             "download from CREST stored on https://086gc.sharepoint.com/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=QSeYb8&cid=a94075b0%2D307f%2D43b2%2D96e6%2D02a093c68a9a&FolderCTID=0x01200009EB148EBFDA544E816AF000384149AC&id=%2Fsites%2FPAC%2DSCAStockAssessmentSTAD%2FShared%20Documents%2FWCVI%20STAD%2FTerminal%20CN%20Run%20Recon%2F2022%2FCommunal%20data%2FCREST&viewid=931f98e0%2Da6b1%2D48c6%2D9fee%2D65ba9363ce0e",
+                             "Removed Salmon River from Fraser watershed in stream aux file because duplicate river on VI.",
+                             "Changed the terminology and made some manual adjustments to Robertson, Toquart/Toquaht, Big Q, Tranquil and Omega Pacific in stream aux file.",
+                             "",
+                             "sheet description:",
+                             "CREST Biodata, chinook only 2021-2022 for terminal run reconstruction. Joined two years of files together and assigned TermRR roll-up groupings. Produced a number of QC flag columns at the end.",
+                             "Summary of QC flag columns and # of entries belonging to that flag."
+                             #rep("", 11)
+                             ))
+
+
+
+
 #############################################################################################################################################################
 
 #                                                                           VIII. EXPORT 
@@ -351,35 +322,13 @@ R_OUT_CREST.CODED <- openxlsx::createWorkbook()
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "readme")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "WCVI CN CREST Biodata CODED")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC summary")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc1_otoNoSample")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc2_scaleNoAge")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc3_CWTnoID")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc4_CWTzero")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc5_WmanNoSample")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc6_CWTDNAdisagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc7_otoDNAdisagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc8_DNAuncert")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc9_PBTmaybe")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc10_susSUS")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc11_ageDisagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "qc12_nonstdSex")
+
 
 # Write data to the sheets
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=wcviCNcrest_coded)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC summary", x=qc_summary)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc1_otoNoSample", x=qc1_otoNoSample)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc2_scaleNoAge", x=qc2_scaleNoAge)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc3_CWTnoID", x=qc3_CWTnoID)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc4_CWTzero", x=qc4_CWTzero)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc5_WmanNoSample", x=qc5_WmanNoSample)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc6_CWTDNAdisagree", x=qc6_CWTDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc7_otoDNAdisagree", x=qc7_otoDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc8_DNAuncert", x=qc8_DNAuncert)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc9_PBTmaybe", x=qc9_PBTmaybe)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc10_susSUS", x=qc10_susSUS)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc11_ageDisagree", x=qc11_ageDisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet = "qc12_nonstdSex", x=qc12_nonstdSex)
+
 
 
 

@@ -201,7 +201,7 @@ left_join(wcviCNcrest,
 
 #############################################################################################################################################################
 
-#                                                                           VII. QC 
+#                                                                           VII. QC AND README
 
 
 # Add QC flag columns ---------------------------
@@ -334,12 +334,12 @@ openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC summary", x=qc_summary)
 
 # Export to git and SP ---------------------------
 # To git:
-openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
-                       file=paste0(here("outputs"), 
-                                   sep="/", 
-                                   "R_OUT - WCVI CN CREST Biodata CODED.xlsx"),
-                       overwrite=T,
-                       returnValue=T)
+#openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
+#                       file=paste0(here("outputs"), 
+#                                   sep="/", 
+#                                   "R_OUT - WCVI CN CREST Biodata CODED.xlsx"),
+#                       overwrite=T,
+#                       returnValue=T)
 
 
 # To SP: 

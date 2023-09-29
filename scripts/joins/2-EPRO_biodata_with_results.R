@@ -43,7 +43,7 @@ epro.files <- lapply(list.files(paste0("C:/Users", sep="/", Sys.info()[6], sep="
                                       "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/EPRO/"), 
                                pattern = "All_Adult_Biosampling_", full.names = T), 
                     readxl::read_excel,
-                    guess_max=20000)
+                    guess_max=20000, trim_ws=T)
 # Should be a Large List of at least 7 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita
 
 
@@ -55,7 +55,7 @@ names(epro.files) <- list.files(paste0("C:/Users", sep="/", Sys.info()[6], sep="
 
 # Convert the Large List into a useable R dataframe ---------------------------
 wcviCNepro2022 <- do.call("rbind", epro.files) %>%
-  #filter(Spawning.Stock !="") %>%
+  filter(`Spawning Stock` !="") %>%
   tibble::rownames_to_column(var="file_source") %>%
   mutate(`(R) OTOLITH BOX NUM` = `Bag No`,
          `(R) OTOLITH VIAL NUM` = `Vial No`,
@@ -81,7 +81,7 @@ remove(epro.files)
 
 # Export to git and SP as a backup for future use---------------------------
 # To git:
-writexl::write_xlsx(wcviCNepro2022, path=paste0(here("outputs"), sep="/", "R_OUT - All EPRO facilities master.xlsx"))
+#writexl::write_xlsx(wcviCNepro2022, path=paste0(here("outputs"), sep="/", "R_OUT - All EPRO facilities master.xlsx"))
 
 
 # To SP: 
@@ -182,6 +182,10 @@ CWT_rel_10yr <- getCWTData(paste0(here("scripts","json"), "/CWT_Releases_CN_last
   rename(`(R) TAGCODE` = MRP_Tagcode) %>% 
   print()
 
+# If you get an error message about "atomic vectors" try restarting R and/or your computer. It's related to connectivity access and just means R isn't 
+# talking to the DFO network properly
+
+
 
 #############################################################################################################################################################
 
@@ -199,17 +203,43 @@ wcviCNepro_w_NPAFC.MRP2022 <- left_join(wcviCNepro_w_NPAFC2022 ,
 
 #############################################################################################################################################################
 
-#                                                                           VI. ASSIGN FINAL STOCK ID
+#                                                                           VI. ASSIGN FINAL STOCK ID and ORIGIN
 
 
 wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022 %>%
-  mutate(`(R) RESOLVED STOCK` = case_when(!is.na(`MRP_Stock Site Name`) ~ `MRP_Stock Site Name`,
-                                          is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag" & !is.na(NPAFC_STOCK) ~ NPAFC_STOCK,
-                                          TRUE ~ NA),
-         `(R) RESOLVED ID METHOD` = case_when(grepl("S-", `(R) RESOLVED STOCK`) ~ "Otolith",
-                                              !grepl("S-", `(R) RESOLVED STOCK`) & !is.na(`(R) RESOLVED STOCK`) ~ "CWT",
-                                              TRUE ~ NA)) %>% 
+  mutate(`(R) ORIGIN` = case_when(`(R) HATCHCODE`=="Not Marked" & (`(R) TAGCODE`=="No tag" | is.na(`(R) TAGCODE`)) & `External Marks`!="Clipped"  ~ "Natural",
+                                  
+                                  `External Marks`=="Clipped" |
+                                  (`(R) HATCHCODE`%notin%c("Destroyed","No Sample", "Not Marked") & !is.na(`(R) HATCHCODE`)) | 
+                                    (`(R) TAGCODE`!="No tag" & !is.na(`(R) TAGCODE`)) ~ "Hatchery",
+
+                                  `External Marks`!="Clipped" & (is.na(`(R) HATCHCODE`) | `(R) HATCHCODE`%in%c("Destroyed","No Sample")) &
+                                    is.na(`(R) TAGCODE`) ~ "Unknown",
+                                  
+                                  TRUE ~ "FLAG"),
+         
+         `(R) STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ gsub(" Cr", "", 
+                                                                         gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+                                                                         ignore.case=F),
+                                    
+                                    (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK) ~ 
+                                      gsub(" R", "",
+                                           gsub(" Cr", "",  
+                                                str_to_title(
+                                                  str_sub(NPAFC_STOCK,3,100)), 
+                                                ignore.case = F), 
+                                           ignore.case=F),
+                                    
+                                    TRUE ~ "Unknown"),
+
+         
+         `(R) STOCK ID METHOD` = case_when(!is.na(`MRP_Stock Site Name`) ~ "CWT",
+                                           (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK) ~ "Otolith",
+                                           TRUE ~ NA),
+         
+         `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) STOCK ID`)) %>% 
   print()
+
 
 
 #############################################################################################################################################################
@@ -268,7 +298,7 @@ qc3_noCWTID <- wcviCNepro_w_Results2022 %>%
 
 
 qc4_noRslvdID <- wcviCNepro_w_Results2022 %>% 
-  filter(is.na(`(R) RESOLVED STOCK`) & !is.na(NPAFC_STOCK) & !is.na(`MRP_Stock Site Name`)) %>% 
+  filter(`(R) STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK) & !is.na(`MRP_Stock Site Name`)) %>% 
   print()
 
 
@@ -318,12 +348,12 @@ openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc4 - No Reslvd ID", x=qc4_noRslv
 
 # Export to git and SP ---------------------------
 # To git:
-openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-                       file=paste0(here("outputs"), 
-                                   sep="/", 
-                                   "R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
-                       overwrite=T,
-                       returnValue=T)
+# openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+#                        file=paste0(here("outputs"), 
+#                                    sep="/", 
+#                                    "R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+#                        overwrite=T,
+#                        returnValue=T)
 
 
 # To SP: 

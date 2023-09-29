@@ -326,7 +326,7 @@ openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC summary")
 
 # Write data to the sheets
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=wcviCNcrest_coded)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=wcviCNcrest_coded_qc)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC summary", x=qc_summary)
 
 

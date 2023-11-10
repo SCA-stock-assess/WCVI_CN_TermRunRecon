@@ -98,13 +98,15 @@ wcviCNepro2022 <- epro.files %>%
     `(R) TAGCODE` = `CWT Tag Code`,
     `(R) HATCHCODE` = `Hatch Code`,
     `(R) RESOLVED TOTAL AGE` = case_when(
+      !is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
       !is.na(`Total Age (yrs)`) ~ as.numeric(`Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
       `Scale Part Age`=="1M" ~ 2,
       `Scale Part Age`=="2M" ~ 3,
       `Scale Part Age`=="3M" ~ 4,
       `Scale Part Age`=="4M" ~ 5,
       `Scale Part Age`=="5M" ~ 6,
-      `Scale Part Age`=="6M" ~ 7
+      `Scale Part Age`=="6M" ~ 7,
+      T ~ NA_real_
     ),
     `(R) BROOD YEAR` = analysis_year - `(R) RESOLVED TOTAL AGE`,
     UEID = paste0("2022", "-", seq(1:nrow(.)))
@@ -388,12 +390,12 @@ openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc4 - No Reslvd ID", x=qc4_noRslv
 
 # Export to git and SP ---------------------------
 # To git:
- # openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
- #                        file=paste0(here("outputs"), 
- #                                    sep="/", 
- #                                    "R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
- #                        overwrite=T,
- #                        returnValue=T)
+openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+                       file=paste0(here("outputs"), 
+                                   sep="/", 
+                                   "R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
 
 # To SP: 

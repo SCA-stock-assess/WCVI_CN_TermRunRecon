@@ -50,24 +50,24 @@ esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mp
                                           recursive=F, pattern="^[^~]*.xlsx")[4]
 
 #3. Read in the file and reformat (slow) ----------------
-wcviCNesc2022 <- cbind(
+wcviCNescBiodat <- #cbind(
   readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-             sheet="Biodata 2015-2022", range="A1:A10000", guess_max=10000),
-  readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-             sheet="Biodata 2015-2022", range="F1:AX10000", guess_max=10000),
-  readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-             sheet="Biodata 2015-2022", range="CC1:CE10000", guess_max=10000),
-  readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-             sheet="Biodata 2015-2022", range="CI1:CM10000", guess_max=10000),
-  readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-             sheet="Biodata 2015-2022", range="CP1:CP10000", guess_max=10000),
-  readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-             sheet="Biodata 2015-2022", range="CY1:CZ10000", guess_max=10000)) %>%
-  filter(Year %in% analysis_year, Species=="Chinook") %>%
-  mutate(`(R) OTOLITH BOX NUM`=`Otolith Box #`,
-         `(R) OTOLITH VIAL NUM` = `Otolith Specimen #`,
-         `(R) OTOLITH LAB NUM` = `Otolith Lab Number`,
-         `(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
+              sheet="Biodata 2015-2022", guess_max=10000) %>% #,
+  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
+  #            sheet="Biodata 2015-2022", range="F1:AX10000", guess_max=10000),
+  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
+  #            sheet="Biodata 2015-2022", range="CC1:CE10000", guess_max=10000),
+  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
+  #            sheet="Biodata 2015-2022", range="CI1:CM10000", guess_max=10000),
+  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
+  #            sheet="Biodata 2015-2022", range="CP1:CP10000", guess_max=10000),
+  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
+  #            sheet="Biodata 2015-2022", range="CY1:CZ10000", guess_max=10000)) %>%
+  filter(#Year %in% analysis_year, 
+         #Species=="Chinook"
+    ) %>%
+  select(Year, `Sample Month`:Species, `Fishery / River`:Gear, Sex, `POF Length (mm)`:`Egg Retention`, Comments) %>%
+  mutate(`(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
                                                 paste0(`Otolith Lab Number`,sep="-",`Otolith Box #`,sep="-",`Otolith Specimen #`)),
          `(R) SCALE BOOK NUM` = case_when(`Scale Book #` %in% c(15983:15987,15989) ~ paste0("22SC ", `Scale Book #` ),
                                           `Scale Book #` %in% c(17376,17377) ~ paste0("22SP", `Scale Book #` ),
@@ -77,18 +77,36 @@ wcviCNesc2022 <- cbind(
                                           grepl("10", `Scale Format (5 down, 2 across, etc)`) & `Scale #`=="21" ~ "3",
                                           grepl("10", `Scale Format (5 down, 2 across, etc)`) & `Scale #`=="31" ~ "4",
                                           grepl("10", `Scale Format (5 down, 2 across, etc)`) & `Scale #`=="41" ~ "5",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="01-41" ~ "1",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="02-42" ~ "2",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="03-43" ~ "3",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="04-44" ~ "4",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="05-45" ~ "5",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="06-46" ~ "6",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="07-47" ~ "7",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="08-48" ~ "8",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="09-49" ~ "9",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="10-50" ~ "10",
                                           TRUE ~ `Scale #`),
-         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`Scale Book #`) & `Scale #`%in%c(1:51) ~ paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
+         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`Scale Book #`) & !is.na(`Scale #`) ~ paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
          # `(R) FIELD SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) FIELD SCALE BOOK NUM`) ~ paste0(`(R) FIELD SCALE BOOK NUM`,"-",`(R) SCALE CELL NUM`),
          #                                                TRUE ~ NA),
          # `(R) RESOVLED SCALE BOOK-CELL CONCAT` = case_when(is.na(`(R) FIELD SCALE BOOK-CELL CONCAT`) ~ `(R) SCALE BOOK-CELL CONCAT`,
          #                                                   !is.na(`(R) FIELD SCALE BOOK-CELL CONCAT`) ~ `(R) FIELD SCALE BOOK-CELL CONCAT`,
          #                                                   TRUE~"FLAG"),
+         RrowID = seq(1:nrow(.)),
+         Sex = case_when(Sex=="Female" ~ "F",
+                         Sex=="Male" ~ "M",
+                         TRUE ~ Sex),
+         `Fishery / River` = case_when(`Fishery / River`=="Moheya River" ~ "Moyeha River",
+                                       TRUE ~ `Fishery / River`)) %>%
+  rename(`(R) OTOLITH BOX NUM`=`Otolith Box #`,
+         `(R) OTOLITH VIAL NUM` = `Otolith Specimen #`,
+         `(R) OTOLITH LAB NUM` = `Otolith Lab Number`,
          `(R) SAMPLE YEAR` = Year,
-         `(R) HEAD LABEL` = `CWT Head Label #`,
-         RrowID = seq(1:nrow(.))) %>%
-  drop_na(Year) %>%    # remove entries without year specified
-  mutate_at(c("(R) SCALE BOOK NUM", "(R) HEAD LABEL"), as.character) %>%
+         `(R) HEAD LABEL` = `CWT Head Label #`) %>%
+  drop_na(`(R) SAMPLE YEAR`) %>%    # remove entries without year specified
+  mutate_at(c("(R) SCALE BOOK NUM", "(R) HEAD LABEL", "(R) SAMPLE YEAR"), as.character) %>%
   print()
 
 
@@ -98,13 +116,16 @@ wcviCNesc2022 <- cbind(
 #                                                                           II. AGE DATA LOAD 
 
 
-# Load source script function (saves as 'allPADS') ----------------
+# ======================== MRP AGE DATA ========================  
+
+# Load source script function (saves as 'mrpPADS') --------------------------- **slow** 
 source(here("scripts","functions","getAgeDataMRP.R"))
 
 
-# Clean PADS data ----------------
-wcviCNPADS2022 <- allPADS %>% 
-  filter(RecoveryYear %in% analysis_year, Area%in%c(20:27, 121:127), Species=="Chinook") %>% 
+# Clean MRP PADS data ---------------------------
+wcviCNmrpPADS <- mrpPADS %>% 
+  filter(RecoveryYear %in% analysis_year,     # << this may change next year once MRP PADS has more ages; right now no ages prior to 2022 loaded (only archived)
+         Area%in%c(20:27, 121:127), Species=="Chinook") %>% 
   filter(!grepl("Georgia Str|Sooke", ProjectName)) %>%
   setNames(paste0('PADS_', names(.))) %>% 
   mutate(`(R) SCALE BOOK NUM` = case_when(is.na(PADS_FieldContainerId) ~ PADS_ContainerId,
@@ -112,19 +133,80 @@ wcviCNPADS2022 <- allPADS %>%
                                           TRUE ~ "FLAG"),
          `(R) SCALE CELL NUM` = PADS_FishNumber,
          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ 
-                                                    paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`))) %>%
-  mutate_at("(R) SCALE CELL NUM", as.character) %>%
+                                                    paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
+         PADS_GearMrpName = case_when(!is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.x,
+                                 is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.y),
+         `(R) scale data source` = "MRP") %>%
+  rename(`(R) SAMPLE YEAR` = PADS_RecoveryYear) %>%
+  select(PADS_Species, `(R) SAMPLE YEAR`, PADS_LifeHistory, PADS_Area, PADS_ContainerId:PADS_CntEndDate, PADS_ProjectName, PADS_Location, PADS_ContainerNotes, PADS_EuAge, 
+         PADS_GrAge, PADS_ScaleCondition, `(R) SCALE BOOK NUM`:PADS_GearMrpName, `(R) scale data source`) %>% 
+  mutate_at(c("(R) SCALE CELL NUM","(R) SAMPLE YEAR"), as.character) %>%
   print()
 
 
-# Export to git and SP as a backup for future use ---------------------------
-# To git:
-writexl::write_xlsx(wcviCNPADS2022, here("outputs", "R_OUT - PADS WCVI Chinook 2022.xlsx"))
+
+# ======================== NUSEDS AGE DATA ========================  
+
+# Load source script function (saves as 'getNuSEDS') ---------------------------
+source(here("scripts","functions","getNusedsData.R"))
 
 
-# To SP: 
-writexl::write_xlsx(wcviCNPADS2022, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/", 
-                                                "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - PADS WCVI Chinook 2022.xlsx"))
+# Pull data ----------------     * SLOW *
+nuPads <- getNuSEDS(here("scripts","json", "nuseds_ages_CN_2012-2021.json"), password=NULL)  
+
+
+
+# Clean NuSEDs PADS data ---------------------------
+wcviCNnuPADS <- nuPads %>% 
+  select(`Fiscal Year`, Project, Location, Species, `Sample Source`, `Gear Code`, `Container Label`, `Container Address`, `Sample Number`, `Sample Start Date`, 
+         `Sample End Date`, `Part Age Code`, `GR Age`, `EU Age`) %>% 
+  setNames(paste0('PADS_', names(.))) %>% 
+  rename(`(R) SAMPLE YEAR` = `PADS_Fiscal Year`,
+         `(R) SCALE BOOK NUM` = `PADS_Container Label`,
+         `(R) SCALE CELL NUM` = `PADS_Container Address`,
+         PADS_ProjectName = PADS_Project,
+         PADS_Location = PADS_Location,
+         PADS_Species = PADS_Species,
+         PADS_GearMrpName = `PADS_Gear Code`,
+         PADS_CntStartDate = `PADS_Sample Start Date`,
+         PADS_CntEndDate = `PADS_Sample End Date`,
+         PADS_ScaleCondition = `PADS_Part Age Code`,
+         PADS_GrAge = `PADS_GR Age`,
+         PADS_EuAge = `PADS_EU Age`) %>%
+  mutate(`(R) scale data source` = "NuSEDs",
+         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",
+                                                                                                                       `(R) SCALE CELL NUM`)),
+         PADS_CntStartDate = lubridate::ymd(PADS_CntStartDate),
+         PADS_CntEndDate = lubridate::ymd(PADS_CntEndDate)) %>% 
+  filter(`PADS_Sample Source` %in% c("ESCAPEMENT", "ESCAPEMENT - SURPLUS SPAWNING", "FIRST NATIONS SAMPLE", "NATIVE FOOD FISHERY", "MIXED", "UNKNOWN CATCH", 
+                                     "HATCHERY"),
+         !grepl("(FRASER)|(ATNARKO)|(BABINE)|(BC INTERIOR)|(BELLA COOLA)|(BIG BAR)|(CHEHALIS)|(CHILKO)|(CHILLIWACK)|(DEAN)|(DOCEE)|(HARRISON)|(KILBELLA)|
+                (KTIMAT)|(KITSUMKALUM)|(KITWANGA)|(KLUKSHU)|(CHILCOTIN)|(SHUSWAP)|(MEZIADIN)|(NECHAKO)|(NICOLA)|(SNOOTLI)|(SPIUS)|(TATSAMENIE)|(TENDERFOOT)|
+                (THOMPSON)|(NASS)|(SKEENA)|(STIKINE)|(WANNOCK)|(WHITEHORSE)|(YUKON)", PADS_ProjectName)) %>%
+  print()
+
+
+# ======================== COMBINE MRP+NuSEDS AGE DATA ========================  
+intersect(colnames(wcviCNmrpPADS), colnames(wcviCNnuPADS))
+
+wcviCNallPADS <- full_join(wcviCNmrpPADS, wcviCNnuPADS)
+
+
+
+
+# ======================== EXPORT ========================  
+
+# To git ---------------------------
+#writexl::write_xlsx(wcviCNmrpPADS, here("outputs", "R_OUT - PADS WCVI Chinook 2022.xlsx"))
+
+
+# To SP  --------------------------- 
+writexl::write_xlsx(wcviCNallPADS, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/", 
+                                            "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - PADS WCVI Chinook ",
+                                            min(wcviCNallPADS$`(R) SAMPLE YEAR`),
+                                            "-",
+                                            max(wcviCNallPADS$`(R) SAMPLE YEAR`),
+                                            ".xlsx"))
 
 
 
@@ -134,11 +216,13 @@ writexl::write_xlsx(wcviCNPADS2022, path=paste0("C:/Users", sep="/", Sys.info()[
 
 
 # ======================== JOIN ESCAPEMENT BIODATA to PADS, calc BY ========================  
-intersect(colnames(wcviCNesc2022), colnames(wcviCNPADS2022))
+intersect(colnames(wcviCNescBiodat), colnames(wcviCNallPADS))
 
-esc_biodata_PADS <- left_join(wcviCNesc2022,
-                              wcviCNPADS2022 %>% 
-                                filter(PADS_ProjectName != "WCVI Creel Survey" & !grepl("Fisher", PADS_ProjectName))) %>%
+# IF you get a many-to-many error, you have duplicate scalebooks that were handed out to different regions. 
+# Will need to further filter down the wcviCNallPADS file
+esc_biodata_PADS <- left_join(wcviCNescBiodat,
+                              wcviCNallPADS,
+                              na_matches="never") %>%
   mutate(`(R) RESOLVED TOTAL AGE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
                                               `PADS_GrAge`=="1M" ~ 2,
                                               `PADS_GrAge`=="2M" ~ 3,
@@ -146,8 +230,10 @@ esc_biodata_PADS <- left_join(wcviCNesc2022,
                                               `PADS_GrAge`=="4M" ~ 5,
                                               `PADS_GrAge`=="5M" ~ 6,
                                               `PADS_GrAge`=="6M" ~ 7),
-         `(R) BROOD YEAR` = analysis_year-`(R) RESOLVED TOTAL AGE`) %>% 
+         `(R) BROOD YEAR` = as.numeric(`(R) SAMPLE YEAR`)-`(R) RESOLVED TOTAL AGE`) %>% 
+  arrange(`(R) SAMPLE YEAR`) %>%
   print()
+
 
 
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
@@ -155,7 +241,7 @@ esc_scaleIDs <- esc_biodata_PADS %>%
   filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
-antijoin_PADS <- wcviCNPADS2022 %>% 
+antijoin_PADS <- wcviCNallPADS %>% 
   filter(`(R) SCALE BOOK-CELL CONCAT` %notin% esc_scaleIDs & PADS_ProjectName!="WCVI Creel Survey") %>% 
   print()
 
@@ -165,18 +251,21 @@ antijoin_PADS <- wcviCNPADS2022 %>%
 
 #                                                                           IV. OTOLITH DATA LOAD 
 
-wcviCNOtos2022 <- readxl::read_excel(path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
-                                                 "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/OtoManager_RecoverySpecimens_Area20-27_121-127_CN_2022_28Aug2023.xlsx"),
-                                     sheet="RcvySpecAge", skip=1, guess_max=20000) %>%
-  setNames(paste0('OM_', names(.))) %>% 
-  mutate(`(R) OTOLITH BOX NUM` = `OM_BOX CODE`,
-         `(R) OTOLITH VIAL NUM` = `OM_CELL NUMBER`,
-         `(R) OTOLITH LAB NUM` = `OM_LAB NUMBER`,
-         `(R) OTOLITH LBV CONCAT` = case_when(!is.na(`OM_LAB NUMBER`) & !is.na(`OM_BOX CODE`) & !is.na(`OM_CELL NUMBER`) ~ 
-                                                paste0(`OM_LAB NUMBER`,sep="-",`OM_BOX CODE`,sep="-",`OM_CELL NUMBER`))) %>%
-  mutate_at("(R) OTOLITH VIAL NUM", as.character) %>%
-  rename(`(R) HATCHCODE` = `OM_HATCH CODE`) %>%
-  print()
+# <<< Manual download latest year Recovery Specimens file: http://devios-intra.dfo-mpo.gc.ca/Otolith/Reports/recoveryspecimen.aspx
+# Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/Import
+# FOLLOW NAMING CONVENTION
+
+# Run helper script to compile/load Otolith data (saves as 'wcviOtos') ---------------------------
+source(here("scripts","misc-helpers","OtoCompile.R")) 
+  
+
+
+# Extract lab numbers for QC ---------------------------
+write.csv(wcviOtos %>% 
+            filter(grepl("scapement", OM_SOURCE)) %>%
+            group_by(`(R) SAMPLE YEAR`, OM_SPECIES, `OM_CATCH SITES`, `(R) OTOLITH LAB NUM`) %>%
+            summarize(n()),
+          "C:/Users/DAVIDSONKA/Desktop/oto lab nums.csv", row.names=F)
 
 
 
@@ -186,11 +275,19 @@ wcviCNOtos2022 <- readxl::read_excel(path=paste0("C:/Users", sep="/", Sys.info()
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS to OTOMGR ========================  
-intersect(colnames(esc_biodata_PADS), colnames(wcviCNOtos2022))
+intersect(colnames(esc_biodata_PADS), colnames(wcviOtos))
 
 
 esc_biodata_PADS_oto <- left_join(esc_biodata_PADS,
-                                  wcviCNOtos2022)
+                                  wcviOtos %>%
+                                    filter(OM_SPECIES=="Chinook") %>% 
+                                    mutate_at("(R) SAMPLE YEAR", as.character),
+                                  #by=c("(R) OTOLITH BOX NUM", "(R) OTOLITH VIAL NUM", "(R) SAMPLE YEAR", "(R) OTOLITH LBV CONCAT"),
+                                  na_matches="never") %>% 
+  mutate(`(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR`, " - ", `(R) HATCHCODE`),
+                                TRUE ~ NA)) %>% 
+  print()
+
 
 
 # ANTI JOINS: Oto samples that didn't make it in to the escapement biodata basefile ---------------------------
@@ -198,7 +295,7 @@ esc_otoIDs <- esc_biodata_PADS_oto %>%
   filter(!is.na(`(R) OTOLITH LBV CONCAT`)) %>% 
   pull(`(R) OTOLITH LBV CONCAT`)
 
-antijoin_OM <- wcviCNOtos2022 %>% 
+antijoin_OM <- wcviOtos %>% 
   filter(`(R) OTOLITH LBV CONCAT` %notin% esc_otoIDs & OM_SOURCE != "Sport") %>% 
   print()
 
@@ -207,6 +304,11 @@ antijoin_OM <- wcviCNOtos2022 %>%
 #############################################################################################################################################################
 
 #                                                                           VI. LOAD NPAFC
+
+
+# Load NPAFC CN mark master file ---------------------------
+###  **** Load other species later ? *****
+prob_orders <- factor(c("V LOW", "LOW", "MED", "HIGH"), levels=c("V LOW", "LOW", "MED", "HIGH"), ordered=T)
 
 NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
@@ -218,14 +320,54 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
                                     TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
-                                 TRUE ~ NPAFC_STOCK)) %>%
-  # **ASSUPMTIONS**: 
-  # 1. Alaska and Kamchatka marks should essentially not exist, so remove them to avoid duplicate marks 
-  filter(NPAFC_STATE_PROVINCE %in% c("BRITISH COLUMBIA", "IDAHO", "WASHINGTON", "OREGON"),
+                                 TRUE ~ NPAFC_STOCK),
+         `(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR`, " - ", `(R) HATCHCODE`),
+                                TRUE ~ NA)) %>%
+  # This filter line below initially removed some marks to avoid duplicates, but the work-around below now addresses this more systematically. Below is just
+  #     kept for reference for now
+  #filter(NPAFC_STATE_PROVINCE %in% c("BRITISH COLUMBIA", "IDAHO", "WASHINGTON", "OREGON"),
          # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
-         !grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5") %>%
-  select(`(R) BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`) %>% 
+         #!grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5"
+         #) %>%
+  select(`(R) BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
+  distinct(`(R) BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
+  #group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
+                                     NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
+                                     NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
+                                     NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("GSVI","JNST") ~ "C",
+                                     NPAFC_STATE_PROVINCE=="ALASKA" ~ "D",
+                                     NPAFC_STATE_PROVINCE=="KAMCHATKA" ~ "E")) %>%
+  #mutate(NPAFC_wcvi_prob = reorder(NPAFC_wcvi_prob, prob_orders))  %>% 
+  arrange(`(R) BYHID`, NPAFC_wcvi_prob) %>%
+  mutate(group = case_when(!is.na(`(R) BYHID`) ~ with(., ave(seq_along(`(R) BYHID`), `(R) BYHID`, FUN = seq_along)),
+                           TRUE ~ 1),
+         NPAFC_wcvi_prob = case_when(NPAFC_wcvi_prob=="A" ~ "HIGH",
+                                     NPAFC_wcvi_prob=="B" ~ "MED-HIGH",
+                                     NPAFC_wcvi_prob=="C" ~ "MED",
+                                     NPAFC_wcvi_prob=="D" ~ "LOW",
+                                     NPAFC_wcvi_prob=="E" ~ "V LOW")) %>%
+  group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  pivot_wider(names_from = group,
+              values_from= c(NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, NPAFC_STATE_PROVINCE, NPAFC_REGION, NPAFC_wcvi_prob, NPAFC_NUMBER_RELEASED)) %>%
+  select(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
   print()
+
+
+
+# Cases where multiple stocks within a BY received the same hatchcode ---------------------------
+NPAFC_dupl <- NPAFC %>% 
+  filter(!is.na(NPAFC_FACILITY_2)) %>% 
+  pull(`(R) BYHID`)
+
+
+# Cases where multiple stocks within a BY received the same hatchcode --------------------------- REFERENCE  - DELETE SOON
+# NPAFC_dupl <- NPAFC %>% 
+#   filter(!is.na(`(R) BYHID`)) %>% 
+#   group_by(`(R) BYHID`) %>% 
+#   mutate(dupe = n()>1) %>% 
+#   filter(dupe == TRUE) %>% 
+#   pull(`(R) BYHID`)
 
 
 
@@ -233,56 +375,346 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
 
 #                                                                           VII. JOIN BIODATA+PADS+OTO to NPAFC
 
-# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTOMGR to NPAFC ========================  
-intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFC))
 
-esc_biodata_w_RESULTS <- left_join(esc_biodata_PADS_oto,
-                                   NPAFC) %>% 
-  mutate(`(R) HATCHERY ORIGIN` = case_when(`OM_READ STATUS` == "Not Marked" ~ "Natural",
-                                           `AD Clipped?` == "Y" ~ "Hatchery"),
-         # update resolved stock ID when more stock ID available 
-         `(R) RESOLVED STOCK` = NPAFC_STOCK) %>% 
+# # QC flag: duplicate BY-hatchcodes in our esc biodata ------------------------
+ esc_biodata_PADS_otoDUPS <- esc_biodata_PADS_oto %>% 
+   filter(`(R) BYHID` %in% NPAFC_dupl) %>% 
+   print()
+
+
+# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTOMGR to NPAFC ========================  
+intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFCt))
+
+# Joining to NPAFC - note there are often cases where the same BY received the same hatchcode, so we need a way to join on this. 
+#   solution: join the unique cases separately, then add in cases that could be duplicates - the user will then have to make a manual assessment whether or
+#     not to assume a stock ID, 
+esc_biodata_PADS_otoNPAFC <- 
+  # 1. Remove duplicate BY-Hatchcode combinations and join JSUT unique BY-Hatchcode combinations to the NPAFC master file ---------------------------
+  left_join(
+    esc_biodata_PADS_oto,
+      #filter(`(R) BYHID` %notin% NPAFC_dupl),
+    NPAFC,
+    #relationship = "many-to-one",
+    na_matches="never"
+    ) %>% 
+  # 2. Bring back in the duplicates to the above join, WITHOUT linking them to the NPAFC file (which will cause errors) ---------------------------
+  #    note the corresponding BY-hatchcode combinations will be put in it's own QC tab "!NPAFC_dupl!" for the analyst to quickly refer to. 
+  #full_join(.,
+  #          left_join(
+  #            esc_biodata_PADS_oto %>% 
+  #              filter(`(R) BYHID` %in% NPAFC_dupl),
+  #            NPAFC
+  #          ) %>% 
+              print()
+
+write.xlsx(esc_biodata_PADS_otoNPAFC, "C:/Users/DAVIDSONKA/Desktop/esc biod w npafc test.xlsx")
+
+#############################################################################################################################################################
+
+#                                                                           VIII. LOAD HEAD RECOVERY RECORDS
+
+
+# <<< Manual download latest year CWT Recovery file: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
+# Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
+# FOLLOW NAMING CONVENTION OR ELSE!!!!
+
+
+# ======================== Load head recovery data ========================  
+# Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
+source(here("scripts","misc-helpers","HeadRcvyCompile.R")) 
+
+
+
+#############################################################################################################################################################
+
+#                                                                           X. JOIN BIODATA+PADS+OTO+NPAFC to HEAD RECOVERY RECORDS
+
+# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC to HEADS ========================  
+intersect(colnames(esc_biodata_PADS_otoNPAFC), colnames(mrpHeadRcvy))
+
+esc_biodata_PADS_otoNPAFC_heads <- left_join(esc_biodata_PADS_otoNPAFC,
+                                             mrpHeadRcvy,
+                                             na_matches="never") %>% 
+  mutate(`(R) TAGCODE` = MRP_TagCode) %>%
   print()
 
 
 
 #############################################################################################################################################################
 
-#                                                                           VIII. QC and README
+#                                                                           XI. LOAD CWT TAGCODE IDs
+
+# Load source script function ---------------- **slow** 
+source(here("scripts","functions","getCWTData.R"))
+
+
+# ======================== Extract tagcodes ========================  (slow)
+cn_rel <- getCWTData(query_doc = here("scripts", "json", "CWT_Releases_CN_2012-present.json"), password=NULL) %>% 
+  setNames(paste0('MRP_', names(.))) %>% 
+  select(`MRP_Tagcode`, `MRP_Species Name`, `MRP_Release Agency Code`, `MRP_Project Name`, `MRP_Country Code`, `MRP_Brood Year`, `MRP_Release Year`, 
+         `MRP_Recovery Years`, `MRP_Hatchery Site Name`, `MRP_Hatchery PSC Basin Name`, `MRP_Release Site Name`, `MRP_Release PSC Basin Name`, 
+         `MRP_Stock Site Name`, `MRP_Stock PSC Basin Name`, `MRP_Hatchery Site Prov/State Code`:`MRP_Stock Site Prov/State Code`, `MRP_Total Released`) %>%
+  mutate(`(R) TAGCODE` = MRP_Tagcode,
+         `MRP_Stock Site Name` = case_when(is.na(`MRP_Stock Site Name`) ~ paste0(`MRP_Hatchery Site Name`, sep=" - ", `MRP_Release Site Name`),
+                                           TRUE ~ `MRP_Stock Site Name`)) %>% 
+  print()
+
+
+
+#############################################################################################################################################################
+
+#                                                                           XII. JOIN BIODATA+PADS+OTO+NPAFC+HEADS to CWT TAGCODE ID
+
+# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS to TAGCODE ID ========================  
+intersect(colnames(esc_biodata_PADS_otoNPAFC_heads), colnames(cn_rel))
+
+esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
+                                                 cn_rel,
+                                                 by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
+  print()
+
+
+
+#############################################################################################################################################################
+
+#                                                                           XIII. ASSIGN FINAL STOCK ID
+
+esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
+  mutate(
+    `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
+                             `OM_READ STATUS` == "Marked" ~ "Hatchery",
+                             `OM_READ STATUS` == "Not Marked" ~ "Natural",
+                             TRUE ~ "Unknown"),
+    
+    `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+                                     gsub(" Cr", "", 
+                                          gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+                                          ignore.case=F),
+                                   TRUE ~ NA),
+    
+    `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "Otolith",
+                                        !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
+                                          "Otolith duplicate (assumed stock ID)",
+                                        is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Otolith (to facility / assumed stock based on facility)",
+                                        TRUE~NA),
+    
+    `(R) OTOLITH STOCK ID` = case_when(
+      # no CWT, single otolith stock choice
+      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
+        gsub(" R", "", 
+             gsub("River", "R",
+                  gsub(" Cr ", "",  
+                       gsub("S-", "",
+                            stringr::str_to_title(
+                              stringr::str_sub('COLUMBIA RIVER TULE',1,100)), 
+                            ignore.case = F), 
+                       ignore.case = F), 
+                  ignore.case=F),   
+             ignore.case=F),
+      
+      
+      
+      
+      # No CWT, multiple high probability otolith matches, flag for manual ID: 
+      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
+        "!! manual decision needed, refer to release sizes!!",
+      
+      # No CWT, multiple high probability otolith matches, flag for manual ID: 
+      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
+        "!! manual decision needed, refer to release sizes!!",
+      
+      # No CWT, multiple otolith matches but Stock1 is high probability and the rest are not, choose Otolith stock 1: 
+      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # No CWT, multiple otolith matches but Stock1 is med-high probability and the rest are not, choose Otolith stock 1: 
+      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # No CWT, low prob otoliths choose stock1
+      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 6. No CWT, no oto stock ID, OM_FACILITY==nitinat and catch site is Sooke ~ Sooke 
+      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("NITINAT", OM_FACILITY) & grepl("SOOKE", `OM_CATCH SITES`) ~ 
+        gsub(" River", "",
+             stringr::str_sub(`Fishery / River`,1,100),#), 
+             ignore.case=F),
+      
+      # 6. No CWT, no oto stock ID, OM_FACILITY==san juan  ~ san juan 
+      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("SAN JUAN", OM_FACILITY) ~ 
+        gsub(" River", "",
+             stringr::str_sub(`Fishery / River`,1,100),#), 
+             ignore.case=F),
+      
+      TRUE ~ NA)) %>% 
+  mutate(
+    `(R) OTOLITH FACILITY ID` = case_when(
+      
+      # 6. No CWT, no oto stock ID, OM_FACILITY==nitinat and catch site is not Sooke ~ unk nitinat  
+      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("NITINAT", OM_FACILITY) & !grepl("SOOKE", `OM_CATCH SITES`) ~ 
+        gsub(" River H", "",
+             gsub(" River", "",
+                  gsub("H", "",
+                       stringr::str_to_title(
+                         stringr::str_sub(OM_FACILITY,3,100)), 
+                       ignore.case = F), 
+                  ignore.case = F), 
+             ignore.case = F), 
+      
+      
+      
+      # 6. No CWT, no oto stock ID, OM_FACILITY==marble ~ marble
+      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("MARBLE|SPIUS|CONUMA|ROBERTSON", OM_FACILITY) ~ 
+        gsub(" H", "",
+             gsub(" R", "",
+                  gsub(" River H", "",
+                       
+                       gsub(" Cr", "",
+                            gsub("Creek", "",
+                                 stringr::str_to_title(
+                                   stringr::str_sub(OM_FACILITY,3,100)), 
+                                 ignore.case=F),
+                            ignore.case=F),
+                       ignore.case=F),
+                  ignore.case=F),
+             ignore.case=F),
+    )) %>%
+  mutate(
+    `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
+                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ `(R) OTOLITH ID METHOD`,
+                                               TRUE ~ NA),
+    
+    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
+                                        is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
+                                        is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,
+                                        `(R) ORIGIN`=="Natural" & (grepl("Escapement",`Sample Type`) | `Sample Type`%in%c("Escapement","Broodstock", "FSC")) ~  gsub(" River", "",
+                                                                                                                                                                     gsub(" Creek", "",
+                                                                                                                                                                          stringr::str_to_title(
+                                                                                                                                                                            stringr::str_sub(`Fishery / River`,1,100)), 
+                                                                                                                                                                          ignore.case=F),
+                                                                                                                                                                     ignore.case=F),
+                                        TRUE ~ "Unknown"),
+    
+    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`)
+  ) %>% 
+  relocate(`(R) OTOLITH ID METHOD`, .after=`(R) OTOLITH FACILITY ID`) %>% 
+  print()
+
+
+write.xlsx(esc_biodata_w_RESULTS, "C:/Users/DAVIDSONKA/Desktop/esc bio wR test.xlsx")
+
+
+
+
+  
+  
+
+#############################################################################################################################################################
+
+#                                                                           VIII. QC REPORT and README
 
 
 # QC flags ---------------------------
-qc1_noOtoID <- esc_biodata_w_RESULTS %>%
-  filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK)) %>%
+# NPAFC duplicates - key for assigning final stock IDs for orphan otolith samples with duplicate BY-hatchcodes (already defined above)
+NPAFC_dupl.df <- NPAFC %>% 
+  filter(!is.na(NPAFC_STOCK_2)) %>%
+  # filter(!is.na(`(R) BYHID`)) %>% 
+  # group_by(`(R) BYHID`) %>% 
+  # mutate(dupe = n()>1) %>% 
+  # filter(dupe == TRUE) %>% 
+  # arrange(desc(`(R) BROOD YEAR`)) %>%
   print()
 
+# Entries in the escapement biodata that have >1 NPAFC stock ID option due to duplicated BY-hatchcode applications or only assumed via facility
+qc0_EBwR_uncertOtoID <- esc_biodata_w_RESULTS %>% 
+  filter(grepl("assumed", `(R) OTOLITH ID METHOD`)) %>% 
+  print()
+
+# Otolith hatch code and BY available but no NPAFC stock ID (Oto read errors)
+qc1_noOtoID <- esc_biodata_w_RESULTS %>%
+  filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
+  print()
+
+# Otolith sample available but no result (Oto processing error)
 qc2_noOtoResults <- esc_biodata_w_RESULTS %>%
   filter(!is.na(`(R) OTOLITH LBV CONCAT`) & !is.na(`(R) BROOD YEAR`) & is.na(`(R) HATCHCODE`) & `OM_READ STATUS`!="Not Marked") %>%
   print()
 
-# PLACEHOLDER: NO CWT DATA YET
- qc3_noCWTID <- data.frame(val="Empty")   #esc_biodata_w_RESULTS %>%
-   #filter(!is.na(`(R) TAGCODE`) & `(R) TAGCODE`!="No Tag" & is.na(`MRP_Stock Site Name`)) %>% 
-   filter()
+# E-Label collected but missing CWT ID results (CWT processing error)
+ qc3_noCWTID <- esc_biodata_w_RESULTS %>%
+   filter(!is.na(`(R) HEAD LABEL`) & is.na(`MRP_TagCode`)) %>% 
+   print()
 
+# CWT or Otolith stock ID available but not populated in final Stock ID column (R code error)
 qc4_noRslvdID <- esc_biodata_w_RESULTS %>% 
-  filter(is.na(`(R) RESOLVED STOCK`) & !is.na(NPAFC_STOCK)) %>% 
+  filter(`(R) RESOLVED STOCK ID`=="Unknown" & (!is.na(NPAFC_STOCK_1) | !is.na(`MRP_Stock Site Name`))) %>% 
+  print()
+
+# CWT and Otolith stock IDs contradict (stock ID error)
+qc5_unRslvdID <- esc_biodata_w_RESULTS %>% 
+  filter(`(R) CWT STOCK ID`!=`(R) OTOLITH STOCK ID` | `(R) CWT STOCK ID`!=`(R) OTOLITH FACILITY ID`) %>%
+  # select(NPAFC_STOCK, `MRP_Stock Site Name`, `(R) ORIGIN`:`(R) RESOLVED STOCK-ORIGIN`) %>% 
+  # filter(!is.na(NPAFC_STOCK) | !is.na(`MRP_Stock Site Name`)) %>%
+  # filter(
+  #   (gsub(" Cr", "", 
+  #         gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+  #         ignore.case=F))
+  #   !=
+  #     (gsub(" R", "",
+  #           gsub(" Cr", "",  
+  #                stringr::str_to_title(
+  #                  stringr::str_sub(NPAFC_STOCK,3,100)), 
+  #                ignore.case = F), 
+  #           ignore.case=F))) %>% 
   print()
 
 
 # QC Summary ---------------------------
-qc_summary <- data.frame(qc_flagName = c("qc1_noID",
+qc_summary <- data.frame(qc_flagName = c("qc0 - EBwR unCert Oto",
+                                         "qc1_noID",
                                          "qc2_noResults",
                                          "qc3_noCWTID",
-                                         "qc4_noRslvdID"),
-                         number_records = c(nrow(qc1_noOtoID),
+                                         "qc4_noRslvdID",
+                                         "qc5_unRslvdID",
+                                         "antijoin - PADS",
+                                         "antijoin - Otos"),
+                         number_records = c(nrow(qc0_EBwR_uncertOtoID),
+                                            nrow(qc1_noOtoID),
                                             nrow(qc2_noOtoResults),
                                             nrow(qc3_noCWTID),
-                                            nrow(qc4_noRslvdID)),
-                         description = c("Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
+                                            nrow(qc4_noRslvdID),
+                                            nrow(qc5_unRslvdID),
+                                            nrow(antijoin_PADS),
+                                            nrow(antijoin_OM)),
+                         description = c("Esc biodata entries where there was no CWT and duplicate otolith hatch codes were applied within one Brood Year resulting in >1 stock ID options, OR where unable to resolve to Stock level and are left making assumptions based on Facility. These records are still retained in the full biodata file as well, and assumptions are made based on likelihood or facility. These are indicated in the (R) OTOLITH ID METHOD column.",
+                                         "Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
                                          "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
                                          "There is a CWT available but no Stock ID.",
-                                         "There is a CWT or an NPAFC ID but no Resolved stock ID.")) %>% 
+                                         "There is a CWT or an NPAFC ID but no Resolved stock ID.",
+                                         "Otolith stock ID does not match CWT stock ID.",
+                                         "All WCVI CN PADS results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'WCVI Creel Survey' assumed already in CREST. Purpose here is to make sure there are no missing scales expected (i.e., samples not entered in base esc biodata file).",
+                                         "All WCVI otolith results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'Sport' assumed already in CREST. Purpose here is to make sure there are no missing otoliths expected (i.e., samples not entered in base esc biodata file).")) %>% 
   print()
 
 
@@ -294,16 +726,17 @@ readme <- data.frame(`1` = c("date rendered:",
                              "source Oto Manager file:",
                              "source NPAFC file:",
                              "!PLACEHOLDER! CWT source:",
-                             "assumptions made:", 
-                             "",
                              "",
                              "sheet name:",
                              "Esc biodata w RESULTS",
                              "QC summary",
+                             "qc0 - EBwR unCert Oto",
+                             "!NPAFC_dupl!",
                              "qc1 - No stock ID",
                              "qc2 - No Oto result",
                              "qc3 - No CWT ID",
                              "qc4 - No Reslvd ID",
+                             "qc5 - Unreslvd ID",
                              "antijoin - PADS unmatched",
                              "antijoin - OM unmatched"
 ),
@@ -314,18 +747,19 @@ readme <- data.frame(`1` = c("date rendered:",
         "For 2022, query from OtoManager online stored in: https://086gc.sharepoint.com/:x:/r/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/WCVI%20STAD/Terminal%20CN%20Run%20Recon/2022/Communal%20data/BiodataResults/OtoManager_RecoverySpecimens_Area20-27_121-127_CN_2022_28Aug2023.xlsx?d=w398c15dd3c9b4ceb84d3083a215e9c6a&csf=1&web=1&e=NAxyjd",
         "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
         "!NOT IN YET!: http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
-        "Removed AK and Kamchatka marks from NPAFC file to avoid duplicates, assuming strays are only BC/SUS",
-        "Ignored one case where RCH and Nanaimo hatchery applied the H5 same mark in 2018; assume it was a RCH mark that showed up in 2022 Burman broodstock",
         "",
         "sheet description:",
-        "2022 WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, and the NPAFC mark file to give otolith stock ID. Currently does NOT include CWT Head Tag or DNA results.",
+        "2022 WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, NPAFC mark file to give otolith stock ID, and CWT recoveries. Currently does NOT include DNA results.",
         "Summary of QC flags and # of entries belonging to that flag.",
+        "QC flag 0 tab. Only the Esc biodata w RESULTS ('EBwR') entries that correspond to NPAFC BY-hatchcode duplicates. See QC summary for details.",
+        "All duplicate BY-hatchcodes documented by the NPAFC. To inform decisions around QC Flag 0.",
         "QC flag 1 tab. See QC summary for details.",
         "QC flag 2 tab. See QC summary for details.",
         "QC flag 3 tab. See QC summary for details.",
         "QC flag 4 tab. See QC summary for details.",
-        "All WCVI CN 2022 PADS results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., FOS. ASSUMPTION: Removed 'WCVI Creel Survey' assumed already in CREST.",
-        "All WCVI CN 2022 otolith results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., FOS. ASSUMPTION: Removed 'Sport' assumed already in CREST."))
+        "QC flag 5 tab. See QC summary for details.",
+        "PADS Antijoin tab. See QC summary for details.",
+        "OtoManager Antijoin tab. See QC summary for details."))
 
 
 
@@ -341,10 +775,13 @@ R_OUT_ESC.RES <- openxlsx::createWorkbook()
 openxlsx::addWorksheet(R_OUT_ESC.RES, "readme")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodata w RESULTS")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "QC summary")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "qc0 - EBwR unCert Oto")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "!NPAFC_dupl!")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "qc1 - No Oto stock ID")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "qc2 - No Oto result")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "qc3 - No CWT ID")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "qc4 - No Reslvd ID")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "qc5 - Unreslvd ID")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - PADS unmatched")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - OM unmatched")
 
@@ -352,29 +789,35 @@ openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - OM unmatched")
 openxlsx::writeData(R_OUT_ESC.RES, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodata w RESULTS", x=esc_biodata_w_RESULTS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
+openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc0_EBwR_uncertOtoID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet="!NPAFC_dupl!", x=NPAFC_dupl.df)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc1 - No Oto stock ID", x=qc1_noOtoID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc3 - No CWT ID", x=qc3_noCWTID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc4 - No Reslvd ID", x=qc4_noRslvdID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc5 - Unreslvd ID", x=qc5_unRslvdID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - PADS unmatched", x=antijoin_PADS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - OM unmatched", x=antijoin_OM)
 
 # Export to git and SP ---------------------------
 # To git:
-openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0(here("outputs"), 
-                                   sep="/", 
-                                   "R_OUT - Escapement biodata WITH RESULTS.xlsx"),
-                       overwrite=T,
-                       returnValue=T)
+# openxlsx::saveWorkbook(R_OUT_ESC.RES, 
+#                        file=paste0(here("outputs"), 
+#                                    sep="/", 
+#                                    "R_OUT - Escapement biodata WITH RESULTS.xlsx"),
+#                        overwrite=T,
+#                        returnValue=T)
 
 
 # To SP: 
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
                        file=paste0("C:/Users", sep="/", 
                                    Sys.info()[6], 
-                                   sep="/",
-                                   "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - Escapement biodata WITH RESULTS.xlsx"),
+                                   "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_",
+                                   min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "-",
+                                   max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "_WithResults.xlsx"),
                        overwrite=T,
                        returnValue=T)
 
@@ -395,9 +838,3 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 
 
 
-
-
-
-
-# NON JOIN SCALES
-# NON JOIN OTOS

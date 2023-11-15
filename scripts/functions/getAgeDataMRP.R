@@ -84,9 +84,10 @@ PADS_batch_ids <- httr::GET('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2
   httr::content(x = .,  'text') %>%
   jsonlite::fromJSON() %>%
   # Filter batch list to keep only South Coast samples:
-  filter(Sector == "SC"#,
-         # --- If query is too slow, you can add a filter for year(s) here: ---
-         #SampleYear == analysis_year
+  filter(Sector == "SC",
+         # --- If query is too slow, you can add a filter for year(s) here: --- (NOT RUN)
+         SampleYear%in%c(2012:analysis_year),
+         Structure=="Scales"
          ) %>%
   pull(Id)           # Extract column of age batch Ids from resulting dataframe
 
@@ -95,7 +96,7 @@ PADS_batch_ids <- httr::GET('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2
 # Extract batch metadata, container metadata, and age data for scales in PADS_batch_ids; Join into 1 dataframe ---------------------------
 #   intermediate table names are ignored for now, but can be run to help with diagnosing code issues if needed
 
-allPADS <- 
+mrpPADS <- 
   full_join(
     # Batch metadata ---
     # PADS_batch_meta <- 
@@ -128,13 +129,13 @@ allPADS <-
 nrow(PADS_batch_ids %>%
        purrr::map_dfr(get_age_data) %>%
        rename(BatchId = Id))
-nrow(allPADS)
+nrow(mrpPADS)
 # There will likely be a difference in the number of data rows in the Join vs. the number that have been aged - this is likely because the lab hasn't completed all aging yet. 
 
 
 # Do the math to confirm that the unaged samples account for the difference (roughly); should result in TRUE: 
 # (total # samples in PADS join) - (# unaged samples in the PADS join) == (total # samples available) 
-nrow(allPADS) - allPADS%>%filter(is.na(GrAge)&is.na(ScaleCondition))%>%summarize(n=n())%>%pull(n) == nrow(PADS_batch_ids %>%
+nrow(mrpPADS) - mrpPADS%>%filter(is.na(GrAge)&is.na(ScaleCondition))%>%summarize(n=n())%>%pull(n) == nrow(PADS_batch_ids %>%
                                                                                                             purrr::map_dfr(get_age_data) %>%
                                                                                                             rename(BatchId = Id))
 

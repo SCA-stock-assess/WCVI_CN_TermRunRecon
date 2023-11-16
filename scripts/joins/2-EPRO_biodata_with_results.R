@@ -41,33 +41,13 @@ analysis_year <- 2022
 # Load files from Sharepoint -------------
 
 # Save directory name for where files are located (change if necessary)
-epro_dir <- paste(
-  "C:/Users", 
-  Sys.info()[6],
-  "OneDrive - DFO-MPO/WCVI STAD/Terminal CN Run Recon/2022/Communal data/EPRO",
-  sep="/"
-)
+epro_dir <- paste("C:/Users", Sys.info()[6], "OneDrive - DFO-MPO/WCVI STAD/Terminal CN Run Recon/2022/Communal data/EPRO", sep="/")
 
 # Load files as a list of tibbles
-epro.files <- list.files(
-  epro_dir, 
-  pattern = "All_Adult_Biosampling_", 
-  full.names = T
-) |> 
+epro.files <- list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = T) |> 
   purrr::set_names(
-    list.files(
-      epro_dir, 
-      pattern = "All_Adult_Biosampling_", 
-      full.names = F
-    )
-  ) |> 
-  map(
-    ~readxl::read_excel(
-      path = .x, 
-      trim_ws=T
-    ),
-    id = "path"
-  )
+    list.files(epro_dir,pattern = "All_Adult_Biosampling_",full.names = F)) |> 
+  map(~readxl::read_excel(path = .x, trim_ws=T), id = "path" )
 # Should be a Large List of at least 7 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita
 
 
@@ -75,10 +55,7 @@ epro.files <- list.files(
 
 # Convert the Large List into a useable R dataframe ---------------------------
 wcviCNepro2022 <- epro.files %>%
-  map(
-    ~ mutate(
-      .x, 
-      across(everything(), as.character) # Convert all columns to character for rbind compatibility
+  map(~ mutate(.x, across(everything(), as.character) # Convert all columns to character for rbind compatibility
     )
   ) %>% 
   list_rbind(names_to = "file_source") %>% 
@@ -97,20 +74,17 @@ wcviCNepro2022 <- epro.files %>%
     ),
     `(R) TAGCODE` = `CWT Tag Code`,
     `(R) HATCHCODE` = `Hatch Code`,
-    `(R) RESOLVED TOTAL AGE` = case_when(
-      !is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
-      !is.na(`Total Age (yrs)`) ~ as.numeric(`Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
-      `Scale Part Age`=="1M" ~ 2,
-      `Scale Part Age`=="2M" ~ 3,
-      `Scale Part Age`=="3M" ~ 4,
-      `Scale Part Age`=="4M" ~ 5,
-      `Scale Part Age`=="5M" ~ 6,
-      `Scale Part Age`=="6M" ~ 7,
-      T ~ NA_real_
-    ),
+    `(R) RESOLVED TOTAL AGE` = case_when(!is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
+                                         !is.na(`Total Age (yrs)`) ~ as.numeric(`Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
+                                         `Scale Part Age`=="1M" ~ 2,
+                                         `Scale Part Age`=="2M" ~ 3,
+                                         `Scale Part Age`=="3M" ~ 4,
+                                         `Scale Part Age`=="4M" ~ 5,
+                                         `Scale Part Age`=="5M" ~ 6,
+                                         `Scale Part Age`=="6M" ~ 7,
+                                         T ~ NA_real_),
     `(R) BROOD YEAR` = analysis_year - `(R) RESOLVED TOTAL AGE`,
-    UEID = paste0("2022", "-", seq(1:nrow(.)))
-  ) 
+    UEID = paste0("2022", "-", seq(1:nrow(.)))) 
 
 # Remove the list object
 rm(epro.files)

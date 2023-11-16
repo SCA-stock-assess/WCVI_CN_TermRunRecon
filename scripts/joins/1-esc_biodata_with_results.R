@@ -116,51 +116,52 @@ wcviCNescBiodat <- #cbind(
 #                                                                           II. AGE DATA LOAD 
 
 
-# ======================== MRP AGE DATA ========================  
 
-# Load source script function (saves as 'mrpPADS') --------------------------- **slow** 
+# ======================== MRP AGE DATA ========================
+
+# Load source script function (saves as 'mrpPADS') --------------------------- **slow**
 source(here("scripts","functions","getAgeDataMRP.R"))
 
 
 # Clean MRP PADS data ---------------------------
-wcviCNmrpPADS <- mrpPADS %>% 
+wcviCNmrpPADS <- mrpPADS %>%
   filter(RecoveryYear %in% analysis_year,     # << this may change next year once MRP PADS has more ages; right now no ages prior to 2022 loaded (only archived)
-         Area%in%c(20:27, 121:127), Species=="Chinook") %>% 
+         Area%in%c(20:27, 121:127), Species=="Chinook") %>%
   filter(!grepl("Georgia Str|Sooke", ProjectName)) %>%
-  setNames(paste0('PADS_', names(.))) %>% 
+  setNames(paste0('PADS_', names(.))) %>%
   mutate(`(R) SCALE BOOK NUM` = case_when(is.na(PADS_FieldContainerId) ~ PADS_ContainerId,
                                           !is.na(PADS_FieldContainerId) ~ PADS_FieldContainerId,
                                           TRUE ~ "FLAG"),
          `(R) SCALE CELL NUM` = PADS_FishNumber,
-         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ 
+         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~
                                                     paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
          PADS_GearMrpName = case_when(!is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.x,
                                  is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.y),
          `(R) scale data source` = "MRP") %>%
   rename(`(R) SAMPLE YEAR` = PADS_RecoveryYear) %>%
-  select(PADS_Species, `(R) SAMPLE YEAR`, PADS_LifeHistory, PADS_Area, PADS_ContainerId:PADS_CntEndDate, PADS_ProjectName, PADS_Location, PADS_ContainerNotes, PADS_EuAge, 
-         PADS_GrAge, PADS_ScaleCondition, `(R) SCALE BOOK NUM`:PADS_GearMrpName, `(R) scale data source`) %>% 
+  select(PADS_Species, `(R) SAMPLE YEAR`, PADS_LifeHistory, PADS_Area, PADS_ContainerId:PADS_CntEndDate, PADS_ProjectName, PADS_Location, PADS_ContainerNotes, PADS_EuAge,
+         PADS_GrAge, PADS_ScaleCondition, `(R) SCALE BOOK NUM`:PADS_GearMrpName, `(R) scale data source`) %>%
   mutate_at(c("(R) SCALE CELL NUM","(R) SAMPLE YEAR"), as.character) %>%
   print()
 
 
 
-# ======================== NUSEDS AGE DATA ========================  
+# ======================== NUSEDS AGE DATA ========================
 
 # Load source script function (saves as 'getNuSEDS') ---------------------------
 source(here("scripts","functions","getNusedsData.R"))
 
 
 # Pull data ----------------     * SLOW *
-nuPads <- getNuSEDS(here("scripts","json", "nuseds_ages_CN_2012-2021.json"), password=NULL)  
+nuPads <- getNuSEDS(here("scripts","json", "nuseds_ages_CN_2012-2021.json"), password=NULL)
 
 
 
 # Clean NuSEDs PADS data ---------------------------
-wcviCNnuPADS <- nuPads %>% 
-  select(`Fiscal Year`, Project, Location, Species, `Sample Source`, `Gear Code`, `Container Label`, `Container Address`, `Sample Number`, `Sample Start Date`, 
-         `Sample End Date`, `Part Age Code`, `GR Age`, `EU Age`) %>% 
-  setNames(paste0('PADS_', names(.))) %>% 
+wcviCNnuPADS <- nuPads %>%
+  select(`Fiscal Year`, Project, Location, Species, `Sample Source`, `Gear Code`, `Container Label`, `Container Address`, `Sample Number`, `Sample Start Date`,
+         `Sample End Date`, `Part Age Code`, `GR Age`, `EU Age`) %>%
+  setNames(paste0('PADS_', names(.))) %>%
   rename(`(R) SAMPLE YEAR` = `PADS_Fiscal Year`,
          `(R) SCALE BOOK NUM` = `PADS_Container Label`,
          `(R) SCALE CELL NUM` = `PADS_Container Address`,
@@ -177,8 +178,8 @@ wcviCNnuPADS <- nuPads %>%
          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",
                                                                                                                        `(R) SCALE CELL NUM`)),
          PADS_CntStartDate = lubridate::ymd(PADS_CntStartDate),
-         PADS_CntEndDate = lubridate::ymd(PADS_CntEndDate)) %>% 
-  filter(`PADS_Sample Source` %in% c("ESCAPEMENT", "ESCAPEMENT - SURPLUS SPAWNING", "FIRST NATIONS SAMPLE", "NATIVE FOOD FISHERY", "MIXED", "UNKNOWN CATCH", 
+         PADS_CntEndDate = lubridate::ymd(PADS_CntEndDate)) %>%
+  filter(`PADS_Sample Source` %in% c("ESCAPEMENT", "ESCAPEMENT - SURPLUS SPAWNING", "FIRST NATIONS SAMPLE", "NATIVE FOOD FISHERY", "MIXED", "UNKNOWN CATCH",
                                      "HATCHERY"),
          !grepl("(FRASER)|(ATNARKO)|(BABINE)|(BC INTERIOR)|(BELLA COOLA)|(BIG BAR)|(CHEHALIS)|(CHILKO)|(CHILLIWACK)|(DEAN)|(DOCEE)|(HARRISON)|(KILBELLA)|
                 (KTIMAT)|(KITSUMKALUM)|(KITWANGA)|(KLUKSHU)|(CHILCOTIN)|(SHUSWAP)|(MEZIADIN)|(NECHAKO)|(NICOLA)|(SNOOTLI)|(SPIUS)|(TATSAMENIE)|(TENDERFOOT)|
@@ -186,7 +187,7 @@ wcviCNnuPADS <- nuPads %>%
   print()
 
 
-# ======================== COMBINE MRP+NuSEDS AGE DATA ========================  
+# ======================== COMBINE MRP+NuSEDS AGE DATA ========================
 intersect(colnames(wcviCNmrpPADS), colnames(wcviCNnuPADS))
 
 wcviCNallPADS <- full_join(wcviCNmrpPADS, wcviCNnuPADS)
@@ -194,19 +195,20 @@ wcviCNallPADS <- full_join(wcviCNmrpPADS, wcviCNnuPADS)
 
 
 
-# ======================== EXPORT ========================  
+# ======================== EXPORT ========================
 
 # To git ---------------------------
 #writexl::write_xlsx(wcviCNmrpPADS, here("outputs", "R_OUT - PADS WCVI Chinook 2022.xlsx"))
 
 
-# To SP  --------------------------- 
-writexl::write_xlsx(wcviCNallPADS, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/", 
+# To SP  ---------------------------
+writexl::write_xlsx(wcviCNallPADS, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
                                             "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - PADS WCVI Chinook ",
                                             min(wcviCNallPADS$`(R) SAMPLE YEAR`),
                                             "-",
                                             max(wcviCNallPADS$`(R) SAMPLE YEAR`),
                                             ".xlsx"))
+
 
 
 
@@ -444,7 +446,7 @@ esc_biodata_PADS_otoNPAFC_heads <- left_join(esc_biodata_PADS_otoNPAFC,
 
 #                                                                           XI. LOAD CWT TAGCODE IDs
 
-# Load source script function ---------------- **slow** 
+# Load source script function ----------------  
 source(here("scripts","functions","getCWTData.R"))
 
 
@@ -479,7 +481,14 @@ esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
 
 #                                                                           XIII. ASSIGN FINAL STOCK ID
 
-esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
+
+# !!! Load temp Rout file to fix stock ID because all of the MRP databases are blocked now....  !!!!!!!
+esc_biodata_PADS_otoNPAFC_headsCWT_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
+                                                                                      "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_2012-2022_WithResults.xlsx"),
+                                                                               sheet="Esc biodata w RESULTS")
+
+
+esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_TEMP %>% 
   mutate(
     `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
                              `OM_READ STATUS` == "Marked" ~ "Hatchery",
@@ -492,10 +501,10 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
                                           ignore.case=F),
                                    TRUE ~ NA),
     
-    `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "Otolith",
+    `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
                                         !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
-                                          "Otolith duplicate (assumed stock ID)",
-                                        is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Otolith (to facility / assumed stock based on facility)",
+                                          "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
+                                        is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
                                         TRUE~NA),
     
     `(R) OTOLITH STOCK ID` = case_when(
@@ -503,10 +512,10 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
       (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
         gsub(" R", "", 
              gsub("River", "R",
-                  gsub(" Cr ", "",  
+                  gsub(" Cr", "",  
                        gsub("S-", "",
                             stringr::str_to_title(
-                              stringr::str_sub('COLUMBIA RIVER TULE',1,100)), 
+                              stringr::str_sub(NPAFC_STOCK_1,1,100)), 
                             ignore.case = F), 
                        ignore.case = F), 
                   ignore.case=F),   
@@ -556,13 +565,13 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
              ignore.case=F),
       
       # 6. No CWT, no oto stock ID, OM_FACILITY==nitinat and catch site is Sooke ~ Sooke 
-      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("NITINAT", OM_FACILITY) & grepl("SOOKE", `OM_CATCH SITES`) ~ 
+      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("NITINAT", OM_FACILITY) & grepl("SOOKE", `OM_CATCH SITES`) ~ 
         gsub(" River", "",
              stringr::str_sub(`Fishery / River`,1,100),#), 
              ignore.case=F),
       
       # 6. No CWT, no oto stock ID, OM_FACILITY==san juan  ~ san juan 
-      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("SAN JUAN", OM_FACILITY) ~ 
+      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("SAN JUAN", OM_FACILITY) ~ 
         gsub(" River", "",
              stringr::str_sub(`Fishery / River`,1,100),#), 
              ignore.case=F),
@@ -572,7 +581,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
     `(R) OTOLITH FACILITY ID` = case_when(
       
       # 6. No CWT, no oto stock ID, OM_FACILITY==nitinat and catch site is not Sooke ~ unk nitinat  
-      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("NITINAT", OM_FACILITY) & !grepl("SOOKE", `OM_CATCH SITES`) ~ 
+      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("NITINAT", OM_FACILITY) & !grepl("SOOKE", `OM_CATCH SITES`) ~ 
         gsub(" River H", "",
              gsub(" River", "",
                   gsub("H", "",
@@ -585,7 +594,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
       
       
       # 6. No CWT, no oto stock ID, OM_FACILITY==marble ~ marble
-      `(R) OTOLITH ID METHOD`=="Otolith (to facility / assumed stock based on facility)" & grepl("MARBLE|SPIUS|CONUMA|ROBERTSON", OM_FACILITY) ~ 
+      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("MARBLE|SPIUS|CONUMA|ROBERTSON", OM_FACILITY) ~ 
         gsub(" H", "",
              gsub(" R", "",
                   gsub(" River H", "",
@@ -602,7 +611,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
     )) %>%
   mutate(
     `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
-                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ `(R) OTOLITH ID METHOD`,
+                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
                                                TRUE ~ NA),
     
     `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,

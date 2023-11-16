@@ -27,7 +27,7 @@ auth <- authenticate(user = Sys.info()["login"],
 
 # Function for getting container metadata (gives 'CtnStartDate' field) ---------------------------
 get_container_meta <- function(batch_id){
-  url <- paste0('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/odata/GetBatchContainers')
+  url <- paste0('https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/odata/GetBatchContainers')
   request_body <- paste0(r"({"batch_id":")", batch_id, r"("})")
   x <- httr::POST(url, auth, body=request_body, encode="json", httr::verbose(), httr::content_type_json())
   y <-
@@ -42,13 +42,13 @@ get_container_meta <- function(batch_id){
 
 # Function for getting batch metadata (gives 'Location' field) ---------------------------
 get_batch_meta <- function(batch_id){
-  url <- paste0('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/api/AgeBatchDetail/GetAgeBatchDetail/', batch_id)
+  url <- paste0('https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/api/AgeBatchDetail/GetAgeBatchDetail/', batch_id)
   x <- httr::GET(url, auth)
   batch_df <-
     httr::content(x, "text", encoding = "UTF-8") %>%
     jsonlite::fromJSON()
   url <- 
-    paste0("http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/odata/Project?$filter=Id eq ", batch_id) |>
+    paste0("https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/odata/Project?$filter=Id eq ", batch_id) |>
     URLencode()
   y <- 
     httr::GET(url, auth) %>%
@@ -64,7 +64,7 @@ get_batch_meta <- function(batch_id){
 
 # Function for extracting batch age results ---------------------------
 get_age_data <- function(batch_id){
-  url <- paste0('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/api/AgeBatchDetail/ScaleAgeDetail/', 
+  url <- paste0('https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/api/AgeBatchDetail/ScaleAgeDetail/', 
                 batch_id)
   x <- httr::GET(url, auth)
   y <- batch_df_sc <- jsonlite::fromJSON(httr::content(x, "text"))
@@ -78,7 +78,7 @@ get_age_data <- function(batch_id){
 
 # Extract all South Coast scale batch IDs for SampleYear of interest and store in a vector of IDs called "PADS_batch_ids" ---------------------------
 ## If this gives you trouble, re-start R session, clear Environment and try again...
-PADS_batch_ids <- httr::GET('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/api/Report/GetAgeBatchList',
+PADS_batch_ids <- httr::GET('https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/api/Report/GetAgeBatchList',
                                  auth) %>%
   # Get list of available age result batches:
   httr::content(x = .,  'text') %>%

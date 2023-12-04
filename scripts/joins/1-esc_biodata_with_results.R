@@ -482,12 +482,12 @@ esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
 #                                                                           XIII. ASSIGN FINAL STOCK ID
 
 
-# !!! Load temp Rout file to fix stock ID because all of the MRP databases are blocked now....  !!!!!!!
+# !!! Load temp R_OUT file to fix stock ID because all of the MRP databases are blocked now....  !!!!!!!
 esc_biodata_PADS_otoNPAFC_headsCWT_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
                                                                                       "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_2012-2022_WithResults.xlsx"),
                                                                                sheet="Esc biodata w RESULTS")
 
-
+# Join
 esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_TEMP %>% 
   mutate(
     `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",

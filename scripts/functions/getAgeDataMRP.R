@@ -27,7 +27,7 @@ auth <- authenticate(user = Sys.info()["login"],
 
 # Function for getting container metadata (gives 'CtnStartDate' field) ---------------------------
 get_container_meta <- function(batch_id){
-  url <- paste0('https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/odata/GetBatchContainers')
+  url <- paste0('http://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v2/odata/GetBatchContainers')
   request_body <- paste0(r"({"batch_id":")", batch_id, r"("})")
   x <- httr::POST(url, auth, body=request_body, encode="json", httr::verbose(), httr::content_type_json())
   y <-
@@ -99,12 +99,12 @@ PADS_batch_ids <- httr::GET('https://pac-salmon.dfo-mpo.gc.ca/Api.CwtDataEntry.v
 mrpPADS <- 
   full_join(
     # Batch metadata ---
-    # PADS_batch_meta <- 
+     PADS_batch_meta <- 
     PADS_batch_ids %>%
       purrr::map_dfr(get_batch_meta) %>%
       rename(BatchId = Id), 
     # Container metadata ---
-    # PADS_container_meta <- 
+     PADS_container_meta <- 
     PADS_batch_ids %>%
       purrr::map_dfr(get_container_meta) %>%
       rename(ContainerId = Id) %>%
@@ -112,7 +112,7 @@ mrpPADS <-
     by="BatchId") %>%
   full_join(.,
             # Age data ---
-            # PADS_age_data <- 
+             PADS_age_data <- 
             PADS_batch_ids %>%
               purrr::map_dfr(get_age_data) %>%
               rename(BatchId = Id),

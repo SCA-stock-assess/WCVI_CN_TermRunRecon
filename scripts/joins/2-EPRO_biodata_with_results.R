@@ -108,29 +108,6 @@ writexl::write_xlsx(
 
 ################################################################################################################################################
 
-#                                                                           (ignore). OTOLITH DATA LOAD 
-
-
-# wcviCNOtos2022 <- readxl::read_excel(path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
-#                                                  "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/OtoManager_RecoverySpecimens_Area20-27_121-127_CN_2022_28Aug2023.xlsx"),
-#                                      sheet="RcvySpecAge", skip=1, guess_max=20000) %>%
-#   mutate(`(R) OTOLITH BOX NUM` = `BOX CODE`,
-#          `(R) OTOLITH VIAL NUM` = `CELL NUMBER`,
-#          `(R) OTOLITH LAB BUM` = `LAB NUMBER`,
-#          `(R) OTOLITH BOX-VIAL CONCAT` = case_when(!is.na(`BOX CODE`) & !is.na(`CELL NUMBER`) ~ paste0(`BOX CODE`,sep="-",`CELL NUMBER`)),
-#          `(R) OTOLITH LBV CONCAT` = case_when(!is.na(`LAB NUMBER`) & !is.na(`BOX CODE`) & !is.na(`CELL NUMBER`) ~ 
-#                                                 paste0(`LAB NUMBER`,sep="-",`BOX CODE`,sep="-",`CELL NUMBER`))) %>%
-#   print()
-# 
-# 
-# 
-# writexl::write_xlsx(wcviCNOtos2022, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/", 
-#                                                 "Desktop/ototest.xlsx"))
-
-
-
-################################################################################################################################################
-
 #                                                                           II. NPAFC LOAD
 
 
@@ -142,15 +119,39 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
          `(R) BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
-                              TRUE ~ NPAFC_FACILITY),
+                                    TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
-                           TRUE ~ NPAFC_STOCK)) %>%
-  # **ASSUPMTIONS**: 
-  # 1. Alaska and Kamchatka marks should essentially not exist, so remove them to avoid duplicate marks 
-  filter(NPAFC_STATE_PROVINCE %in% c("BRITISH COLUMBIA", "IDAHO", "WASHINGTON", "OREGON"),
-         # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
-         !grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5") %>%
-  select(`(R) BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`) %>% 
+                                 TRUE ~ NPAFC_STOCK),
+         `(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR`, " - ", `(R) HATCHCODE`),
+                                 TRUE ~ NA)) %>%
+  # This filter line below initially removed some marks to avoid duplicates, but the work-around below now addresses this more systematically. Below is just
+  #     kept for reference for now
+  #filter(NPAFC_STATE_PROVINCE %in% c("BRITISH COLUMBIA", "IDAHO", "WASHINGTON", "OREGON"),
+  # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
+  #!grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5"
+  #) %>%
+  select(`(R) BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
+  distinct(`(R) BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
+  #group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
+                                     NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
+                                     NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
+                                     NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("GSVI","JNST") ~ "C",
+                                     NPAFC_STATE_PROVINCE=="ALASKA" ~ "D",
+                                     NPAFC_STATE_PROVINCE=="KAMCHATKA" ~ "E")) %>%
+  #mutate(NPAFC_wcvi_prob = reorder(NPAFC_wcvi_prob, prob_orders))  %>% 
+  arrange(`(R) BYHID`, NPAFC_wcvi_prob) %>%
+  mutate(group = case_when(!is.na(`(R) BYHID`) ~ with(., ave(seq_along(`(R) BYHID`), `(R) BYHID`, FUN = seq_along)),
+                           TRUE ~ 1),
+         NPAFC_wcvi_prob = case_when(NPAFC_wcvi_prob=="A" ~ "HIGH",
+                                     NPAFC_wcvi_prob=="B" ~ "MED-HIGH",
+                                     NPAFC_wcvi_prob=="C" ~ "MED",
+                                     NPAFC_wcvi_prob=="D" ~ "LOW",
+                                     NPAFC_wcvi_prob=="E" ~ "V LOW")) %>%
+  group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  pivot_wider(names_from = group,
+              values_from= c(NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, NPAFC_STATE_PROVINCE, NPAFC_REGION, NPAFC_wcvi_prob, NPAFC_NUMBER_RELEASED)) %>%
+  select(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
   print()
 
 
@@ -222,17 +223,47 @@ wcviCNepro_w_NPAFC.MRP2022 <- left_join(wcviCNepro_w_NPAFC2022 ,
 #                                                                           VI. ASSIGN FINAL STOCK ID and ORIGIN
 
 
-wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022 %>%
-  mutate(`(R) ORIGIN` = case_when(`(R) HATCHCODE`=="Not Marked" & (`(R) TAGCODE`=="No tag" | is.na(`(R) TAGCODE`)) & `External Marks`!="Clipped"  ~ "Natural",
-                                  
-                                  `External Marks`=="Clipped" |
-                                  (`(R) HATCHCODE`%notin%c("Destroyed","No Sample", "Not Marked") & !is.na(`(R) HATCHCODE`)) | 
-                                    (`(R) TAGCODE`!="No tag" & !is.na(`(R) TAGCODE`)) ~ "Hatchery",
+# Temp read due to database blocks
+wcviCNepro_w_NPAFC.MRP2022_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
+                                                             "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/EPRO/R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+                                                      sheet="AllFacilities w RESULTS")
 
-                                  `External Marks`!="Clipped" & (is.na(`(R) HATCHCODE`) | `(R) HATCHCODE`%in%c("Destroyed","No Sample")) &
-                                    is.na(`(R) TAGCODE`) ~ "Unknown",
-                                  
-                                  TRUE ~ "FLAG"),
+
+
+wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022_TEMP %>%
+  mutate(#`(R) ORIGIN` = case_when(`(R) HATCHCODE`=="Not Marked" & (`(R) TAGCODE`=="No tag" | is.na(`(R) TAGCODE`)) & `External Marks`!="Clipped"  ~ "Natural",
+  #                                 
+  #                                 `External Marks`=="Clipped" |
+  #                                 (`(R) HATCHCODE`%notin%c("Destroyed","No Sample", "Not Marked") & !is.na(`(R) HATCHCODE`)) | 
+  #                                   (`(R) TAGCODE`!="No tag" & !is.na(`(R) TAGCODE`)) ~ "Hatchery",
+  # 
+  #                                 `External Marks`!="Clipped" & (is.na(`(R) HATCHCODE`) | `(R) HATCHCODE`%in%c("Destroyed","No Sample")) &
+  #                                   is.na(`(R) TAGCODE`) ~ "Unknown",
+  #                                 
+  #                                 TRUE ~ "FLAG"),
+         
+         
+         `(R) ORIGIN` = case_when(`External Marks`=="Clipped" ~ "Hatchery",
+                                  !is.na(`CWT Tag Code`) | `CWT Tag Code` != "No tag" ~ "Hatchery",
+                                  `Hatch Code` == "Marked" ~ "Hatchery",
+                                  `Hatch Code` == "Not Marked" ~ "Natural",
+                                  TRUE ~ "Unknown"),
+         
+         
+         `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+                                          gsub(" Cr", "", 
+                                               gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+                                               ignore.case=F),
+                                        TRUE ~ NA),
+         
+         
+         `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
+                                             !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
+                                               "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
+                                             is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
+                                             TRUE~NA),
+         
+         
          
          `(R) STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ gsub(" Cr", "", 
                                                                          gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 

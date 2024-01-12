@@ -28,7 +28,7 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 library(openxlsx)
-library(saaWeb)
+library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-assess/saaWeb") 
 
 
 # Helpers ----------------
@@ -118,97 +118,105 @@ wcviCNescBiodat <- #cbind(
 
 
 
+# 0. RUN AGE DATA COMPILE ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
+  # source(here("scripts", "functions", "pullChinookAgeData.R"))
+
+# 1. Load age data
+SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
+                                                  pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                  full.names = TRUE), 
+                                  sheet="Sheet1")  
+ 
+
+
+## OLD BELOW - RETIRE ONCE HAPPY WITH THIS... 
 # ======================== MRP AGE DATA ========================
 
-# Load source script function (saves as 'mrpPADS') --------------------------- **slow**
-source(here("scripts","functions","getAgeDataMRP.R"))
-
-
 # Clean MRP PADS data ---------------------------
-wcviCNmrpPADS <- mrpPADS %>%
-  filter(RecoveryYear %in% analysis_year,     # << this may change next year once MRP PADS has more ages; right now no ages prior to 2022 loaded (only archived)
-         Area%in%c(20:27, 121:127), Species=="Chinook") %>%
-  filter(!grepl("Georgia Str|Sooke", ProjectName)) %>%
-  setNames(paste0('PADS_', names(.))) %>%
-  mutate(`(R) SCALE BOOK NUM` = case_when(is.na(PADS_FieldContainerId) ~ PADS_ContainerId,
-                                          !is.na(PADS_FieldContainerId) ~ PADS_FieldContainerId,
-                                          TRUE ~ "FLAG"),
-         `(R) SCALE CELL NUM` = PADS_FishNumber,
-         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~
-                                                    paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
-         PADS_GearMrpName = case_when(!is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.x,
-                                 is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.y),
-         `(R) scale data source` = "MRP") %>%
-  rename(`(R) SAMPLE YEAR` = PADS_RecoveryYear) %>%
-  select(PADS_Species, `(R) SAMPLE YEAR`, PADS_LifeHistory, PADS_Area, PADS_ContainerId:PADS_CntEndDate, PADS_ProjectName, PADS_Location, PADS_ContainerNotes, PADS_EuAge,
-         PADS_GrAge, PADS_ScaleCondition, `(R) SCALE BOOK NUM`:PADS_GearMrpName, `(R) scale data source`) %>%
-  mutate_at(c("(R) SCALE CELL NUM","(R) SAMPLE YEAR"), as.character) %>%
-  print()
-
-
-
-# ======================== NUSEDS AGE DATA ========================
-
-# Load source script function (saves as 'getNuSEDS') ---------------------------
-source(here("scripts","functions","getNusedsData.R"))
-
-
-# Pull data ----------------     * SLOW *
-nuPads <- getNuSEDS(here("scripts","json", "nuseds_ages_CN_2012-2021.json"), password=NULL)
-
-
-
-# Clean NuSEDs PADS data ---------------------------
-wcviCNnuPADS <- nuPads %>%
-  select(`Fiscal Year`, Project, Location, Species, `Sample Source`, `Gear Code`, `Container Label`, `Container Address`, `Sample Number`, `Sample Start Date`,
-         `Sample End Date`, `Part Age Code`, `GR Age`, `EU Age`) %>%
-  setNames(paste0('PADS_', names(.))) %>%
-  rename(`(R) SAMPLE YEAR` = `PADS_Fiscal Year`,
-         `(R) SCALE BOOK NUM` = `PADS_Container Label`,
-         `(R) SCALE CELL NUM` = `PADS_Container Address`,
-         PADS_ProjectName = PADS_Project,
-         PADS_Location = PADS_Location,
-         PADS_Species = PADS_Species,
-         PADS_GearMrpName = `PADS_Gear Code`,
-         PADS_CntStartDate = `PADS_Sample Start Date`,
-         PADS_CntEndDate = `PADS_Sample End Date`,
-         PADS_ScaleCondition = `PADS_Part Age Code`,
-         PADS_GrAge = `PADS_GR Age`,
-         PADS_EuAge = `PADS_EU Age`) %>%
-  mutate(`(R) scale data source` = "NuSEDs",
-         `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",
-                                                                                                                       `(R) SCALE CELL NUM`)),
-         PADS_CntStartDate = lubridate::ymd(PADS_CntStartDate),
-         PADS_CntEndDate = lubridate::ymd(PADS_CntEndDate)) %>%
-  filter(`PADS_Sample Source` %in% c("ESCAPEMENT", "ESCAPEMENT - SURPLUS SPAWNING", "FIRST NATIONS SAMPLE", "NATIVE FOOD FISHERY", "MIXED", "UNKNOWN CATCH",
-                                     "HATCHERY"),
-         !grepl("(FRASER)|(ATNARKO)|(BABINE)|(BC INTERIOR)|(BELLA COOLA)|(BIG BAR)|(CHEHALIS)|(CHILKO)|(CHILLIWACK)|(DEAN)|(DOCEE)|(HARRISON)|(KILBELLA)|
-                (KTIMAT)|(KITSUMKALUM)|(KITWANGA)|(KLUKSHU)|(CHILCOTIN)|(SHUSWAP)|(MEZIADIN)|(NECHAKO)|(NICOLA)|(SNOOTLI)|(SPIUS)|(TATSAMENIE)|(TENDERFOOT)|
-                (THOMPSON)|(NASS)|(SKEENA)|(STIKINE)|(WANNOCK)|(WHITEHORSE)|(YUKON)", PADS_ProjectName)) %>%
-  print()
-
-
-# ======================== COMBINE MRP+NuSEDS AGE DATA ========================
-intersect(colnames(wcviCNmrpPADS), colnames(wcviCNnuPADS))
-
-wcviCNallPADS <- full_join(wcviCNmrpPADS, wcviCNnuPADS)
-
-
-
-
-# ======================== EXPORT ========================
-
-# To git ---------------------------
-#writexl::write_xlsx(wcviCNmrpPADS, here("outputs", "R_OUT - PADS WCVI Chinook 2022.xlsx"))
-
-
-# To SP  ---------------------------
-writexl::write_xlsx(wcviCNallPADS, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
-                                            "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - PADS WCVI Chinook ",
-                                            min(wcviCNallPADS$`(R) SAMPLE YEAR`),
-                                            "-",
-                                            max(wcviCNallPADS$`(R) SAMPLE YEAR`),
-                                            ".xlsx"))
+# wcviCNmrpPADS <- mrpPADS %>%
+#   filter(RecoveryYear %in% analysis_year,     # << this may change next year once MRP PADS has more ages; right now no ages prior to 2022 loaded (only archived)
+#          Area%in%c(20:27, 121:127), Species=="Chinook") %>%
+#   filter(!grepl("Georgia Str|Sooke", ProjectName)) %>%
+#   setNames(paste0('PADS_', names(.))) %>%
+#   mutate(`(R) SCALE BOOK NUM` = case_when(is.na(PADS_FieldContainerId) ~ PADS_ContainerId,
+#                                           !is.na(PADS_FieldContainerId) ~ PADS_FieldContainerId,
+#                                           TRUE ~ "FLAG"),
+#          `(R) SCALE CELL NUM` = PADS_FishNumber,
+#          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~
+#                                                     paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
+#          PADS_GearMrpName = case_when(!is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.x,
+#                                  is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.y),
+#          `(R) scale data source` = "MRP") %>%
+#   rename(`(R) SAMPLE YEAR` = PADS_RecoveryYear) %>%
+#   select(PADS_Species, `(R) SAMPLE YEAR`, PADS_LifeHistory, PADS_Area, PADS_ContainerId:PADS_CntEndDate, PADS_ProjectName, PADS_Location, PADS_ContainerNotes, PADS_EuAge,
+#          PADS_GrAge, PADS_ScaleCondition, `(R) SCALE BOOK NUM`:PADS_GearMrpName, `(R) scale data source`) %>%
+#   mutate_at(c("(R) SCALE CELL NUM","(R) SAMPLE YEAR"), as.character) %>%
+#   print()
+# 
+# 
+# 
+# # ======================== NUSEDS AGE DATA ========================
+# 
+# # Load source script function (saves as 'getNuSEDS') ---------------------------
+# source(here("scripts","functions","getNusedsData.R"))
+# 
+# 
+# # Pull data ----------------     * SLOW *
+# nuPads <- getNuSEDS(here("scripts","json", "nuseds_ages_CN_2012-2021.json"), password=NULL)
+# 
+# 
+# 
+# # Clean NuSEDs PADS data ---------------------------
+# wcviCNnuPADS <- nuPads %>%
+#   select(`Fiscal Year`, Project, Location, Species, `Sample Source`, `Gear Code`, `Container Label`, `Container Address`, `Sample Number`, `Sample Start Date`,
+#          `Sample End Date`, `Part Age Code`, `GR Age`, `EU Age`) %>%
+#   setNames(paste0('PADS_', names(.))) %>%
+#   rename(`(R) SAMPLE YEAR` = `PADS_Fiscal Year`,
+#          `(R) SCALE BOOK NUM` = `PADS_Container Label`,
+#          `(R) SCALE CELL NUM` = `PADS_Container Address`,
+#          PADS_ProjectName = PADS_Project,
+#          PADS_Location = PADS_Location,
+#          PADS_Species = PADS_Species,
+#          PADS_GearMrpName = `PADS_Gear Code`,
+#          PADS_CntStartDate = `PADS_Sample Start Date`,
+#          PADS_CntEndDate = `PADS_Sample End Date`,
+#          PADS_ScaleCondition = `PADS_Part Age Code`,
+#          PADS_GrAge = `PADS_GR Age`,
+#          PADS_EuAge = `PADS_EU Age`) %>%
+#   mutate(`(R) scale data source` = "NuSEDs",
+#          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",
+#                                                                                                                        `(R) SCALE CELL NUM`)),
+#          PADS_CntStartDate = lubridate::ymd(PADS_CntStartDate),
+#          PADS_CntEndDate = lubridate::ymd(PADS_CntEndDate)) %>%
+#   filter(`PADS_Sample Source` %in% c("ESCAPEMENT", "ESCAPEMENT - SURPLUS SPAWNING", "FIRST NATIONS SAMPLE", "NATIVE FOOD FISHERY", "MIXED", "UNKNOWN CATCH",
+#                                      "HATCHERY"),
+#          !grepl("(FRASER)|(ATNARKO)|(BABINE)|(BC INTERIOR)|(BELLA COOLA)|(BIG BAR)|(CHEHALIS)|(CHILKO)|(CHILLIWACK)|(DEAN)|(DOCEE)|(HARRISON)|(KILBELLA)|
+#                 (KTIMAT)|(KITSUMKALUM)|(KITWANGA)|(KLUKSHU)|(CHILCOTIN)|(SHUSWAP)|(MEZIADIN)|(NECHAKO)|(NICOLA)|(SNOOTLI)|(SPIUS)|(TATSAMENIE)|(TENDERFOOT)|
+#                 (THOMPSON)|(NASS)|(SKEENA)|(STIKINE)|(WANNOCK)|(WHITEHORSE)|(YUKON)", PADS_ProjectName)) %>%
+#   print()
+# 
+# 
+# # ======================== COMBINE MRP+NuSEDS AGE DATA ========================
+# intersect(colnames(wcviCNmrpPADS), colnames(wcviCNnuPADS))
+# 
+# wcviCNallPADS <- full_join(wcviCNmrpPADS, wcviCNnuPADS)
+# 
+# 
+# 
+# 
+# # ======================== EXPORT ========================
+# 
+# # To git ---------------------------
+# #writexl::write_xlsx(wcviCNmrpPADS, here("outputs", "R_OUT - PADS WCVI Chinook 2022.xlsx"))
+# 
+# 
+# # To SP  ---------------------------
+# writexl::write_xlsx(wcviCNallPADS, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
+#                                             "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - PADS WCVI Chinook ",
+#                                             min(wcviCNallPADS$`(R) SAMPLE YEAR`),
+#                                             "-",
+#                                             max(wcviCNallPADS$`(R) SAMPLE YEAR`),
+#                                             ".xlsx"))
 
 
 

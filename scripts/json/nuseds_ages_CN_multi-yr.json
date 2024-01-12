@@ -34,16 +34,20 @@
    "Aggregates": [],
    "Filters": [
      {
-       "Column": "SPECIES",
-       "Value": "CHINOOK SALMON"
+       "Column": "SBJ_ID",
+       "Value": "5"
      },
      {
-       "Column": "YEAR",
+       "Column": "FISCAL_YEAR",
        "Value": "2012,2013,2014,2015,2016,2017,2018,2019,2020,2021"
      },
      {
        "Column": "LIFE_HISTORY_STAGE",
        "Value": "'Adult','Not Precocious','Precocious','SubAdult','Subadult','Unknown'"
+     },
+     {
+        "Column": "READING_METHOD",
+        "Value": "'Scales'"
      }
 
    ],

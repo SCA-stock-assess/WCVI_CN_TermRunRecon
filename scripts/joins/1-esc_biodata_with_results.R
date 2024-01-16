@@ -121,7 +121,7 @@ wcviCNescBiodat <- #cbind(
 # 0. RUN AGE DATA COMPILE ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
   # source(here("scripts", "functions", "pullChinookAgeData.R"))
 
-# 1. Load age data
+# 1. Load pre-dumped age data (Step 0)
 SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
                                                   pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
@@ -226,13 +226,16 @@ SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
 #                                                                           III. JOIN ESCAPEMENT BIODATA to PADS, CALC BY
 
 
+# *****  !!!!!!! REVIEW FROM HERE NEXT DAY!!!!!!!!! 
+
+
 # ======================== JOIN ESCAPEMENT BIODATA to PADS, calc BY ========================  
-intersect(colnames(wcviCNescBiodat), colnames(wcviCNallPADS))
+intersect(colnames(wcviCNescBiodat), colnames(SC_age_data))
 
 # IF you get a many-to-many error, you have duplicate scalebooks that were handed out to different regions. 
-# Will need to further filter down the wcviCNallPADS file
+# Will need to further filter down the SC_age_data file
 esc_biodata_PADS <- left_join(wcviCNescBiodat,
-                              wcviCNallPADS,
+                              SC_age_data,
                               na_matches="never") %>%
   mutate(`(R) RESOLVED TOTAL AGE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
                                               `PADS_GrAge`=="1M" ~ 2,
@@ -252,7 +255,7 @@ esc_scaleIDs <- esc_biodata_PADS %>%
   filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
-antijoin_PADS <- wcviCNallPADS %>% 
+antijoin_PADS <- SC_age_data %>% 
   filter(`(R) SCALE BOOK-CELL CONCAT` %notin% esc_scaleIDs & PADS_ProjectName!="WCVI Creel Survey") %>% 
   print()
 

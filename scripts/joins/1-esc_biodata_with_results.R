@@ -125,7 +125,8 @@ wcviCNescBiodat <- #cbind(
 SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
                                                   pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
-                                  sheet="Sheet1")  
+                                  sheet="Sheet1")  %>% 
+  mutate_at("(R) SAMPLE YEAR", as.character)
  
 
 
@@ -226,8 +227,6 @@ SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
 #                                                                           III. JOIN ESCAPEMENT BIODATA to PADS, CALC BY
 
 
-# *****  !!!!!!! REVIEW FROM HERE NEXT DAY!!!!!!!!! 
-
 
 # ======================== JOIN ESCAPEMENT BIODATA to PADS, calc BY ========================  
 intersect(colnames(wcviCNescBiodat), colnames(SC_age_data))
@@ -251,12 +250,16 @@ esc_biodata_PADS <- left_join(wcviCNescBiodat,
 
 
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
+# 1. Extract Book-cell values in the join 
 esc_scaleIDs <- esc_biodata_PADS %>%
   filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
+# 2. Filter 
 antijoin_PADS <- SC_age_data %>% 
   filter(`(R) SCALE BOOK-CELL CONCAT` %notin% esc_scaleIDs & PADS_ProjectName!="WCVI Creel Survey") %>% 
+  group_by(`(R) SAMPLE YEAR`, PADS_ProjectName, PADS_Location) %>% 
+  summarize(n=n()) %>%
   print()
 
 
@@ -265,9 +268,11 @@ antijoin_PADS <- SC_age_data %>%
 
 #                                                                           IV. OTOLITH DATA LOAD 
 
-# <<< Manual download latest year Recovery Specimens file: http://devios-intra.dfo-mpo.gc.ca/Otolith/Reports/recoveryspecimen.aspx
-# Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/Import
-# FOLLOW NAMING CONVENTION
+# <<< For each new year: >>> 
+  # 1. manually download newest year's Recovery Specimens file: http://devios-intra.dfo-mpo.gc.ca/Otolith/Reports/recoveryspecimen.aspx
+  # 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/Import
+    # FOLLOW NAMING CONVENTION >:(
+  # 3. Run source() line below 
 
 # Run helper script to compile/load Otolith data (saves as 'wcviOtos') ---------------------------
 source(here("scripts","misc-helpers","OtoCompile.R")) 
@@ -305,10 +310,12 @@ esc_biodata_PADS_oto <- left_join(esc_biodata_PADS,
 
 
 # ANTI JOINS: Oto samples that didn't make it in to the escapement biodata basefile ---------------------------
+# 1. Extract lab-box-vial #s from escapement file 
 esc_otoIDs <- esc_biodata_PADS_oto %>%
   filter(!is.na(`(R) OTOLITH LBV CONCAT`)) %>% 
   pull(`(R) OTOLITH LBV CONCAT`)
 
+# 2. Filter otolith master file by not those numbers 
 antijoin_OM <- wcviOtos %>% 
   filter(`(R) OTOLITH LBV CONCAT` %notin% esc_otoIDs & OM_SOURCE != "Sport") %>% 
   print()
@@ -327,7 +334,7 @@ prob_orders <- factor(c("V LOW", "LOW", "MED", "HIGH"), levels=c("V LOW", "LOW",
 NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
                                             full.names = TRUE), 
-                            sheet="AllNPAFC CNReleasestoJun8,2022") %>% 
+                            sheet="AC087805 (1)") %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
          `(R) BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 

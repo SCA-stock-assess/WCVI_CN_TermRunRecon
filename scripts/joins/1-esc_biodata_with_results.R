@@ -406,29 +406,17 @@ NPAFC_dupl <- NPAFC %>%
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTOMGR to NPAFC ========================  
 intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFCt))
 
-# Joining to NPAFC - note there are often cases where the same BY received the same hatchcode, so we need a way to join on this. 
-#   solution: join the unique cases separately, then add in cases that could be duplicates - the user will then have to make a manual assessment whether or
-#     not to assume a stock ID, 
-esc_biodata_PADS_otoNPAFC <- 
-  # 1. Remove duplicate BY-Hatchcode combinations and join JSUT unique BY-Hatchcode combinations to the NPAFC master file ---------------------------
-  left_join(
-    esc_biodata_PADS_oto,
-      #filter(`(R) BYHID` %notin% NPAFC_dupl),
-    NPAFC,
-    #relationship = "many-to-one",
-    na_matches="never"
-    ) %>% 
-  # 2. Bring back in the duplicates to the above join, WITHOUT linking them to the NPAFC file (which will cause errors) ---------------------------
-  #    note the corresponding BY-hatchcode combinations will be put in it's own QC tab "!NPAFC_dupl!" for the analyst to quickly refer to. 
-  #full_join(.,
-  #          left_join(
-  #            esc_biodata_PADS_oto %>% 
-  #              filter(`(R) BYHID` %in% NPAFC_dupl),
-  #            NPAFC
-  #          ) %>% 
-              print()
+# Joining to NPAFC FIX: 
+  # Originally, there were cases where the same BY received the same hatchcode, so we need a way to join on this. 
+  # Solution: Now that the NPAFC file has been re-organized to identify multiple stock IDs within a BY-HID (e.g., NPAFC_STOCK_1, NPAFC_STOCK_2, etc.), don't need to worry about complex joins/renaming. R will do it all. 
+esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
+                                       NPAFC,
+                                       na_matches="never") %>% 
+  print()
 
-write.xlsx(esc_biodata_PADS_otoNPAFC, "C:/Users/DAVIDSONKA/Desktop/esc biod w npafc test.xlsx")
+
+
+# write.xlsx(esc_biodata_PADS_otoNPAFC, "C:/Users/DAVIDSONKA/Desktop/esc biod w npafc test.xlsx")
 
 #############################################################################################################################################################
 

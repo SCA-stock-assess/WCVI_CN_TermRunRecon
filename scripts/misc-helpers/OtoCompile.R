@@ -14,10 +14,10 @@
 
 #############################################################################################################################################################
 
-#                                                     ==================== For RECOVERY Specimens ==========================
+#                                                     ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ For RECOVERY Specimens ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-#                                                           1. LOAD OTOLITH MANAGER RECOVERY SPEC BASE FILES (historical data)
+# ==================== 1. LOAD OTOLITH MANAGER RECOVERY SPEC BASE FILES (historical data) ==================== 
 
 
 # Read OtoManager files as large list ---------------------------
@@ -57,10 +57,9 @@ remove(wcviOtos.LL)
 
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-#                                                          2. EXPORT
+# ==================== 2. EXPORT ==================== 
 
 
 # Export to Network ---------------------------
@@ -75,8 +74,7 @@ writexl::write_xlsx(wcviOtos,
                                 Sys.Date(),
                                 ".xlsx"))
 
-# Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.' 
-# means you have the file open
+# "Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.' "   --> means you have the file open
 
 
 
@@ -84,10 +82,10 @@ writexl::write_xlsx(wcviOtos,
 #############################################################################################################################################################
 
 
-#                                                     ==================== For REFERENCE Specimens ==========================
+#                                                     ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ For REFERENCE Specimens ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-#                                                           1. LOAD OTOLITH MANAGER REFERENCE SPEC BASE FILES
+# ==================== 1. LOAD OTOLITH MANAGER REFERENCE SPEC BASE FILES ====================
 
 
 # Read OtoManager files as large list ---------------------------
@@ -115,10 +113,9 @@ remove(OtosRef.LL)
 
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-#                                                          2. EXPORT
+# ==================== 2. EXPORT ====================
 
 
 # Export to Network ---------------------------

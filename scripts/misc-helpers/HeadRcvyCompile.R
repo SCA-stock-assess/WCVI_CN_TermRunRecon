@@ -14,10 +14,10 @@
 
 #############################################################################################################################################################
 
-#                                                           1. LOAD OTOLITH MANAGER BASE FILES (historical data)
+#                                                           1. LOAD HEAD RCVY BASE FILES (historical data)
 
 
-# Read OtoManager files as large list ---------------------------
+# Read CWT recovery files as large list ---------------------------
 # Load base files to compile
 mrpHeadRcvy.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import", 
                                     pattern=".csv", full.names=T), 

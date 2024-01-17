@@ -423,9 +423,11 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
 #                                                                           VIII. LOAD HEAD RECOVERY RECORDS
 
 
-# <<< Manual download latest year CWT Recovery file: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
-# Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
-# FOLLOW NAMING CONVENTION OR ELSE!!!!
+# <<< For each new year: >>> 
+  # 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
+  # 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
+    # FOLLOW NAMING CONVENTION OR ELSE! >:(
+  # 3. Run source() line below 
 
 
 # ======================== Load head recovery data ========================  
@@ -453,20 +455,18 @@ esc_biodata_PADS_otoNPAFC_heads <- left_join(esc_biodata_PADS_otoNPAFC,
 
 #                                                                           XI. LOAD CWT TAGCODE IDs
 
-# Load source script function ----------------  
-source(here("scripts","functions","getCWTData.R"))
 
 
-# ======================== Extract tagcodes ========================  (slow)
-cn_rel <- getCWTData(query_doc = here("scripts", "json", "CWT_Releases_CN_2012-present.json"), password=NULL) %>% 
-  setNames(paste0('MRP_', names(.))) %>% 
-  select(`MRP_Tagcode`, `MRP_Species Name`, `MRP_Release Agency Code`, `MRP_Project Name`, `MRP_Country Code`, `MRP_Brood Year`, `MRP_Release Year`, 
-         `MRP_Recovery Years`, `MRP_Hatchery Site Name`, `MRP_Hatchery PSC Basin Name`, `MRP_Release Site Name`, `MRP_Release PSC Basin Name`, 
-         `MRP_Stock Site Name`, `MRP_Stock PSC Basin Name`, `MRP_Hatchery Site Prov/State Code`:`MRP_Stock Site Prov/State Code`, `MRP_Total Released`) %>%
-  mutate(`(R) TAGCODE` = MRP_Tagcode,
-         `MRP_Stock Site Name` = case_when(is.na(`MRP_Stock Site Name`) ~ paste0(`MRP_Hatchery Site Name`, sep=" - ", `MRP_Release Site Name`),
-                                           TRUE ~ `MRP_Stock Site Name`)) %>% 
-  print()
+# 0. RUN CWT RELEASE CODE DUMP ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
+  # source(here("scripts", "functions", "pullChinookCWTReleases.R"))
+
+# 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
+SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here("outputs"),
+                                                       pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                       full.names = TRUE), 
+                                       sheet="Sheet1")  
+
+
 
 
 
@@ -475,10 +475,10 @@ cn_rel <- getCWTData(query_doc = here("scripts", "json", "CWT_Releases_CN_2012-p
 #                                                                           XII. JOIN BIODATA+PADS+OTO+NPAFC+HEADS to CWT TAGCODE ID
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS to TAGCODE ID ========================  
-intersect(colnames(esc_biodata_PADS_otoNPAFC_heads), colnames(cn_rel))
+intersect(colnames(esc_biodata_PADS_otoNPAFC_heads), colnames(SC_cnRelTagCodes))
 
 esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
-                                                 cn_rel,
+                                                SC_cnRelTagCodes,
                                                  by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
   print()
 
@@ -490,12 +490,12 @@ esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
 
 
 # !!! Load temp Rout file to fix stock ID because all of the MRP databases are blocked now....  !!!!!!!
-esc_biodata_PADS_otoNPAFC_headsCWT_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
-                                                                                      "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_2012-2022_WithResults.xlsx"),
-                                                                               sheet="Esc biodata w RESULTS")
+    # esc_biodata_PADS_otoNPAFC_headsCWT_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
+    #                                                                                       "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_2012-2022_WithResults.xlsx"),
+    #                                                                                sheet="Esc biodata w RESULTS")
 
 
-esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_TEMP %>% 
+esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
   mutate(
     `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
                              `OM_READ STATUS` == "Marked" ~ "Hatchery",

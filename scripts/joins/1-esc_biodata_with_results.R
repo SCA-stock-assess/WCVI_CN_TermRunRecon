@@ -784,11 +784,12 @@ readme <- data.frame(`1` = c("date rendered:",
 
 #                                                                           X. EXPORT 
 
-# Export ---------------------------
-# Create a blank workbook
+
+# ==================== Create the Excel file ====================
+# Create workbook --------------------
 R_OUT_ESC.RES <- openxlsx::createWorkbook()
 
-# Add sheets to the workbook
+# Add sheets to the workbook --------------------
 openxlsx::addWorksheet(R_OUT_ESC.RES, "readme")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodata w RESULTS")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "QC summary")
@@ -802,7 +803,7 @@ openxlsx::addWorksheet(R_OUT_ESC.RES, "qc5 - Unreslvd ID")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - PADS unmatched")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - OM unmatched")
 
-# Write data to the sheets
+# Write data to the sheets --------------------
 openxlsx::writeData(R_OUT_ESC.RES, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodata w RESULTS", x=esc_biodata_w_RESULTS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
@@ -816,21 +817,31 @@ openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc5 - Unreslvd ID", x=qc5_unRslvdID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - PADS unmatched", x=antijoin_PADS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - OM unmatched", x=antijoin_OM)
 
-# Export to git and SP ---------------------------
-# To git:
-# openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-#                        file=paste0(here("outputs"), 
-#                                    sep="/", 
-#                                    "R_OUT - Escapement biodata WITH RESULTS.xlsx"),
-#                        overwrite=T,
-#                        returnValue=T)
 
 
-# To SP: 
+
+
+# ==================== EXPORT ====================
+
+# To github repo --------------------
+openxlsx::saveWorkbook(R_OUT_ESC.RES,
+                       file=paste0(here("outputs"),
+                                   "/R_OUT - WCVI_Escapement-FSC_BioData_",
+                                   min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "-",
+                                   max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "_WithResults_",
+                                   Sys.Date(),
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
+
+
+# To SharePoint working Term Run folder -------------------- 
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0("C:/Users", sep="/", 
+                       file=paste0("C:/Users/", 
                                    Sys.info()[6], 
-                                   "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_",
+                                   "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2023/Communal data/Escapement/R_OUT - WCVI_Escapement-FSC_BioData_",
                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
                                    "-",
                                    max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
@@ -840,7 +851,18 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 
 
 
-
+# To DFO Network drive --------------------
+openxlsx::saveWorkbook(R_OUT_ESC.RES, 
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",  
+                                   "R_OUT - WCVI_Escapement-FSC_BioData_",
+                                   min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "-",
+                                   max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "_WithResults_",
+                                   Sys.Date(),
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
 
 

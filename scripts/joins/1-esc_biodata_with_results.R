@@ -327,9 +327,10 @@ antijoin_OM <- wcviOtos %>%
 #                                                                           VI. LOAD NPAFC
 
 
-# Load NPAFC CN mark master file ---------------------------
-###  **** Load other species later ? *****
 prob_orders <- factor(c("V LOW", "LOW", "MED", "HIGH"), levels=c("V LOW", "LOW", "MED", "HIGH"), ordered=T)
+
+
+# Load NPAFC CN mark master file ---------------------------
 
 NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
@@ -352,7 +353,6 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
          #) %>%
   select(`(R) BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
   distinct(`(R) BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
-  #group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
   mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
                                      NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
                                      NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
@@ -474,12 +474,13 @@ SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here("outputs"),
 
 #                                                                           XII. JOIN BIODATA+PADS+OTO+NPAFC+HEADS to CWT TAGCODE ID
 
+
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS to TAGCODE ID ========================  
 intersect(colnames(esc_biodata_PADS_otoNPAFC_heads), colnames(SC_cnRelTagCodes))
 
 esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
                                                 SC_cnRelTagCodes,
-                                                 by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
+                                                by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
   print()
 
 

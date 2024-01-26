@@ -329,7 +329,11 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                         TRUE ~ "Unknown"),
     
     # 7. Combine the origin and ID into the final grouping level for the Term Run files 
-    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`)) %>% 
+    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`),
+    
+    # 8. Create flag for cases where CWT and Otolith IDs disagree
+    `(R) RESOLVED STOCK ID FLAG` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "stock ID methods disagree",
+                                             TRUE ~ NA)) %>% 
   print()
 
 
@@ -354,7 +358,8 @@ readme <- data.frame(`1` = c("date rendered:",
                               "qc1 - No stock ID",
                               "qc2 - No Oto result",
                              "qc3 - No CWT ID",
-                             "qc4 - No Reslvd ID"
+                             "qc4 - No Reslvd ID",
+                             "qc5 - Unreslvd ID"
                               ),
                      `2` = c(as.character(Sys.Date()), 
                              "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/2-EPRO_biodata_with_results.R", 
@@ -370,27 +375,34 @@ readme <- data.frame(`1` = c("date rendered:",
                              "QC flag 1 tab. See QC summary for details.",
                              "QC flag 2 tab. See QC summary for details.",
                              "QC flag 3 tab. See QC summary for details.",
-                             "QC flag 4 tab. See QC summary for details."))
+                             "QC flag 4 tab. See QC summary for details.",
+                             "QC flag 5 tab. See QC summary for details."))
 
 
 # QC flags ---------------------------
+# 1. There is brood year data and a useable hatch code but the Otolith stock ID didn't populate (e.g., code errors)
 qc1_noOtoID <- wcviCNepro_w_Results %>%
-  filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK)) %>%
+  filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
   print()
 
-
+# 2. There is an otolith sample that was taken and a useable brood year, but no otolith result (e.g., sample processing errors)
 qc2_noOtoResults <- wcviCNepro_w_Results %>%
   filter(!is.na(`(R) OTOLITH BOX-VIAL CONCAT`) & !is.na(`(R) BROOD YEAR`) & is.na(`(R) HATCHCODE`)) %>%
   print()
 
-
+# 3. There is a useable CWT but no stock ID (e.g., code errors)
 qc3_noCWTID <- wcviCNepro_w_Results %>% 
   filter(!is.na(`(R) TAGCODE`) & `(R) TAGCODE`!="No Tag" & is.na(`MRP_Stock Site Name`)) %>% 
   filter()
 
-
+# 4. Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)
 qc4_noRslvdID <- wcviCNepro_w_Results %>% 
-  filter(`(R) STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK) & !is.na(`MRP_Stock Site Name`)) %>% 
+  filter(`(R) RESOLVED STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK_1) & !is.na(`MRP_Stock Site Name`)) %>% 
+  print()
+
+# 5. Otolith and CWT stock IDs disagree (e.g., processing error)
+qc5_unRslvdID <- wcviCNepro_w_Results %>% 
+  filter(`(R) RESOLVED STOCK ID FLAG` == "FLAG") %>%
   print()
 
 
@@ -398,15 +410,18 @@ qc4_noRslvdID <- wcviCNepro_w_Results %>%
 qc_summary <- data.frame(qc_flagName = c("qc1_noID",
                                          "qc2_noResults",
                                          "qc3_noCWTID",
-                                         "qc4_noRslvdID"),
+                                         "qc4_noRslvdID",
+                                         "qc5_unRslvdID"),
                          number_records = c(nrow(qc1_noOtoID),
                                             nrow(qc2_noOtoResults),
                                             nrow(qc3_noCWTID),
-                                            nrow(qc4_noRslvdID)),
+                                            nrow(qc4_noRslvdID),
+                                            nrow(qc5_unRslvdID)),
                          description = c("Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
                                          "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
                                          "There is a CWT available but no Stock ID.",
-                                         "There is a CWT or an NPAFC ID but no Resolved stock ID.")) %>% 
+                                         "There is a CWT or an NPAFC ID but no Resolved stock ID.",
+                                         "CWT and Otolith stock ID's disagree.")) %>% 
   print()
 
 
@@ -415,8 +430,7 @@ qc_summary <- data.frame(qc_flagName = c("qc1_noID",
 #                                                                           VIII. EXPORT 
 
 
-# Export ---------------------------
-# Create a blank workbook
+# ================== Create a blank workbook ==================
 R_OUT_EPRO.NPAFC <- openxlsx::createWorkbook()
 
 # Add sheets to the workbook
@@ -427,6 +441,7 @@ openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc1 - No Oto stock ID")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc2 - No Oto result")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc3 - No CWT ID")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc4 - No Reslvd ID")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc5 - Unreslvd ID")
 
 # Write data to the sheets
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
@@ -436,31 +451,38 @@ openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc1 - No Oto stock ID", x=qc1_noO
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc3 - No CWT ID", x=qc3_noCWTID)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc4 - No Reslvd ID", x=qc4_noRslvdID)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc5 - Unreslvd ID", x=qc5_unRslvdID)
 
 
-# Export to git and SP ---------------------------
-# To git:
+
+
+# ================== Export ================== 
+# To github repo ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
                        file=paste0(here("outputs"), 
-                                   sep="/", 
-                                   "R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+                                   "/R_OUT - All EPRO facilities master WITH RESULTS",
+                                   analysis_year,
+                                   ".xlsx"),
                        overwrite=T,
                        returnValue=T)
 
 
-# To SP: 
-openxlsx::saveWorkbook(
-  R_OUT_EPRO.NPAFC, 
-  file=paste0(
-    epro_dir, 
-    "/R_OUT - All EPRO facilities master WITH RESULTS.xlsx"
-  ),
-  overwrite=T,
-  returnValue=T
-)
+# To SharePoint ---------------------------
+openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+                       file=paste0(epro_dir, 
+                                   "/R_OUT - All EPRO facilities master WITH RESULTS ",
+                                   analysis_year,
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
-
-
+# To DFO Network drive ---------------------------
+openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - All EPRO facilities master WITH RESULTS ",
+                                   analysis_year,
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
 
 # /END!

@@ -33,7 +33,7 @@ library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-asse
 
 # Helpers ----------------
 "%notin%" <- Negate("%in%")
-analysis_year <- 2022
+analysis_year <- 2023
 
 
 
@@ -53,20 +53,7 @@ esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mp
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- #cbind(
   readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-              sheet="Biodata 2015-2022", guess_max=10000) %>% #,
-  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-  #            sheet="Biodata 2015-2022", range="F1:AX10000", guess_max=10000),
-  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-  #            sheet="Biodata 2015-2022", range="CC1:CE10000", guess_max=10000),
-  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-  #            sheet="Biodata 2015-2022", range="CI1:CM10000", guess_max=10000),
-  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-  #            sheet="Biodata 2015-2022", range="CP1:CP10000", guess_max=10000),
-  # readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-  #            sheet="Biodata 2015-2022", range="CY1:CZ10000", guess_max=10000)) %>%
-  filter(#Year %in% analysis_year, 
-         #Species=="Chinook"
-    ) %>%
+              sheet=paste0("Biodata 2015-", analysis_year), guess_max=10000) %>% 
   select(Year, `Sample Month`:Species, `Fishery / River`:Gear, Sex, `POF Length (mm)`:`Egg Retention`, Comments) %>%
   mutate(`(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
                                                 paste0(`Otolith Lab Number`,sep="-",`Otolith Box #`,sep="-",`Otolith Specimen #`)),
@@ -490,12 +477,6 @@ esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
 #                                                                           XIII. ASSIGN FINAL STOCK ID
 
 
-# !!! Load temp Rout file to fix stock ID because all of the MRP databases are blocked now....  !!!!!!!
-    # esc_biodata_PADS_otoNPAFC_headsCWT_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
-    #                                                                                       "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - WCVI_Escapement-FSC_BioData_2012-2022_WithResults.xlsx"),
-    #                                                                                sheet="Esc biodata w RESULTS")
-
-
 esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
   mutate(
     `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
@@ -537,7 +518,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
         (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
         "!! manual decision needed, refer to release sizes!!",
       
-      # No CWT, multiple high probability otolith matches, flag for manual ID: 
+      # No CWT, multiple medium probability otolith matches, flag for manual ID: 
       (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
         (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
         "!! manual decision needed, refer to release sizes!!",
@@ -766,7 +747,7 @@ readme <- data.frame(`1` = c("date rendered:",
         "!NOT IN YET!: http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
         "",
         "sheet description:",
-        "2022 WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, NPAFC mark file to give otolith stock ID, and CWT recoveries. Currently does NOT include DNA results.",
+        "WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, NPAFC mark file to give otolith stock ID, and CWT recoveries. Currently does NOT include DNA results.",
         "Summary of QC flags and # of entries belonging to that flag.",
         "QC flag 0 tab. Only the Esc biodata w RESULTS ('EBwR') entries that correspond to NPAFC BY-hatchcode duplicates. See QC summary for details.",
         "All duplicate BY-hatchcodes documented by the NPAFC. To inform decisions around QC Flag 0.",

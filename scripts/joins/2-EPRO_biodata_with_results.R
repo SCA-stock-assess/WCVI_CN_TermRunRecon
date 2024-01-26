@@ -231,14 +231,6 @@ write.xlsx(wcviCNepro_w_NPAFC.MRP, "wcviCNepro_w_NPAFC.MRP.xlsx")
 #                                                                           VI. ASSIGN FINAL STOCK ID and ORIGIN
 
 
-# Temp read due to database blocks
-# wcviCNepro_w_NPAFC.MRP_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
-#                                                          "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/",
-#                                                          analysis_year,
-#                                                          "/Communal data/EPRO/R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
-#                                                   sheet="AllFacilities w RESULTS")
-
-
 
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
   mutate(
@@ -321,33 +313,23 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                          ignore.case = F), 
                     ignore.case=F),
            #//end 4. 
-           TRUE ~ NA))
-           
-           
-           
-         
-         
-         
-         `(R) STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ gsub(" Cr", "", 
-                                                                         gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
-                                                                         ignore.case=F),
-                                    
-                                    (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK) ~ 
-                                      gsub(" R", "",
-                                           gsub(" Cr", "",  
-                                                str_to_title(
-                                                  str_sub(NPAFC_STOCK,3,100)), 
-                                                ignore.case = F), 
-                                           ignore.case=F),
-                                    
-                                    TRUE ~ "Unknown"),
-
-         
-         `(R) STOCK ID METHOD` = case_when(!is.na(`MRP_Stock Site Name`) ~ "CWT",
-                                           (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK) ~ "Otolith",
-                                           TRUE ~ NA),
-         
-         `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) STOCK ID`)) %>% 
+           TRUE ~ NA)) %>% 
+  mutate(
+    # 5. Identify the method used to determine the final stock ID 
+    `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
+                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
+                                               TRUE ~ NA),
+    
+    # 6. Assign the final stock ID
+    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
+                                        is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
+                                        #is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
+                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", `Spawning Stock`), 6, -1)), 
+                                                                         " (assumed)"), 
+                                        TRUE ~ "Unknown"),
+    
+    # 7. Combine the origin and ID into the final grouping level for the Term Run files 
+    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`)) %>% 
   print()
 
 

@@ -25,6 +25,7 @@ library(tidyverse)
 library(readxl)
 library(writexl)
 library(openxlsx)
+library(saaWeb)
 
 
 # Helpers -------------
@@ -41,23 +42,24 @@ analysis_year <- 2022
 # Load files from Sharepoint -------------
 
 # Save directory name for where files are located (change if necessary)
-epro_dir <- paste("C:/Users", Sys.info()[6], "OneDrive - DFO-MPO/WCVI STAD/Terminal CN Run Recon/2022/Communal data/EPRO", sep="/")
+epro_dir <- paste("C:/Users", Sys.info()[6], "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon",
+                  analysis_year,
+                  "Communal data/EPRO/",
+                  sep="/")
+
 
 # Load files as a list of tibbles
-epro.files <- list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = T) |> 
+epro.files <- list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = T) %>%
   purrr::set_names(
-    list.files(epro_dir,pattern = "All_Adult_Biosampling_",full.names = F)) |> 
+    list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = F)) %>%
   map(~readxl::read_excel(path = .x, trim_ws=T), id = "path" )
-# Should be a Large List of at least 7 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita
-
+# Should be a Large List of at least 8 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita, San Juan, possible multiple files per stock depending on annual biosampling
 
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
-wcviCNepro2022 <- epro.files %>%
-  map(~ mutate(.x, across(everything(), as.character) # Convert all columns to character for rbind compatibility
-    )
-  ) %>% 
+wcviCNepro <- epro.files %>%
+  map(~ mutate(.x, across(everything(), as.character))) %>% # Convert all columns to character for rbind compatibility
   list_rbind(names_to = "file_source") %>% 
   filter(`Spawning Stock` != "") %>%
   mutate(
@@ -75,7 +77,7 @@ wcviCNepro2022 <- epro.files %>%
     `(R) TAGCODE` = `CWT Tag Code`,
     `(R) HATCHCODE` = `Hatch Code`,
     `(R) RESOLVED TOTAL AGE` = case_when(!is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
-                                         !is.na(`Total Age (yrs)`) ~ as.numeric(`Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
+                                         !is.na(`Scale Total Age (yrs)`) ~ as.numeric(`Scale Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
                                          `Scale Part Age`=="1M" ~ 2,
                                          `Scale Part Age`=="2M" ~ 3,
                                          `Scale Part Age`=="3M" ~ 4,
@@ -84,7 +86,7 @@ wcviCNepro2022 <- epro.files %>%
                                          `Scale Part Age`=="6M" ~ 7,
                                          T ~ NA_real_),
     `(R) BROOD YEAR` = analysis_year - `(R) RESOLVED TOTAL AGE`,
-    UEID = paste0("2022", "-", seq(1:nrow(.)))) 
+    UEID = paste0(analysis_year, "-", seq(1:nrow(.)))) 
 
 # Remove the list object
 rm(epro.files)
@@ -92,18 +94,29 @@ rm(epro.files)
 
 # Export to git and SP as a backup for future use---------------------------
 # To git:
-# writexl::write_xlsx(wcviCNepro2022, path=paste0(here("outputs"), sep="/", "R_OUT - All EPRO facilities master.xlsx"))
+writexl::write_xlsx(wcviCNepro, 
+                    path=paste0(here("outputs"), 
+                                "/R_OUT - All EPRO facilities master ",
+                                analysis_year,
+                                ".xlsx"))
 
 
 # Export to SharePoint: 
-writexl::write_xlsx(
-  wcviCNepro2022, 
-  path = paste0(
-    epro_dir, 
-    "/R_OUT - All EPRO facilities master.xlsx"
-    )
-  )
+writexl::write_xlsx(wcviCNepro, 
+                    path = paste0(epro_dir, 
+                                  "R_OUT - All EPRO facilities master ",
+                                  analysis_year,
+                                  ".xlsx"))
 
+
+
+# Export to DFO Network:
+writexl::write_xlsx(wcviCNepro, 
+                    path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+                                  analysis_year, "/",
+                                  "R_OUT - All EPRO facilities master ",
+                                  analysis_year,
+                                  ".xlsx"))
 
 
 ################################################################################################################################################
@@ -114,7 +127,7 @@ writexl::write_xlsx(
 NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
                                             full.names = TRUE), 
-                            sheet="AllNPAFC CNReleasestoJun8,2022") %>% 
+                            sheet="AC087805 (1)") %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
          `(R) BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
@@ -162,9 +175,9 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
 
 
 # Join EPRO master file to NPAFC master mark file ---------------------------
-intersect(colnames(wcviCNepro2022), colnames(NPAFC))
+intersect(colnames(wcviCNepro), colnames(NPAFC))
 
-wcviCNepro_w_NPAFC2022 <- left_join(wcviCNepro2022 ,
+wcviCNepro_w_NPAFC <- left_join(wcviCNepro ,
                                     NPAFC,
                                     by=c("(R) BROOD YEAR", "(R) HATCHCODE"),
                                     relationship="many-to-one")
@@ -176,32 +189,26 @@ wcviCNepro_w_NPAFC2022 <- left_join(wcviCNepro2022 ,
 #                                                                           IV. CWT LOAD
 
 
-# Load function to query MRPIS CWT releases --------------------------- 
-source(here("scripts","functions","getCWTData.R"))
+# Option 1: Load function to query MRPIS CWT releases --------------------------- 
+  # Run this if it hasn't been refreshed in a while (SLOW)
+# source(here("scripts","functions","pullChinookCWTReleases.R"))
 
 
-# Query MRP Releases using json query doc --------------------------- 
-CWT_rel_10yr <- getCWTData(paste0(here("scripts","json"), "/CWT_Releases_CN_last10yrs.json"), password=NULL) %>% 
-  select(`Tagcode`,
-         `Release Agency Code`,
-         `Country Code`,
-         `Stock Site Prov/State Code`,
-         `Brood Year`,
-         `Release Year`,
-         `Stock Site Name`,
-         `Stock PSC Basin Code`,
-         `Stock PSC Region Code`,
-         `Hatchery Site Name`,
-         `Release Site Name`,
-         `Release PSC Basin Code`,
-         `Release PSC Region Code`) %>% 
-  setNames(paste0('MRP_', names(.))) %>% 
-  rename(`(R) TAGCODE` = MRP_Tagcode) %>% 
+# Option 2: Load CWT data export from source() above directly --------------------------- (much quicker)
+cn_relTagCodes <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+                                                     pattern = "^R_OUT - Chinook CWT release tagcodes",   #ignore temp files, eg "~R_OUT - Chinook CWT..."
+                                                     full.names = TRUE), 
+                                     sheet="Sheet1") %>% 
   print()
 
-# If you get an error message about "atomic vectors" try restarting R and/or your computer. It's related to connectivity access and just means R isn't 
-# talking to the DFO network properly
 
+
+# If you get an error message about "atomic vectors"  
+  # try restarting R and/or your computer. It's can be related to connectivity access and just means R isn't talking to the DFO network properly
+
+
+# If you get a message about: Error in openSaaWebConnection(extractor_usage_url, user_name, password) : Error when setting up connection to web server: 401
+  # you may not have the config file in your working directory, or the json query doc name is wrong. 
 
 
 #############################################################################################################################################################
@@ -210,13 +217,14 @@ CWT_rel_10yr <- getCWTData(paste0(here("scripts","json"), "/CWT_Releases_CN_last
 
 
 # Join EPRO master file to NPAFC master mark file ---------------------------
-intersect(colnames(wcviCNepro_w_NPAFC2022), colnames(CWT_rel_10yr))
+intersect(colnames(wcviCNepro_w_NPAFC), colnames(cn_relTagCodes))
 
-wcviCNepro_w_NPAFC.MRP2022 <- left_join(wcviCNepro_w_NPAFC2022 ,
-                                        CWT_rel_10yr,
-                                        by="(R) TAGCODE",
-                                        relationship="many-to-one")
+wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
+                                    cn_relTagCodes,
+                                    by="(R) TAGCODE",
+                                    relationship="many-to-one")
 
+write.xlsx(wcviCNepro_w_NPAFC.MRP, "wcviCNepro_w_NPAFC.MRP.xlsx")
 
 #############################################################################################################################################################
 
@@ -224,25 +232,17 @@ wcviCNepro_w_NPAFC.MRP2022 <- left_join(wcviCNepro_w_NPAFC2022 ,
 
 
 # Temp read due to database blocks
-wcviCNepro_w_NPAFC.MRP2022_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
-                                                             "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/EPRO/R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
-                                                      sheet="AllFacilities w RESULTS")
+# wcviCNepro_w_NPAFC.MRP_TEMP <- readxl::read_excel(paste0("C:/Users", sep="/", Sys.info()['login'], sep="/",
+#                                                          "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/",
+#                                                          analysis_year,
+#                                                          "/Communal data/EPRO/R_OUT - All EPRO facilities master WITH RESULTS.xlsx"),
+#                                                   sheet="AllFacilities w RESULTS")
 
 
 
-wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022_TEMP %>%
-  mutate(#`(R) ORIGIN` = case_when(`(R) HATCHCODE`=="Not Marked" & (`(R) TAGCODE`=="No tag" | is.na(`(R) TAGCODE`)) & `External Marks`!="Clipped"  ~ "Natural",
-  #                                 
-  #                                 `External Marks`=="Clipped" |
-  #                                 (`(R) HATCHCODE`%notin%c("Destroyed","No Sample", "Not Marked") & !is.na(`(R) HATCHCODE`)) | 
-  #                                   (`(R) TAGCODE`!="No tag" & !is.na(`(R) TAGCODE`)) ~ "Hatchery",
-  # 
-  #                                 `External Marks`!="Clipped" & (is.na(`(R) HATCHCODE`) | `(R) HATCHCODE`%in%c("Destroyed","No Sample")) &
-  #                                   is.na(`(R) TAGCODE`) ~ "Unknown",
-  #                                 
-  #                                 TRUE ~ "FLAG"),
-         
-         
+wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
+  mutate(
+         # 1. Identify hatchery/natural origin
          `(R) ORIGIN` = case_when(`External Marks`=="Clipped" ~ "Hatchery",
                                   !is.na(`CWT Tag Code`) | `CWT Tag Code` != "No tag" ~ "Hatchery",
                                   `Hatch Code` == "Marked" ~ "Hatchery",
@@ -250,6 +250,7 @@ wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022_TEMP %>%
                                   TRUE ~ "Unknown"),
          
          
+         # 2. Identify CWT Stock ID 
          `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
                                           gsub(" Cr", "", 
                                                gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
@@ -257,11 +258,73 @@ wcviCNepro_w_Results2022 <- wcviCNepro_w_NPAFC.MRP2022_TEMP %>%
                                         TRUE ~ NA),
          
          
+         # 3. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
          `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
                                              !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
                                                "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
-                                             is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
+                                             #is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",    # NOT RELEVANT FOR EPRO output 
                                              TRUE~NA),
+         
+         
+         # 4. Identify otolit stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
+         `(R) OTOLITH STOCK ID` = case_when(
+           # 4 a) NSingle otolith stock choice (certain ID)
+           !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
+             gsub(" R", "", 
+                  gsub("River", "R",
+                       gsub(" Cr", "",  
+                            gsub("S-", "",
+                                 stringr::str_to_title(
+                                   stringr::str_sub(NPAFC_STOCK_1,1,100)), 
+                                 ignore.case = F), 
+                            ignore.case = F), 
+                       ignore.case=F),   
+                  ignore.case=F),
+           
+             # 4 b) Multiple HIGH probability otolith matches, flag for manual ID: 
+             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+               (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
+               "!! manual decision needed, refer to release sizes!!",
+             
+             # 4 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
+             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+               (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
+               "!! manual decision needed, refer to release sizes!!",
+             
+             # 4 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
+             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+               (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
+               gsub(" R", "",
+                    gsub(" Cr", "",  
+                         stringr::str_to_title(
+                           stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                         ignore.case = F), 
+                    ignore.case=F),
+             
+             # 4 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, choose Otolith stock 1: 
+             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+               (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
+               gsub(" R", "",
+                    gsub(" Cr", "",  
+                         stringr::str_to_title(
+                           stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                         ignore.case = F), 
+                    ignore.case=F),
+             
+             # 4 f) LOW probability otoliths, just choose stock1:
+             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+               (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
+               gsub(" R", "",
+                    gsub(" Cr", "",  
+                         stringr::str_to_title(
+                           stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                         ignore.case = F), 
+                    ignore.case=F),
+           #//end 4. 
+           TRUE ~ NA))
+           
+           
+           
          
          
          
@@ -329,22 +392,22 @@ readme <- data.frame(`1` = c("date rendered:",
 
 
 # QC flags ---------------------------
-qc1_noOtoID <- wcviCNepro_w_Results2022 %>%
+qc1_noOtoID <- wcviCNepro_w_Results %>%
   filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK)) %>%
   print()
 
 
-qc2_noOtoResults <- wcviCNepro_w_Results2022 %>%
+qc2_noOtoResults <- wcviCNepro_w_Results %>%
   filter(!is.na(`(R) OTOLITH BOX-VIAL CONCAT`) & !is.na(`(R) BROOD YEAR`) & is.na(`(R) HATCHCODE`)) %>%
   print()
 
 
-qc3_noCWTID <- wcviCNepro_w_Results2022 %>% 
+qc3_noCWTID <- wcviCNepro_w_Results %>% 
   filter(!is.na(`(R) TAGCODE`) & `(R) TAGCODE`!="No Tag" & is.na(`MRP_Stock Site Name`)) %>% 
   filter()
 
 
-qc4_noRslvdID <- wcviCNepro_w_Results2022 %>% 
+qc4_noRslvdID <- wcviCNepro_w_Results %>% 
   filter(`(R) STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK) & !is.na(`MRP_Stock Site Name`)) %>% 
   print()
 
@@ -385,7 +448,7 @@ openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc4 - No Reslvd ID")
 
 # Write data to the sheets
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="AllFacilities w RESULTS", x=wcviCNepro_w_Results2022)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="AllFacilities w RESULTS", x=wcviCNepro_w_Results)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="QC summary", x=qc_summary)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc1 - No Oto stock ID", x=qc1_noOtoID)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)

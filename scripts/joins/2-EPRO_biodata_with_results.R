@@ -14,10 +14,25 @@
 # 5.   Run QC report(s) (Step VII)
 # 6.   Export to git and Sharepoint for subsequent use in run reconstructions (Step VIII)
 
+################################################################################################################################################
+################################################################################################################################################
 
+# BEFORE YOU START: 
 # Set up ----------------
 rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects.
 gc() #free up memory and report the memory usage.
+
+
+# Define analysis year:
+analysis_year <- 2022
+
+
+
+################################################################################################################################################
+################################################################################################################################################
+
+# Now should be able to high light and run all! 
+
 
 # Load packages ----------------
 library(here)
@@ -30,7 +45,7 @@ library(saaWeb)
 
 # Helpers -------------
 "%notin%" <- Negate("%in%")
-analysis_year <- 2022
+
 
 
 
@@ -235,9 +250,10 @@ write.xlsx(wcviCNepro_w_NPAFC.MRP, "wcviCNepro_w_NPAFC.MRP.xlsx")
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
   mutate(
          # 1. Identify hatchery/natural origin
-         `(R) ORIGIN` = case_when(`External Marks`=="Clipped" ~ "Hatchery",
+         `(R) ORIGIN` = case_when((`Hatch Code` %in% c("Destroyed", "No Sample") | is.na(`Hatch Code`)) & (is.na(`CWT Tag Code`) | `CWT Tag Code` =="No tag") & (`External Marks`=="Unclipped") ~ "Unknown",
+                                  `External Marks`=="Clipped" ~ "Hatchery",
                                   !is.na(`CWT Tag Code`) | `CWT Tag Code` != "No tag" ~ "Hatchery",
-                                  `Hatch Code` == "Marked" ~ "Hatchery",
+                                  `Hatch Code` %notin% c("Destroyed", "No Sample", "Not Marked") ~ "Hatchery", 
                                   `Hatch Code` == "Not Marked" ~ "Natural",
                                   TRUE ~ "Unknown"),
          
@@ -478,7 +494,9 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
 
 # To DFO Network drive ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - All EPRO facilities master WITH RESULTS ",
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+                                   analysis_year,
+                                   "/R_OUT - All EPRO facilities master WITH RESULTS ",
                                    analysis_year,
                                    ".xlsx"),
                        overwrite=T,

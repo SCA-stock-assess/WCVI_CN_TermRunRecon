@@ -48,7 +48,7 @@ list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Manage
 
 # 2. Select the most recent one. This is manual because the naming convention sucks ----------------
 esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement"),
-                                          recursive=F, pattern="^[^~]*.xlsx")[4]
+                                          recursive=F, pattern="^[^~]*.xlsx")[4]   # <<<< change the "4"
 
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- #cbind(

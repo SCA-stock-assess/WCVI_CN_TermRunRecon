@@ -10,7 +10,7 @@ library(here)
 
 # Helper ------------------------
 "%notin%" <- Negate("%in%")
-
+#analysis_year <- 2023      # usually defined in parent R join script and not needed here. 
 
 
 
@@ -130,7 +130,8 @@ SC_allAgesMaster <- full_join(SC_scaleAgesMeta.MRP %>%
 # ============================ 4: EXPORT ============================
 
 # 4.1. Export to StA drive, WCVI Term Run folder ------------------------
-writexl::write_xlsx(SC_allAgesMaster, paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx"))
+writexl::write_xlsx(SC_allAgesMaster, 
+                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx"))
 
 
 
@@ -139,6 +140,19 @@ writexl::write_xlsx(SC_allAgesMaster, here("outputs",
                                            paste0("R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx")))
 
 
+
+# 4.3. Export to Sharepoint ------------------------
+writexl::write_xlsx(SC_allAgesMaster, 
+                    paste0("C:/Users/",
+                           Sys.info()["login"],
+                           "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/",
+                           analysis_year,
+                           "/Communal data/Misc biodata dumps",
+                           "/R_OUT - ALL South Coast Chinook Age results ", 
+                           min(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
+                           "-", 
+                           max(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
+                           ".xlsx"))
 
 
 

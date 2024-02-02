@@ -62,6 +62,23 @@ writexl::write_xlsx(mrpHeadRcvy,
                                 Sys.Date(),
                                 ".xlsx"))
 
+
+# Export to github ---------------------------
+writexl::write_xlsx(mrpHeadRcvy, 
+                    path = paste0(here("outputs"),
+                                "/R_OUT - MPRHeadRecoveries_AllSpecies",
+                                "_",
+                                min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                "-",
+                                max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                "_LastUpdate_",
+                                Sys.Date(),
+                                ".xlsx"))
+
+
+
+
+
 # Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.' 
 # means you have the file open
 

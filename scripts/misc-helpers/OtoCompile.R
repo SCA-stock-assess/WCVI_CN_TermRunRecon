@@ -74,6 +74,21 @@ writexl::write_xlsx(wcviOtos,
                                 Sys.Date(),
                                 ".xlsx"))
 
+
+
+# Export to github ---------------------------
+writexl::write_xlsx(wcviOtos, 
+                    path=paste0(here("outputs", "R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_"),
+                                min(wcviOtos$`(R) SAMPLE YEAR`),
+                                "-",
+                                max(wcviOtos$`(R) SAMPLE YEAR`),
+                                "_LastUpdate_",
+                                Sys.Date(),
+                                ".xlsx"))
+
+
+
+
 # "Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.' "   --> means you have the file open
 
 
@@ -121,14 +136,26 @@ remove(OtosRef.LL)
 # Export to Network ---------------------------
 writexl::write_xlsx(OtosRef, 
                     path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/Export",
-                                "/R_OUT - OtoManager_CN_REFERENCEspecimens",
-                                "_BY",
+                                "/R_OUT - OtoManager_CN_REFERENCEspecimens_BY_",
                                 min(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
                                 "-",
                                 max(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
                                 "_LastUpdate_",
                                 Sys.Date(),
                                 ".xlsx"))
+
+
+# Export to github ---------------------------
+writexl::write_xlsx(wcviOtos, 
+                    path=paste0(here("outputs", "R_OUT - OtoManager_CN_REFERENCEspecimens_BY_"),
+                                min(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
+                                "-",
+                                max(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
+                                "_LastUpdate_",
+                                Sys.Date(),
+                                ".xlsx"))
+
+
 
 # Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.'   means you have the file open
 

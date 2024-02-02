@@ -298,13 +298,6 @@ NPAFC_dupl <- NPAFC %>%
   pull(`(R) BYHID`)
 
 
-# Cases where multiple stocks within a BY received the same hatchcode --------------------------- REFERENCE  - DELETE SOON
-# NPAFC_dupl <- NPAFC %>% 
-#   filter(!is.na(`(R) BYHID`)) %>% 
-#   group_by(`(R) BYHID`) %>% 
-#   mutate(dupe = n()>1) %>% 
-#   filter(dupe == TRUE) %>% 
-#   pull(`(R) BYHID`)
 
 
 
@@ -332,7 +325,6 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
 
 
 
-# write.xlsx(esc_biodata_PADS_otoNPAFC, "C:/Users/DAVIDSONKA/Desktop/esc biod w npafc test.xlsx")
 
 #############################################################################################################################################################
 
@@ -355,10 +347,13 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
 
 # Option 2: Load already saved exported head recovery master file --------------------------- (faster)
   # Do this if you are just loading already compiled head recoveries
-mrpHeadRcvy <- read.csv(file=list.files(path = here("outputs"),
-                                        pattern = "^R_OUT - MPRHeadRecoveries_CHINOOK_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
-                                        full.names = TRUE))
+mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
+                                                  pattern = "^R_OUT - MPRHeadRecoveries_CHINOOK_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                  full.names = TRUE),
+                                  sheet="Sheet1",
+                                  trim_ws=T)
 
+# Error: Std:: bad_alloc()  -- try quitting R session and re-starting. It's a memory issue. 
 
 
 
@@ -366,11 +361,13 @@ mrpHeadRcvy <- read.csv(file=list.files(path = here("outputs"),
 
 #                                                                           X. JOIN BIODATA+PADS+OTO+NPAFC to HEAD RECOVERY RECORDS
 
+
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC to HEADS ========================  
 intersect(colnames(esc_biodata_PADS_otoNPAFC), colnames(mrpHeadRcvy))
 
 esc_biodata_PADS_otoNPAFC_heads <- left_join(esc_biodata_PADS_otoNPAFC,
-                                             mrpHeadRcvy,
+                                             mrpHeadRcvy %>% 
+                                               mutate_at("(R) SAMPLE YEAR", as.character),
                                              na_matches="never") %>% 
   mutate(`(R) TAGCODE` = MRP_TagCode) %>%
   print()
@@ -418,69 +415,106 @@ esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
 
 esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
   mutate(
-    `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
-                             `OM_READ STATUS` == "Marked" ~ "Hatchery",
-                             `OM_READ STATUS` == "Not Marked" ~ "Natural",
-                             TRUE ~ "Unknown"),
-    
-    `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
-                                     gsub(" Cr", "", 
-                                          gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
-                                          ignore.case=F),
-                                   TRUE ~ NA),
-    
-    `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
-                                        !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
-                                          "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
-                                        is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
-                                        TRUE~NA),
-    
-    `(R) OTOLITH STOCK ID` = case_when(
-      # no CWT, single otolith stock choice
-      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
-        gsub(" R", "", 
-             gsub("River", "R",
-                  gsub(" Cr", "",  
-                       gsub("S-", "",
-                            stringr::str_to_title(
-                              stringr::str_sub(NPAFC_STOCK_1,1,100)), 
+         # 1. Identify hatchery/natural origin
+         `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
+                                  `OM_READ STATUS` == "Marked" ~ "Hatchery",
+                                  `OM_READ STATUS` == "Not Marked" ~ "Natural",
+                                  TRUE ~ "Unknown"),
+         
+         
+         # 2. Identify CWT Stock ID
+         `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+                                          gsub(" Cr", "", 
+                                               gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+                                               ignore.case=F),
+                                        TRUE ~ NA),
+         
+         
+         
+         # 3. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
+         `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
+                                             !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
+                                               "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
+                                             is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
+                                             TRUE~NA),
+         
+         
+         # 4. Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
+         `(R) OTOLITH STOCK ID` = case_when(
+           # 4 a) Single otolith stock choice (certain ID)
+           !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
+             gsub(" R", "", 
+                  gsub("River", "R",
+                       gsub(" Cr", "",  
+                            gsub("S-", "",
+                                 stringr::str_to_title(
+                                   stringr::str_sub(NPAFC_STOCK_1,1,100)), 
+                                 ignore.case = F), 
                             ignore.case = F), 
+                       ignore.case=F),   
+                  ignore.case=F),
+           
+           # 4 b) Multiple HIGH probability otolith matches, flag for manual ID: 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+             (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
+             "!! manual decision needed, refer to release sizes!!",
+           
+           # 4 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+             (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
+             "!! manual decision needed, refer to release sizes!!",
+           
+           # 4 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+             (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
+             gsub(" R", "",
+                  gsub(" Cr", "",  
+                       stringr::str_to_title(
+                         stringr::str_sub(NPAFC_STOCK_1,3,100)), 
                        ignore.case = F), 
-                  ignore.case=F),   
-             ignore.case=F),
+                  ignore.case=F),
+           
+           # 4 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+             (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
+             gsub(" R", "",
+                  gsub(" Cr", "",  
+                       stringr::str_to_title(
+                         stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                       ignore.case = F), 
+                  ignore.case=F),
+           
+           # 4 f) LOW probability otoliths, just choose stock1:
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+             (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
+             gsub(" R", "",
+                  gsub(" Cr", "",  
+                       stringr::str_to_title(
+                         stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                       ignore.case = F), 
+                  ignore.case=F),
+           
+           # 4 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
+           `(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" ~
+             gsub("H-", "",
+                  gsub(" R", "",
+                       gsub(" River H", "",
+                            gsub(" Creek H", "",
+                                 stringr::str_to_title(OM_FACILITY),
+                                 ignore.case = F),
+                            ignore.case = F),
+                       ignore.case=F),
+                  ignore.case=F),
+           
+           
+           TRUE ~ NA),
+         #//end 4. "(R) OTOLITH STOCK ID"
+           
+         
+           
       
-      
-      
-      
-      # No CWT, multiple high probability otolith matches, flag for manual ID: 
-      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
-        "!! manual decision needed, refer to release sizes!!",
-      
-      # No CWT, multiple medium probability otolith matches, flag for manual ID: 
-      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-        (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
-        "!! manual decision needed, refer to release sizes!!",
-      
-      # No CWT, multiple otolith matches but Stock1 is high probability and the rest are not, choose Otolith stock 1: 
-      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
-        gsub(" R", "",
-             gsub(" Cr", "",  
-                  stringr::str_to_title(
-                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
-                  ignore.case = F), 
-             ignore.case=F),
-      
-      # No CWT, multiple otolith matches but Stock1 is med-high probability and the rest are not, choose Otolith stock 1: 
-      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-        (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
-        gsub(" R", "",
-             gsub(" Cr", "",  
-                  stringr::str_to_title(
-                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
-                  ignore.case = F), 
-             ignore.case=F),
+
+
       
       # No CWT, low prob otoliths choose stock1
       (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
@@ -559,7 +593,6 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
   print()
 
 
-write.xlsx(esc_biodata_w_RESULTS, "C:/Users/DAVIDSONKA/Desktop/esc bio wR test.xlsx")
 
 
 

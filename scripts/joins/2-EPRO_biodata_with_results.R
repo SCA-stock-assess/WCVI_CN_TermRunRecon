@@ -24,7 +24,7 @@ gc() #free up memory and report the memory usage.
 
 
 # Define analysis year:
-analysis_year <- 2022
+analysis_year <- 2023
 
 
 

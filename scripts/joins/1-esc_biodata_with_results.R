@@ -509,87 +509,47 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
            
            TRUE ~ NA),
          #//end 4. "(R) OTOLITH STOCK ID"
-           
          
-           
-      
-
-
-      
-      # No CWT, low prob otoliths choose stock1
-      (is.na(`MRP_Stock Site Name`) | `MRP_Stock Site Name`=="No Tag") & (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-        (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
-        gsub(" R", "",
-             gsub(" Cr", "",  
-                  stringr::str_to_title(
-                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
-                  ignore.case = F), 
-             ignore.case=F),
-      
-      # 6. No CWT, no oto stock ID, OM_FACILITY==nitinat and catch site is Sooke ~ Sooke 
-      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("NITINAT", OM_FACILITY) & grepl("SOOKE", `OM_CATCH SITES`) ~ 
-        gsub(" River", "",
-             stringr::str_sub(`Fishery / River`,1,100),#), 
-             ignore.case=F),
-      
-      # 6. No CWT, no oto stock ID, OM_FACILITY==san juan  ~ san juan 
-      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("SAN JUAN", OM_FACILITY) ~ 
-        gsub(" River", "",
-             stringr::str_sub(`Fishery / River`,1,100),#), 
-             ignore.case=F),
-      
-      TRUE ~ NA)) %>% 
+         
+         # 5. Identify where may be able to apply the Fishery/River location as finer scale than Otolith facility for uncertain oto ID cases (e.g., Sooke / Nitinat)
+         `(R) OTO STOCK != FISHERY/RIVER` = case_when(`(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" &
+                                                        `(R) OTOLITH STOCK ID` != gsub(" River", "",
+                                                                                       gsub(" Creek", "", `Fishery / River`,
+                                                                                            ignore.case = F),
+                                                                                       ignore.case = F) ~
+                                                        "Flag: Consider substituting Fishery/River as stock ID.",
+                                                      TRUE ~ NA
+                                                       )
+         ) %>%
   mutate(
-    `(R) OTOLITH FACILITY ID` = case_when(
-      
-      # 6. No CWT, no oto stock ID, OM_FACILITY==nitinat and catch site is not Sooke ~ unk nitinat  
-      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("NITINAT", OM_FACILITY) & !grepl("SOOKE", `OM_CATCH SITES`) ~ 
-        gsub(" River H", "",
-             gsub(" River", "",
-                  gsub("H", "",
-                       stringr::str_to_title(
-                         stringr::str_sub(OM_FACILITY,3,100)), 
-                       ignore.case = F), 
-                  ignore.case = F), 
-             ignore.case = F), 
-      
-      
-      
-      # 6. No CWT, no oto stock ID, OM_FACILITY==marble ~ marble
-      `(R) OTOLITH ID METHOD`=="Issue with BY-hatchcode, identified to facility or assumed stock based on facility (least certain ID)" & grepl("MARBLE|SPIUS|CONUMA|ROBERTSON", OM_FACILITY) ~ 
-        gsub(" H", "",
-             gsub(" R", "",
-                  gsub(" River H", "",
-                       
-                       gsub(" Cr", "",
-                            gsub("Creek", "",
-                                 stringr::str_to_title(
-                                   stringr::str_sub(OM_FACILITY,3,100)), 
-                                 ignore.case=F),
-                            ignore.case=F),
-                       ignore.case=F),
-                  ignore.case=F),
-             ignore.case=F),
-    )) %>%
-  mutate(
+    
+    # 6. Identify the method used to determine the final stock ID 
     `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
                                                is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
                                                TRUE ~ NA),
     
+    
+    # 7. Assign the final stock ID
     `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
                                         is.na(`(R) CWT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
-                                        is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,
-                                        `(R) ORIGIN`=="Natural" & (grepl("Escapement",`Sample Type`) | `Sample Type`%in%c("Escapement","Broodstock", "FSC")) ~  gsub(" River", "",
-                                                                                                                                                                     gsub(" Creek", "",
-                                                                                                                                                                          stringr::str_to_title(
-                                                                                                                                                                            stringr::str_sub(`Fishery / River`,1,100)), 
-                                                                                                                                                                          ignore.case=F),
-                                                                                                                                                                     ignore.case=F),
+                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(gsub(" River", "",
+                                                                                                    gsub(" Creek", "",
+                                                                                                         `Fishery / River`,
+                                                                                                         ignore.case=F),
+                                                                                                    ignore.case=F)
+                                                                                               ), 
+                                                                         " (assumed)"), 
                                         TRUE ~ "Unknown"),
     
-    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`)
-  ) %>% 
-  relocate(`(R) OTOLITH ID METHOD`, .after=`(R) OTOLITH FACILITY ID`) %>% 
+    
+    # 8. Combine the origin and ID into the final grouping level for the Term Run files 
+    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`),
+    
+    
+    # 9. Create flag for cases where CWT and Otolith IDs disagree
+    `(R) RESOLVED STOCK ID FLAG` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "stock ID methods disagree",
+                                             TRUE ~ NA)
+  ) %>%
   print()
 
 

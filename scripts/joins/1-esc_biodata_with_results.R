@@ -355,7 +355,10 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
 
 # Option 2: Load already saved exported head recovery master file --------------------------- (faster)
   # Do this if you are just loading already compiled head recoveries
-mrpHeadRcvy <- readxl::read_excel(here("outputs", "R_OUT - MPRHeadRecoveries_AllSpecies_2012-2023_LastUpdate_2024-02-02.xlsx"), sheet="Sheet1")
+mrpHeadRcvy <- read.csv(file=list.files(path = here("outputs"),
+                                        pattern = "^R_OUT - MPRHeadRecoveries_CHINOOK_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                        full.names = TRUE))
+
 
 
 

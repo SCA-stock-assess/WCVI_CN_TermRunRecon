@@ -8,6 +8,7 @@
 #library(here)
 #library(tidyverse)
 #library(readxl)
+#library(writexl)
 
 
 
@@ -36,7 +37,7 @@ mrpHeadRcvy <- do.call("rbind", mrpHeadRcvy.LL) %>%
   setNames(paste0('MRP_', names(.))) %>% 
   rename(`(R) HEAD LABEL` = MRP_LabelId,
          `(R) SAMPLE YEAR` = MRP_RecoveryYear) %>%
-  mutate_at(c("(R) HEAD LABEL", "(R) SAMPLE YEAR"), as.character) %>%
+  mutate_at(c("(R) HEAD LABEL"), as.character) %>%
   filter(MRP_Species=="Chinook") %>% 
   print()
 
@@ -52,29 +53,27 @@ remove(mrpHeadRcvy.LL)
 
 
 # Export to Network ---------------------------
-write.csv(x=mrpHeadRcvy, 
-          file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Export",
-                      "/R_OUT - MPRHeadRecoveries_CHINOOK_",
-                      min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
-                      "-",
-                      max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
-                      "_LastUpdate_",
-                      Sys.Date(),
-                      ".csv"),
-          row.names=F)
+writexl::write_xlsx(mrpHeadRcvy, 
+                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Export",
+                                "/R_OUT - MPRHeadRecoveries_CHINOOK_",
+                                min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                "-",
+                                max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                "_LastUpdate_",
+                                Sys.Date(),
+                                ".xlsx"))
 
 
 # Export to github ---------------------------
-write.csv(x=mrpHeadRcvy, 
-          file = paste0(here("outputs"),
-                        "/R_OUT - MPRHeadRecoveries_CHINOOK_",
-                        min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
-                        "-",
-                        max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
-                        "_LastUpdate_",
-                        Sys.Date(),
-                        ".csv"),
-          row.names=F)
+writexl::write_xlsx(mrpHeadRcvy, 
+                    path = paste0(here("outputs"),
+                                  "/R_OUT - MPRHeadRecoveries_CHINOOK_",
+                                  min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                  "-",
+                                  max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                  "_LastUpdate_",
+                                  Sys.Date(),
+                                  ".xlsx"))
 
 
 

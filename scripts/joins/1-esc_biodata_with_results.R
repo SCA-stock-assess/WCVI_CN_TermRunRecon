@@ -48,7 +48,7 @@ list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Manage
 
 # 2. Select the most recent one. This is manual because the naming convention sucks ----------------
 esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement"),
-                                          recursive=F, pattern="^[^~]*.xlsx")[4]   # <<<< change the "4"
+                                          recursive=F, pattern="^[^~]*.xlsx")[4]   # <<<< change the "4" if needed
 
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- #cbind(
@@ -104,114 +104,27 @@ wcviCNescBiodat <- #cbind(
 #                                                                           II. AGE DATA LOAD 
 
 
+# ======================== Load age data ========================  
 
-# 0. RUN AGE DATA COMPILE ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
-  # source(here("scripts", "functions", "pullChinookAgeData.R"))
+# Option 1: Run helper script to pull/compile scale data (saves as 'SC_age_data') --------------------------- (*slow*)
+# Do this if you need to add a new year. Otherwise, do option 2. 
+#  source(here("scripts", "functions", "pullChinookAgeData.R"))
 
-# 1. Load pre-dumped age data (Step 0)
+
+# Option 2: Load already saved exported age master file --------------------------- (faster)
+# Do this if you are just loading already compiled data
 SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
                                                   pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
                                   sheet="Sheet1")  %>% 
   mutate_at("(R) SAMPLE YEAR", as.character)
- 
-
-
-## OLD BELOW - RETIRE ONCE HAPPY WITH THIS... 
-# ======================== MRP AGE DATA ========================
-
-# Clean MRP PADS data ---------------------------
-# wcviCNmrpPADS <- mrpPADS %>%
-#   filter(RecoveryYear %in% analysis_year,     # << this may change next year once MRP PADS has more ages; right now no ages prior to 2022 loaded (only archived)
-#          Area%in%c(20:27, 121:127), Species=="Chinook") %>%
-#   filter(!grepl("Georgia Str|Sooke", ProjectName)) %>%
-#   setNames(paste0('PADS_', names(.))) %>%
-#   mutate(`(R) SCALE BOOK NUM` = case_when(is.na(PADS_FieldContainerId) ~ PADS_ContainerId,
-#                                           !is.na(PADS_FieldContainerId) ~ PADS_FieldContainerId,
-#                                           TRUE ~ "FLAG"),
-#          `(R) SCALE CELL NUM` = PADS_FishNumber,
-#          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~
-#                                                     paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
-#          PADS_GearMrpName = case_when(!is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.x,
-#                                  is.na(PADS_GearMrpName.x) ~ PADS_GearMrpName.y),
-#          `(R) scale data source` = "MRP") %>%
-#   rename(`(R) SAMPLE YEAR` = PADS_RecoveryYear) %>%
-#   select(PADS_Species, `(R) SAMPLE YEAR`, PADS_LifeHistory, PADS_Area, PADS_ContainerId:PADS_CntEndDate, PADS_ProjectName, PADS_Location, PADS_ContainerNotes, PADS_EuAge,
-#          PADS_GrAge, PADS_ScaleCondition, `(R) SCALE BOOK NUM`:PADS_GearMrpName, `(R) scale data source`) %>%
-#   mutate_at(c("(R) SCALE CELL NUM","(R) SAMPLE YEAR"), as.character) %>%
-#   print()
-# 
-# 
-# 
-# # ======================== NUSEDS AGE DATA ========================
-# 
-# # Load source script function (saves as 'getNuSEDS') ---------------------------
-# source(here("scripts","functions","getNusedsData.R"))
-# 
-# 
-# # Pull data ----------------     * SLOW *
-# nuPads <- getNuSEDS(here("scripts","json", "nuseds_ages_CN_2012-2021.json"), password=NULL)
-# 
-# 
-# 
-# # Clean NuSEDs PADS data ---------------------------
-# wcviCNnuPADS <- nuPads %>%
-#   select(`Fiscal Year`, Project, Location, Species, `Sample Source`, `Gear Code`, `Container Label`, `Container Address`, `Sample Number`, `Sample Start Date`,
-#          `Sample End Date`, `Part Age Code`, `GR Age`, `EU Age`) %>%
-#   setNames(paste0('PADS_', names(.))) %>%
-#   rename(`(R) SAMPLE YEAR` = `PADS_Fiscal Year`,
-#          `(R) SCALE BOOK NUM` = `PADS_Container Label`,
-#          `(R) SCALE CELL NUM` = `PADS_Container Address`,
-#          PADS_ProjectName = PADS_Project,
-#          PADS_Location = PADS_Location,
-#          PADS_Species = PADS_Species,
-#          PADS_GearMrpName = `PADS_Gear Code`,
-#          PADS_CntStartDate = `PADS_Sample Start Date`,
-#          PADS_CntEndDate = `PADS_Sample End Date`,
-#          PADS_ScaleCondition = `PADS_Part Age Code`,
-#          PADS_GrAge = `PADS_GR Age`,
-#          PADS_EuAge = `PADS_EU Age`) %>%
-#   mutate(`(R) scale data source` = "NuSEDs",
-#          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",
-#                                                                                                                        `(R) SCALE CELL NUM`)),
-#          PADS_CntStartDate = lubridate::ymd(PADS_CntStartDate),
-#          PADS_CntEndDate = lubridate::ymd(PADS_CntEndDate)) %>%
-#   filter(`PADS_Sample Source` %in% c("ESCAPEMENT", "ESCAPEMENT - SURPLUS SPAWNING", "FIRST NATIONS SAMPLE", "NATIVE FOOD FISHERY", "MIXED", "UNKNOWN CATCH",
-#                                      "HATCHERY"),
-#          !grepl("(FRASER)|(ATNARKO)|(BABINE)|(BC INTERIOR)|(BELLA COOLA)|(BIG BAR)|(CHEHALIS)|(CHILKO)|(CHILLIWACK)|(DEAN)|(DOCEE)|(HARRISON)|(KILBELLA)|
-#                 (KTIMAT)|(KITSUMKALUM)|(KITWANGA)|(KLUKSHU)|(CHILCOTIN)|(SHUSWAP)|(MEZIADIN)|(NECHAKO)|(NICOLA)|(SNOOTLI)|(SPIUS)|(TATSAMENIE)|(TENDERFOOT)|
-#                 (THOMPSON)|(NASS)|(SKEENA)|(STIKINE)|(WANNOCK)|(WHITEHORSE)|(YUKON)", PADS_ProjectName)) %>%
-#   print()
-# 
-# 
-# # ======================== COMBINE MRP+NuSEDS AGE DATA ========================
-# intersect(colnames(wcviCNmrpPADS), colnames(wcviCNnuPADS))
-# 
-# wcviCNallPADS <- full_join(wcviCNmrpPADS, wcviCNnuPADS)
-# 
-# 
-# 
-# 
-# # ======================== EXPORT ========================
-# 
-# # To git ---------------------------
-# #writexl::write_xlsx(wcviCNmrpPADS, here("outputs", "R_OUT - PADS WCVI Chinook 2022.xlsx"))
-# 
-# 
-# # To SP  ---------------------------
-# writexl::write_xlsx(wcviCNallPADS, path=paste0("C:/Users", sep="/", Sys.info()[6], sep="/",
-#                                             "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/BiodataResults/R_OUT - PADS WCVI Chinook ",
-#                                             min(wcviCNallPADS$`(R) SAMPLE YEAR`),
-#                                             "-",
-#                                             max(wcviCNallPADS$`(R) SAMPLE YEAR`),
-#                                             ".xlsx"))
 
 
 
 
 #############################################################################################################################################################
 
-#                                                                           III. JOIN ESCAPEMENT BIODATA to PADS, CALC BY
+#                                                                           III. JOIN ESCAPEMENT BIODATA to AGES, CALC BY
 
 
 
@@ -256,14 +169,30 @@ antijoin_PADS <- SC_age_data %>%
 #                                                                           IV. OTOLITH DATA LOAD 
 
 # <<< For each new year: >>> 
-  # 1. manually download newest year's Recovery Specimens file: http://devios-intra.dfo-mpo.gc.ca/Otolith/Reports/recoveryspecimen.aspx
-  # 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/Import
+  # 1. manually download newest year's Recovery Specimens file: http://devios-intra.dfo-mpo.gc.ca/Otolith/Reports/ [reference/recovery specimens]
+  # 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ [reference/recovery] / Import
     # FOLLOW NAMING CONVENTION >:(
-  # 3. Run source() line below 
+  # 3. Run Option 1 source() line once/year to add new year. Otherwise, run option 2.
 
-# Run helper script to compile/load Otolith data (saves as 'wcviOtos') ---------------------------
-source(here("scripts","misc-helpers","OtoCompile.R")) 
-  
+
+
+# ======================== Load otolith data ========================  
+
+# Option 1: Run helper script to pull/compile otolith data (saves as 'wcviOtos') --------------------------- (*slow*)
+# Do this if you need to add a new year. Otherwise, do option 2. 
+#  source(here("scripts","misc-helpers","OtoCompile.R")) 
+
+
+# Option 2: Load already saved exported otolith master file --------------------------- (faster)
+# Do this if you are just loading already compiled data
+wcviOtos <- readxl::read_excel(path=list.files(path = here("outputs"),
+                                                  pattern = "^R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                  full.names = TRUE), 
+                                  sheet="Sheet1")  %>% 
+  mutate_at("(R) SAMPLE YEAR", as.character)
+
+
+
 
 
 # Extract lab numbers for QC ---------------------------
@@ -414,12 +343,19 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
   # 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
   # 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
     # FOLLOW NAMING CONVENTION OR ELSE! >:(
-  # 3. Run source() line below 
+  # 3. Run source() line below (Option 1) - only  need to do this once/year. Otherwise run Option 2. 
 
 
 # ======================== Load head recovery data ========================  
-# Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
-source(here("scripts","misc-helpers","HeadRcvyCompile.R")) 
+
+# Option 1: Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
+  # Do this if you need to add a new year. Otherwise, do option 2. 
+  #  source(here("scripts","misc-helpers","HeadRcvyCompile.R")) 
+
+
+# Option 2: Load already saved exported head recovery master file --------------------------- (faster)
+  # Do this if you are just loading already compiled head recoveries
+mrpHeadRcvy <- readxl::read_excel(here("outputs", "R_OUT - MPRHeadRecoveries_AllSpecies_2012-2023_LastUpdate_2024-02-02.xlsx"), sheet="Sheet1")
 
 
 

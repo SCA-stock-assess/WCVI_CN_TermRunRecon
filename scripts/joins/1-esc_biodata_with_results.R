@@ -603,7 +603,7 @@ qc4_noRslvdID <- esc_biodata_w_RESULTS %>%
 
 # CWT and Otolith stock IDs contradict (stock ID error)
 qc5_unRslvdID <- esc_biodata_w_RESULTS %>% 
-  filter(`(R) CWT STOCK ID`!=`(R) OTOLITH STOCK ID` | `(R) CWT STOCK ID`!=`(R) OTOLITH FACILITY ID`) %>%
+  filter(`(R) CWT STOCK ID`!=`(R) OTOLITH STOCK ID`) %>%
   # select(NPAFC_STOCK, `MRP_Stock Site Name`, `(R) ORIGIN`:`(R) RESOLVED STOCK-ORIGIN`) %>% 
   # filter(!is.na(NPAFC_STOCK) | !is.na(`MRP_Stock Site Name`)) %>%
   # filter(
@@ -765,6 +765,7 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 
 
 # To DFO Network drive --------------------
+# For run reconstruction: 
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
                        file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",  
                                    "R_OUT - WCVI_Escapement-FSC_BioData_",
@@ -778,7 +779,18 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
                        returnValue=T)
 
 
-
+# To biodata folder:
+openxlsx::saveWorkbook(R_OUT_ESC.RES, 
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",  
+                                   "R_OUT - WCVI_Escapement-FSC_BioData_",
+                                   min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "-",
+                                   max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+                                   "_WithResults_",
+                                   Sys.Date(),
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
 
 

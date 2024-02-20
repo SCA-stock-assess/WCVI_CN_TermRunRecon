@@ -84,10 +84,7 @@ SC_ages.NuSEDS <- read.csv(here("outputs", "R_OUT - NuSEDS Chinook Age results 2
   select(Fiscal.Year, Project, Location, Species, Sample.Source, Gear.Code, Container.Label, Container.Address, Sample.Number, Sample.Start.Date,
          Sample.End.Date, Part.Age.Code, GR.Age, EU.Age) %>%
   setNames(paste0('PADS_', names(.))) %>%
-  rename(`(R) SAMPLE YEAR` = PADS_Fiscal.Year,
-         `(R) SCALE BOOK NUM` = PADS_Container.Label,
-         `(R) SCALE CELL NUM` = PADS_Container.Address,
-         PADS_ProjectName = PADS_Project,
+  rename(PADS_ProjectName = PADS_Project,
          PADS_Location = PADS_Location,
          PADS_Species = PADS_Species,
          PADS_GearMrpName = PADS_Gear.Code,
@@ -96,7 +93,10 @@ SC_ages.NuSEDS <- read.csv(here("outputs", "R_OUT - NuSEDS Chinook Age results 2
          PADS_ScaleCondition = PADS_Part.Age.Code,
          PADS_GrAge = PADS_GR.Age,
          PADS_EuAge = PADS_EU.Age) %>%
-  mutate(`(R) scale data source` = "NuSEDs",
+  mutate(`(R) SAMPLE YEAR` = PADS_Fiscal.Year,
+         `(R) SCALE BOOK NUM` = PADS_FIELDcontainerLabel,
+         `(R) SCALE CELL NUM` = PADS_Container.Address,
+         `(R) scale data source` = "NuSEDs",
          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",
                                                                                                                        `(R) SCALE CELL NUM`)),
          PADS_CntStartDate = lubridate::ymd(PADS_CntStartDate),

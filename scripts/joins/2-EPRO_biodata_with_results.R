@@ -239,7 +239,6 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
                                     by="(R) TAGCODE",
                                     relationship="many-to-one")
 
-write.xlsx(wcviCNepro_w_NPAFC.MRP, "wcviCNepro_w_NPAFC.MRP.xlsx")
 
 #############################################################################################################################################################
 

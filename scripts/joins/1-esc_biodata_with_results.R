@@ -65,16 +65,16 @@ wcviCNescBiodat <- #cbind(
                                           grepl("10", `Scale Format (5 down, 2 across, etc)`) & `Scale #`=="21" ~ "3",
                                           grepl("10", `Scale Format (5 down, 2 across, etc)`) & `Scale #`=="31" ~ "4",
                                           grepl("10", `Scale Format (5 down, 2 across, etc)`) & `Scale #`=="41" ~ "5",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="01-41" ~ "1",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="02-42" ~ "2",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="03-43" ~ "3",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="04-44" ~ "4",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="05-45" ~ "5",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="06-46" ~ "6",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="07-47" ~ "7",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="08-48" ~ "8",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="09-49" ~ "9",
-                                          is.na(`Scale Format (5 down, 2 across, etc)`) & `Scale #`=="10-50" ~ "10",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("1-41", `Scale #`) ~ "1",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("2-42", `Scale #`) ~ "2",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("3-43", `Scale #`) ~ "3",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("4-44", `Scale #`) ~ "4",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("5-45", `Scale #`) ~ "5",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("6-46|6--46", `Scale #`) ~ "6",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("7-47", `Scale #`) ~ "7",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("8-48", `Scale #`) ~ "8",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("9-49", `Scale #`) ~ "9",
+                                          is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("10-50", `Scale #`) ~ "10",
                                           TRUE ~ `Scale #`),
          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`Scale Book #`) & !is.na(`Scale #`) ~ paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
          # `(R) FIELD SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) FIELD SCALE BOOK NUM`) ~ paste0(`(R) FIELD SCALE BOOK NUM`,"-",`(R) SCALE CELL NUM`),
@@ -348,13 +348,18 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
 # Option 2: Load already saved exported head recovery master file --------------------------- (faster)
   # Do this if you are just loading already compiled head recoveries
 mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
-                                                  pattern = "^R_OUT - MPRHeadRecoveries_CHINOOK_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                  pattern = "^R_OUT - MPRHeadRecoveries_CHINOOK_2012*",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE),
                                   sheet="Sheet1",
                                   trim_ws=T)
 
 # Error: Std:: bad_alloc()  -- try quitting R session and re-starting. It's a memory issue. 
 
+
+
+##### ******* HERE NEXT DAY:: CANT READ IN EXCEL FILE NAYMORE?? TOO BIG??? SWITCH TO CSV??? IS THE FORMAT PRESERVED IN THE CSV 
+
+read.csv("C:/Users/DAVIDSONKA/Documents/ANALYSIS/WCVI_Chinook_Term_Run_Recon/WCVI_CN_TermRunRecon/outputs/R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv")
 
 
 #############################################################################################################################################################

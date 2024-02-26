@@ -150,14 +150,14 @@ esc_biodata_PADS <- left_join(wcviCNescBiodat,
 
 
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
-# 1. Extract Book-cell values in the join 
+# 1. Extract "successful" scale book-cell values from the joined file (e.g., scale books with attached non-NA scale ages)
 available_age_results <- esc_biodata_PADS %>%
   filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`) & !is.na(`(R) RESOLVED TOTAL AGE`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
-# 2. Filter 
+# 2. Filter - remove the successful results from the join from the age data dump and save only the non-successful join (orphans)
 antijoin_PADS <- SC_age_data %>% 
-  filter(`(R) SCALE BOOK-CELL CONCAT` %notin% available_age_results & PADS_ProjectName!="WCVI Creel Survey") %>% 
+  filter(`(R) SCALE BOOK-CELL CONCAT` %notin% available_age_results & !grepl("creel|test", PADS_ProjectName, ignore.case=T)) %>% 
   print()
 
 
@@ -224,12 +224,12 @@ esc_biodata_PADS_oto <- left_join(esc_biodata_PADS,
 
 
 # ANTI JOINS: Oto samples that didn't make it in to the escapement biodata basefile ---------------------------
-# 1. Extract lab-box-vial #s from escapement file 
-esc_otoIDs <- esc_biodata_PADS_oto %>%
-  filter(!is.na(`(R) OTOLITH LBV CONCAT`)) %>% 
+# 1. Extract "successful" otolith lab-box-vial values from the joined file (e.g., vials with attached non-NA BY-hatch code IDs)
+availabe_oto_results <- esc_biodata_PADS_oto %>%
+  filter(!is.na(`(R) OTOLITH LBV CONCAT`) & !is.na(`(R) BYHID`)) %>% 
   pull(`(R) OTOLITH LBV CONCAT`)
 
-# 2. Filter otolith master file by not those numbers 
+# 2. Filter - remove the successful results in the join from the oto data dump and save only the non-successful join results (orphans) 
 antijoin_OM <- wcviOtos %>% 
   filter(`(R) OTOLITH LBV CONCAT` %notin% esc_otoIDs & OM_SOURCE != "Sport") %>% 
   print()

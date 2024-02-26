@@ -313,7 +313,7 @@ NPAFC_dupl <- NPAFC %>%
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTOMGR to NPAFC ========================  
-intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFCt))
+intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFC))
 
 # Joining to NPAFC FIX: 
   # Originally, there were cases where the same BY received the same hatchcode, so we need a way to join on this. 
@@ -348,18 +348,16 @@ esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
 # Option 2: Load already saved exported head recovery master file --------------------------- (faster)
   # Do this if you are just loading already compiled head recoveries
 mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
-                                                  pattern = "^R_OUT - MPRHeadRecoveries_CHINOOK_2012*",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                  pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_2012*.*xlsx",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE),
                                   sheet="Sheet1",
                                   trim_ws=T)
 
-# Error: Std:: bad_alloc()  -- try quitting R session and re-starting. It's a memory issue. 
 
-
-
-##### ******* HERE NEXT DAY:: CANT READ IN EXCEL FILE NAYMORE?? TOO BIG??? SWITCH TO CSV??? IS THE FORMAT PRESERVED IN THE CSV 
-
-read.csv("C:/Users/DAVIDSONKA/Documents/ANALYSIS/WCVI_Chinook_Term_Run_Recon/WCVI_CN_TermRunRecon/outputs/R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv")
+# !! MAY GET:    Error: Std:: bad_alloc()  
+# It's a memory issue. Either try quitting R session and re-starting, or may have to close programs/restart computer. 
+# If not, read in as CSV below: 
+  # mrpHeadRcvy <- read.csv(here("outputs" "R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv"))
 
 
 #############################################################################################################################################################

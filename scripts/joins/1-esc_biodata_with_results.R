@@ -151,15 +151,13 @@ esc_biodata_PADS <- left_join(wcviCNescBiodat,
 
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
 # 1. Extract Book-cell values in the join 
-esc_scaleIDs <- esc_biodata_PADS %>%
-  filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`)) %>% 
+available_age_results <- esc_biodata_PADS %>%
+  filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`) & !is.na(`(R) RESOLVED TOTAL AGE`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
 # 2. Filter 
 antijoin_PADS <- SC_age_data %>% 
-  filter(`(R) SCALE BOOK-CELL CONCAT` %notin% esc_scaleIDs & PADS_ProjectName!="WCVI Creel Survey") %>% 
-  group_by(`(R) SAMPLE YEAR`, PADS_ProjectName, PADS_Location) %>% 
-  summarize(n=n()) %>%
+  filter(`(R) SCALE BOOK-CELL CONCAT` %notin% available_age_results & PADS_ProjectName!="WCVI Creel Survey") %>% 
   print()
 
 
@@ -569,14 +567,10 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT %>%
 
 
 # QC flags ---------------------------
+
 # NPAFC duplicates - key for assigning final stock IDs for orphan otolith samples with duplicate BY-hatchcodes (already defined above)
 NPAFC_dupl.df <- NPAFC %>% 
   filter(!is.na(NPAFC_STOCK_2)) %>%
-  # filter(!is.na(`(R) BYHID`)) %>% 
-  # group_by(`(R) BYHID`) %>% 
-  # mutate(dupe = n()>1) %>% 
-  # filter(dupe == TRUE) %>% 
-  # arrange(desc(`(R) BROOD YEAR`)) %>%
   print()
 
 # Entries in the escapement biodata that have >1 NPAFC stock ID option due to duplicated BY-hatchcode applications or only assumed via facility
@@ -607,19 +601,6 @@ qc4_noRslvdID <- esc_biodata_w_RESULTS %>%
 # CWT and Otolith stock IDs contradict (stock ID error)
 qc5_unRslvdID <- esc_biodata_w_RESULTS %>% 
   filter(`(R) CWT STOCK ID`!=`(R) OTOLITH STOCK ID`) %>%
-  # select(NPAFC_STOCK, `MRP_Stock Site Name`, `(R) ORIGIN`:`(R) RESOLVED STOCK-ORIGIN`) %>% 
-  # filter(!is.na(NPAFC_STOCK) | !is.na(`MRP_Stock Site Name`)) %>%
-  # filter(
-  #   (gsub(" Cr", "", 
-  #         gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
-  #         ignore.case=F))
-  #   !=
-  #     (gsub(" R", "",
-  #           gsub(" Cr", "",  
-  #                stringr::str_to_title(
-  #                  stringr::str_sub(NPAFC_STOCK,3,100)), 
-  #                ignore.case = F), 
-  #           ignore.case=F))) %>% 
   print()
 
 

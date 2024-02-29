@@ -22,21 +22,20 @@
 
 # Read OtoManager files as large list ---------------------------
 # Load base files to compile
-wcviOtos.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/Import", 
+wcviOtos.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/1-Import-to-R", 
                                  pattern=".xlsx", full.names=T), 
                       function(x) {
-                        readxl::read_excel(x, sheet="RecoverySpecimens", skip=1, guess_max=20000)
+                        readxl::read_excel(x, sheet="RcvySpecAge", skip=1, guess_max=20000)
                       })
 
 # Change filenames in the List:
-names(wcviOtos.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/Import", 
+names(wcviOtos.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/1-Import-to-R", 
                                  pattern=".xlsx", full.names=T)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
 wcviOtos <- do.call("rbind", wcviOtos.LL) %>%
   tibble::rownames_to_column(var="file_source") %>%
-  select(-c(`...5`)) %>%
   setNames(paste0('OM_', names(.))) %>% 
   mutate(OM_FACILITY = case_when(OM_FACILITY=="H-ROBERTSON CR" ~ "H-ROBERTSON CREEK H",
                                  OM_FACILITY=="H-CONUMA R " ~ "H-CONUMA RIVER H ",
@@ -49,7 +48,6 @@ wcviOtos <- do.call("rbind", wcviOtos.LL) %>%
   rename(`(R) HATCHCODE` = `OM_HATCH CODE`,
          `(R) SAMPLE YEAR` = `OM_SAMPLE YR`) %>%
   mutate_at("(R) OTOLITH VIAL NUM", as.character) %>%
-  #select(-c(`...5`)) %>%
   print()
 
 # Clean up ---------------------------
@@ -64,7 +62,7 @@ remove(wcviOtos.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(wcviOtos, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/Export",
+                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/2-Export-from-R",
                                 "/R_OUT - OtoManager_AllSpecies_Area20-27andOffshore",
                                 "_",
                                 min(wcviOtos$`(R) SAMPLE YEAR`),

@@ -12,7 +12,7 @@
 
 
 # Load NuSEDS query function ---------------------------
-source(here("scripts","functions","pullNusedsData.R"))
+source(here("scripts","functions","pullChinookNusedsData.R"))
 
 
 

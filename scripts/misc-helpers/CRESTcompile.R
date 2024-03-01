@@ -8,10 +8,11 @@
 
 
 # Load packages ----------------
-#library(here)
-#library(tidyverse)
-#library(readxl)
-#library(writexl)
+library(here)
+library(tidyverse)
+library(readxl)
+library(writexl)
+library(saaWeb)    # for pullNusedsData in source() script to make stream aux file 
 
 
 #############################################################################################################################################################
@@ -47,9 +48,9 @@ remove(crestBio.LL)
 
 #############################################################################################################################################################
 
-#                                                                           I. BUILD STREAM AUX FILE 
+# ==================== 2. LOAD STREAM AUX FILE ==================== 
 
-
+source(here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))
 
 
 

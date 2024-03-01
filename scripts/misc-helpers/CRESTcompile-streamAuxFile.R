@@ -4,9 +4,7 @@
 
 
 # Load libraries ---------------------------
-#library(saaWeb)    NuSEDS query not in saaWeb yet
-
-
+library(saaWeb)   
 
 
 

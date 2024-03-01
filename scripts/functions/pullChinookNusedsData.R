@@ -3,10 +3,13 @@
 # Feb 2024
 
 
+# Load library -----------------------
 library(saaWeb)
 
 
 
+
+# Define function to extract NuSEDS data -----------------------
 pullNusedsData <- function (query_doc, config_file = "saaWeb.config", user_name = Sys.getenv("username"), 
                             password = NULL) 
 {

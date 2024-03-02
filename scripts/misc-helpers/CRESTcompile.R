@@ -38,7 +38,7 @@ crestBio.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CH
 
 # Change filenames in the List:
 names(crestBio.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="^*WCVI_*.*xlsx", full.names=F)
+                                 pattern="*WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS*.*xlsx", full.names=F)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
@@ -84,7 +84,7 @@ stopwords <- c(" River", " Creek")
 
 # CODE TERM RUN GROUPS ---------------------------
 
-wcviCNcrest_coded <- 
+crestBio_grouped <- 
   # Join CREST biodata and streamAreas aux file ----
 left_join(crestBio, 
           streamAreas) %>% 
@@ -168,36 +168,160 @@ left_join(crestBio,
 # ==================== 3. QC & README ==================== 
 
 
-# Add QC flag columns ---------------------------
-wcviCNcrest_coded_qc <- wcviCNcrest_coded %>% 
-  mutate(qc1_otoNoSample = case_when(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & THERMALMARK=="No Sample" ~ 1,
-                                     TRUE ~ 0),
-         qc2_scaleNoAge = case_when(is.na(RESOLVED_AGE) & is.na(PART_AGE_CODE) & !is.na(SCALE_BOOK) ~ 1,
-                                    TRUE ~ 0),
-         qc3_CWTnoID = case_when(!is.na(CWT_HEAD_LABEL) & is.na(CWT_RESULT) ~ 1,
-                                 TRUE ~ 0),
-         qc4_CWTzero = case_when(CWT_HEAD_LABEL==0 ~ 1,
-                                 TRUE ~ 0),
-         qc5_WmanNoSample = case_when(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE" ~ 1,
-                                      TRUE ~ 0),
-         qc6_CWTDNAdisagree = case_when(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME ~ 1,
-                                        TRUE ~ 0),
-         qc7_otoDNAdisagree = case_when(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME ~ 1,
-                                        TRUE ~ 0),
-         qc8_DNAuncert = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8 ~ 1,
-                                   TRUE ~ 0),
-         qc9_PBTmaybe = case_when(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2) ~ 1,
-                                  TRUE ~ 0),
-         qc10_susSUS = case_when(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
-                                   !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
-                                   !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
-                                   !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE" ~ 1,
-                                 TRUE ~ 0),
-         qc11_ageDisagree = case_when((YEAR-CWT_BROOD_YEAR)!=RESOLVED_AGE ~ 1,
-                                      TRUE ~ 0),
-         qc12_nonstdSex = case_when(SEX %notin% c("M","F") ~ 1,
-                                    TRUE ~ 0)) %>% 
+# QC flags ---------------------------
+
+
+
+# Otolith sample and age data (for stock ID) available but no result (possible oto processing error)
+qc1_otoNoSample <- crestBio_grouped %>% 
+  filter(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & !is.na(RESOLVED_AGE) & THERMALMARK!="Not Marked")
+
+# Scale sample available but no result (possible scale processing error)
+qc2_scaleNoAge <- crestBio_grouped %>% 
+  filter(is.na(RESOLVED_AGE) & is.na(PART_AGE_CODE) & !is.na(SCALE_BOOK) & !is.na(SCALE_NO))
+
+# DNA sample available but no DNA result (possible DNA processing error)
+qc5_WmanNoSample <- crestBio_grouped %>% 
+  filter(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE")
+
+# CWT head lable available but no CWT result
+qc3_CWTnoID <- crestBio_grouped %>% 
+  filter(!is.na(CWT_HEAD_LABEL) & is.na(CWT_RESULT))
+
+# Non-standard CWT head label
+qc4_CWTzero <- crestBio_grouped %>% 
+  filter(CWT_HEAD_LABEL==0)
+
+# CWT-based stock ID disagrees with certain (>=80%) DNA stock ID
+qc6_CWTDNAdisagree <- crestBio_grouped %>% 
+  filter(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME) 
+
+# Otolith-based stock ID disagrees with certain (>=80%) DNA stock ID
+qc7_otoDNAdisagree <- crestBio_grouped %>% 
+  filter(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
+
+# DNA stock assignments that are below the recommended 80% threshold
+qc8_DNAuncert <- crestBio_grouped %>% 
+  filter(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8)
+
+
+# Possible candidates for PBT assignment
+qc9_PBTmaybe <- crestBio_grouped %>% 
+  filter(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2))
+
+# Suspicious Southern US assignment - i.e., a fish assumed to be Southern US with little to no evidence (given mass marking is now a thing for WCVI and not limited to S. US)
+qc10_susSUS <- crestBio_grouped %>% 
+  filter(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
+           !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
+           !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
+           !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE")
+
+# CWT BY age disagrees with scale age 
+qc11_ageDisagree <- crestBio_grouped %>% 
+  filter((YEAR-CWT_BROOD_YEAR) != RESOLVED_AGE)
+
+# A non-standard sex assignment
+qc12_nonstdSex <- crestBio_grouped %>% 
+  filter(SEX %notin% c("M","F"))
+
+
+
+
+# *********** HERE NEXT DAY: 
+## build in R code QC flags (e.g., stock ID available but not populated) -- if this is possible? 
+# create QC summary report tab that shows error rate for each QC flag  (e.g., # bad records out of total n rows )
+# create readme 
+# (two versions of these below )
+
+
+
+
+
+
+
+# QC Summary ---------------------------
+qc_summary <- data.frame(qc_flagName = c("qc0 - EBwR unCert Oto",
+                                         "qc1_noID",
+                                         "qc2_noResults",
+                                         "qc3_noCWTID",
+                                         "qc4_noRslvdID",
+                                         "qc5_unRslvdID",
+                                         "antijoin - PADS",
+                                         "antijoin - Otos"),
+                         number_records = c(nrow(qc0_EBwR_uncertOtoID),
+                                            nrow(qc1_noOtoID),
+                                            nrow(qc2_noOtoResults),
+                                            nrow(qc3_noCWTID),
+                                            nrow(qc4_noRslvdID),
+                                            nrow(qc5_unRslvdID),
+                                            nrow(antijoin_PADS),
+                                            nrow(antijoin_OM)),
+                         description = c("Esc biodata entries where there was no CWT and duplicate otolith hatch codes were applied within one Brood Year resulting in >1 stock ID options, OR where unable to resolve to Stock level and are left making assumptions based on Facility. These records are still retained in the full biodata file as well, and assumptions are made based on likelihood or facility. These are indicated in the (R) OTOLITH ID METHOD column.",
+                                         "Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
+                                         "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
+                                         "There is a CWT available but no Stock ID.",
+                                         "There is a CWT or an NPAFC ID but no Resolved stock ID.",
+                                         "Otolith stock ID does not match CWT stock ID.",
+                                         "All WCVI CN PADS results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'WCVI Creel Survey' assumed already in CREST. Purpose here is to make sure there are no missing scales expected (i.e., samples not entered in base esc biodata file).",
+                                         "All WCVI otolith results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'Sport' assumed already in CREST. Purpose here is to make sure there are no missing otoliths expected (i.e., samples not entered in base esc biodata file).")) %>% 
   print()
+
+
+# Create readme ---------------------------
+readme <- data.frame(`1` = c("date rendered:", 
+                             "source R code:", 
+                             "source escapement file:",
+                             "source PADS file:",
+                             "source Oto Manager file:",
+                             "source NPAFC file:",
+                             "!PLACEHOLDER! CWT source:",
+                             "",
+                             "sheet name:",
+                             "Esc biodata w RESULTS",
+                             "QC summary",
+                             "qc0 - EBwR unCert Oto",
+                             "!NPAFC_dupl!",
+                             "qc1 - No stock ID",
+                             "qc2 - No Oto result",
+                             "qc3 - No CWT ID",
+                             "qc4 - No Reslvd ID",
+                             "qc5 - Unreslvd ID",
+                             "antijoin - PADS unmatched",
+                             "antijoin - OM unmatched"
+),
+`2` = c(as.character(Sys.Date()), 
+        "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/1-esc_biodata_with_results.R", 
+        "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/2015-2023_WCVI_Escapement-FSC_BioData.xlsx",
+        "via direct R query to http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/AgeBatchList",
+        "For 2022, query from OtoManager online stored in: https://086gc.sharepoint.com/:x:/r/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/WCVI%20STAD/Terminal%20CN%20Run%20Recon/2022/Communal%20data/BiodataResults/OtoManager_RecoverySpecimens_Area20-27_121-127_CN_2022_28Aug2023.xlsx?d=w398c15dd3c9b4ceb84d3083a215e9c6a&csf=1&web=1&e=NAxyjd",
+        "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
+        "!NOT IN YET!: http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
+        "",
+        "sheet description:",
+        "WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, NPAFC mark file to give otolith stock ID, and CWT recoveries. Currently does NOT include DNA results.",
+        "Summary of QC flags and # of entries belonging to that flag.",
+        "QC flag 0 tab. Only the Esc biodata w RESULTS ('EBwR') entries that correspond to NPAFC BY-hatchcode duplicates. See QC summary for details.",
+        "All duplicate BY-hatchcodes documented by the NPAFC. To inform decisions around QC Flag 0.",
+        "QC flag 1 tab. See QC summary for details.",
+        "QC flag 2 tab. See QC summary for details.",
+        "QC flag 3 tab. See QC summary for details.",
+        "QC flag 4 tab. See QC summary for details.",
+        "QC flag 5 tab. See QC summary for details.",
+        "PADS Antijoin tab. See QC summary for details.",
+        "OtoManager Antijoin tab. See QC summary for details."))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # QC Summary ---------------------------

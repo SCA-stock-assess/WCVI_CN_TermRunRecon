@@ -4,10 +4,11 @@
 .Ruserdata
 
 oto lab nums.csv
-scripts/functions/getAgeDataMRP.R
 scripts/json/nuseds_ages_CN_2012-2021.json
 outputs/R_OUT - NuSEDS Chinook Age results 2012-2021.xlsx
 outputs/R_OUT - MRPHeadRecoveries_CHINOOK_*.csv
 functions/getAgeDataMRP.R
 functions/getCWTData.R
 functions/getNusedsData.R
+misc-helpers/CREST_termRR_groups.R
+misc-helpers/age_summary*.R

@@ -53,85 +53,92 @@ library(saaWeb)
 
 #                                                                           I. EPRO FILES LOAD 
 
+    # REPLACED BY source() below - delete soon! 
+      # # Load files from Sharepoint -------------
+      # 
+      # # Save directory name for where files are located (change if necessary)
+      # epro_dir <- paste("C:/Users", Sys.info()[6], "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon",
+      #                   analysis_year,
+      #                   "Communal data/EPRO/",
+      #                   sep="/")
+      # 
+      # 
+      # # Load files as a list of tibbles
+      # epro.files <- list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = T) %>%
+      #   purrr::set_names(
+      #     list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = F)) %>%
+      #   map(~readxl::read_excel(path = .x, trim_ws=T), id = "path" )
+      # # Should be a Large List of at least 8 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita, San Juan, possible multiple files per stock depending on annual biosampling
+      # 
+      # 
+      # 
+      # # Convert the Large List into a useable R dataframe ---------------------------
+      # wcviCNepro <- epro.files %>%
+      #   map(~ mutate(.x, across(everything(), as.character))) %>% # Convert all columns to character for rbind compatibility
+      #   list_rbind(names_to = "file_source") %>% 
+      #   filter(`Spawning Stock` != "") %>%
+      #   mutate(
+      #     across(everything(), parse_guess), # Automatically determine column classes based on values
+      #     `(R) OTOLITH BOX NUM` = `Bag No`,
+      #     `(R) OTOLITH VIAL NUM` = `Vial No`,
+      #     `(R) OTOLITH BOX-VIAL CONCAT` = case_when(
+      #       !is.na(`Bag No`) & !is.na(`Vial No`) ~ paste0(`Bag No`,sep="-",`Vial No`)
+      #     ),
+      #     `(R) SCALE BOOK NUM` = `Book No`,
+      #     `(R) SCALE CELL NUM` = `Scale Sample No`,
+      #     `(R) SCALE BOOK-CELL CONCAT` = case_when(
+      #       !is.na(`Book No`) & !is.na(`Scale Sample No`) ~ paste0(`Book No`,sep="-",`Scale Sample No`)
+      #     ),
+      #     `(R) TAGCODE` = `CWT Tag Code`,
+      #     `(R) HATCHCODE` = `Hatch Code`,
+      #     `(R) RESOLVED TOTAL AGE` = case_when(!is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
+      #                                          !is.na(`Scale Total Age (yrs)`) ~ as.numeric(`Scale Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
+      #                                          `Scale Part Age`=="1M" ~ 2,
+      #                                          `Scale Part Age`=="2M" ~ 3,
+      #                                          `Scale Part Age`=="3M" ~ 4,
+      #                                          `Scale Part Age`=="4M" ~ 5,
+      #                                          `Scale Part Age`=="5M" ~ 6,
+      #                                          `Scale Part Age`=="6M" ~ 7,
+      #                                          T ~ NA_real_),
+      #     `(R) BROOD YEAR` = analysis_year - `(R) RESOLVED TOTAL AGE`,
+      #     UEID = paste0(analysis_year, "-", seq(1:nrow(.)))) 
+      # 
+      # # Remove the list object
+      # rm(epro.files)
+      # 
+      # 
+      # # Export to git and SP as a backup for future use ---------------------------
+      # # To git:
+      # writexl::write_xlsx(wcviCNepro, 
+      #                     path=paste0(here("outputs"), 
+      #                                 "/R_OUT - All EPRO facilities master ",
+      #                                 analysis_year,
+      #                                 ".xlsx"))
+      # 
+      # 
+      # # Export to SharePoint: 
+      # writexl::write_xlsx(wcviCNepro, 
+      #                     path = paste0(epro_dir, 
+      #                                   "R_OUT - All EPRO facilities master ",
+      #                                   analysis_year,
+      #                                   ".xlsx"))
+      # 
+      # 
+      # 
+      # # Export to DFO Network:
+      # writexl::write_xlsx(wcviCNepro, 
+      #                     path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+      #                                   analysis_year, "/",
+      #                                   "R_OUT - All EPRO facilities master ",
+      #                                   analysis_year,
+      #                                   ".xlsx"))
 
-# Load files from Sharepoint -------------
 
-# Save directory name for where files are located (change if necessary)
-epro_dir <- paste("C:/Users", Sys.info()[6], "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon",
-                  analysis_year,
-                  "Communal data/EPRO/",
-                  sep="/")
+# Load source() EPRO compile code ---------------------------
+# Saves as wcviCNepro
+source(here("scripts", "misc-helpers", "EPROcompile.R"))
 
 
-# Load files as a list of tibbles
-epro.files <- list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = T) %>%
-  purrr::set_names(
-    list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = F)) %>%
-  map(~readxl::read_excel(path = .x, trim_ws=T), id = "path" )
-# Should be a Large List of at least 8 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita, San Juan, possible multiple files per stock depending on annual biosampling
-
-
-
-# Convert the Large List into a useable R dataframe ---------------------------
-wcviCNepro <- epro.files %>%
-  map(~ mutate(.x, across(everything(), as.character))) %>% # Convert all columns to character for rbind compatibility
-  list_rbind(names_to = "file_source") %>% 
-  filter(`Spawning Stock` != "") %>%
-  mutate(
-    across(everything(), parse_guess), # Automatically determine column classes based on values
-    `(R) OTOLITH BOX NUM` = `Bag No`,
-    `(R) OTOLITH VIAL NUM` = `Vial No`,
-    `(R) OTOLITH BOX-VIAL CONCAT` = case_when(
-      !is.na(`Bag No`) & !is.na(`Vial No`) ~ paste0(`Bag No`,sep="-",`Vial No`)
-    ),
-    `(R) SCALE BOOK NUM` = `Book No`,
-    `(R) SCALE CELL NUM` = `Scale Sample No`,
-    `(R) SCALE BOOK-CELL CONCAT` = case_when(
-      !is.na(`Book No`) & !is.na(`Scale Sample No`) ~ paste0(`Book No`,sep="-",`Scale Sample No`)
-    ),
-    `(R) TAGCODE` = `CWT Tag Code`,
-    `(R) HATCHCODE` = `Hatch Code`,
-    `(R) RESOLVED TOTAL AGE` = case_when(!is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
-                                         !is.na(`Scale Total Age (yrs)`) ~ as.numeric(`Scale Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
-                                         `Scale Part Age`=="1M" ~ 2,
-                                         `Scale Part Age`=="2M" ~ 3,
-                                         `Scale Part Age`=="3M" ~ 4,
-                                         `Scale Part Age`=="4M" ~ 5,
-                                         `Scale Part Age`=="5M" ~ 6,
-                                         `Scale Part Age`=="6M" ~ 7,
-                                         T ~ NA_real_),
-    `(R) BROOD YEAR` = analysis_year - `(R) RESOLVED TOTAL AGE`,
-    UEID = paste0(analysis_year, "-", seq(1:nrow(.)))) 
-
-# Remove the list object
-rm(epro.files)
-
-
-# Export to git and SP as a backup for future use ---------------------------
-# To git:
-writexl::write_xlsx(wcviCNepro, 
-                    path=paste0(here("outputs"), 
-                                "/R_OUT - All EPRO facilities master ",
-                                analysis_year,
-                                ".xlsx"))
-
-
-# Export to SharePoint: 
-writexl::write_xlsx(wcviCNepro, 
-                    path = paste0(epro_dir, 
-                                  "R_OUT - All EPRO facilities master ",
-                                  analysis_year,
-                                  ".xlsx"))
-
-
-
-# Export to DFO Network:
-writexl::write_xlsx(wcviCNepro, 
-                    path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
-                                  analysis_year, "/",
-                                  "R_OUT - All EPRO facilities master ",
-                                  analysis_year,
-                                  ".xlsx"))
 
 
 ################################################################################################################################################
@@ -205,7 +212,7 @@ wcviCNepro_w_NPAFC <- left_join(wcviCNepro ,
 
 
 # Option 1: Load function to query MRPIS CWT releases --------------------------- 
-  # Run this if it hasn't been refreshed in a while (SLOW)
+  # Run this if it hasn't been refreshed in a while (**SLOW**)
 # source(here("scripts","functions","pullChinookCWTReleases.R"))
 
 
@@ -355,89 +362,87 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
 
 #############################################################################################################################################################
 
-#                                                                           VII. QC 
+#                                                                           VII. QC and readme
 
-
-# Create readme ---------------------------
-readme <- data.frame(`1` = c("date rendered:", 
-                              "source R code:", 
-                              "source EPRO files:",
-                              "source NPAFC file:",
-                              "CWT source:",
-                              "assumptions made:", 
-                              "",
-                              "",
-                              "sheet name:",
-                              "AllFacilities w RESULTS",
-                              "QC summary",
-                              "qc1 - No stock ID",
-                              "qc2 - No Oto result",
-                             "qc3 - No CWT ID",
-                             "qc4 - No Reslvd ID",
-                             "qc5 - Unreslvd ID"
-                              ),
-                     `2` = c(as.character(Sys.Date()), 
-                             "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/2-EPRO_biodata_with_results.R", 
-                             "https://086gc.sharepoint.com/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/Forms/AllItems.aspx?csf=1&web=1&e=QSeYb8&cid=a94075b0%2D307f%2D43b2%2D96e6%2D02a093c68a9a&FolderCTID=0x01200009EB148EBFDA544E816AF000384149AC&id=%2Fsites%2FPAC%2DSCAStockAssessmentSTAD%2FShared%20Documents%2FWCVI%20STAD%2FTerminal%20CN%20Run%20Recon%2F2022%2FCommunal%20data%2FEPRO&viewid=931f98e0%2Da6b1%2D48c6%2D9fee%2D65ba9363ce0e",
-                             "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
-                             "http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
-                             "Removed AK and Kamchatka marks from NPAFC file to avoid duplicates, assuming strays are only BC/SUS",
-                             "Ignored one case where RCH and Nanaimo hatchery applied the H5 same mark in 2018; assume it was a RCH mark that showed up in 2022 Burman broodstock",
-                             "",
-                             "sheet description:",
-                             "All EPRO facilities 2022 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID.",
-                             "Summary of QC flags and # of entries belonging to that flag.",
-                             "QC flag 1 tab. See QC summary for details.",
-                             "QC flag 2 tab. See QC summary for details.",
-                             "QC flag 3 tab. See QC summary for details.",
-                             "QC flag 4 tab. See QC summary for details.",
-                             "QC flag 5 tab. See QC summary for details."))
 
 
 # QC flags ---------------------------
-# 1. There is brood year data and a useable hatch code but the Otolith stock ID didn't populate (e.g., code errors)
-qc1_noOtoID <- wcviCNepro_w_Results %>%
+# There is brood year data and a useable hatch code but the Otolith stock ID didn't populate (e.g., R code errors)
+qc_noOtoID <- wcviCNepro_w_Results %>%
   filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
   print()
 
-# 2. There is an otolith sample that was taken and a useable brood year, but no otolith result (e.g., sample processing errors)
-qc2_noOtoResults <- wcviCNepro_w_Results %>%
+# There is an otolith sample that was taken and a useable brood year, but no otolith result (e.g., sample processing errors)
+qc_noOtoResults <- wcviCNepro_w_Results %>%
   filter(!is.na(`(R) OTOLITH BOX-VIAL CONCAT`) & !is.na(`(R) BROOD YEAR`) & is.na(`(R) HATCHCODE`)) %>%
   print()
 
-# 3. There is a useable CWT but no stock ID (e.g., code errors)
-qc3_noCWTID <- wcviCNepro_w_Results %>% 
-  filter(!is.na(`(R) TAGCODE`) & `(R) TAGCODE`!="No Tag" & is.na(`MRP_Stock Site Name`)) %>% 
+# There is a useable CWT but no stock ID (e.g., R code errors)
+qc_noCWTID <- wcviCNepro_w_Results %>% 
+  filter(!is.na(`CWT Tag Code`) & `CWT Tag Code`%notin%c("No Tag","Lost Tag","No Head") & `Sample Status`=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
   filter()
 
-# 4. Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)
-qc4_noRslvdID <- wcviCNepro_w_Results %>% 
+# Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)
+qc_noRslvdID <- wcviCNepro_w_Results %>% 
   filter(`(R) RESOLVED STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK_1) & !is.na(`MRP_Stock Site Name`)) %>% 
   print()
 
-# 5. Otolith and CWT stock IDs disagree (e.g., processing error)
-qc5_unRslvdID <- wcviCNepro_w_Results %>% 
+# Otolith and CWT stock IDs disagree (e.g., processing error)
+qc_unRslvdID <- wcviCNepro_w_Results %>% 
   filter(`(R) RESOLVED STOCK ID FLAG` == "FLAG") %>%
   print()
 
 
-# QC Summary ---------------------------
-qc_summary <- data.frame(qc_flagName = c("qc1_noID",
-                                         "qc2_noResults",
-                                         "qc3_noCWTID",
-                                         "qc4_noRslvdID",
-                                         "qc5_unRslvdID"),
-                         number_records = c(nrow(qc1_noOtoID),
-                                            nrow(qc2_noOtoResults),
-                                            nrow(qc3_noCWTID),
-                                            nrow(qc4_noRslvdID),
-                                            nrow(qc5_unRslvdID)),
+# QC summary Report ---------------------------
+qc_summary <- data.frame(qc_flagName = c("QC- No Oto ID",
+                                         "QC- Oto sample no result",
+                                         "QC- No CWT ID",
+                                         "QC- No resolved ID",
+                                         "QC- Oto/CWT IDs disagree",
+                                         "",
+                                         "total EPRO records:"),
+                         number_records = c(nrow(qc_noOtoID),
+                                            nrow(qc_noOtoResults),
+                                            nrow(qc_noCWTID),
+                                            nrow(qc_noRslvdID),
+                                            nrow(qc_unRslvdID),
+                                            "",
+                                            nrow(wcviCNepro_w_Results)),
                          description = c("Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
                                          "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
-                                         "There is a CWT available but no Stock ID.",
+                                         "There is CWT info available but no Stock ID. Note sometimes this is due to exceptionally young age classes (eg, Jimmies) being sampled, or more rarely species ID issues (e.g., tag code 186168). Use https://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/TagSearch to search individual tag #s if concerned about results.",
                                          "There is a CWT or an NPAFC ID but no Resolved stock ID.",
-                                         "CWT and Otolith stock ID's disagree.")) %>% 
+                                         "CWT and Otolith stock IDs disagree.",
+                                         "",
+                                         paste0("for ", paste(unique(wcviCNepro_w_Results$`(R) RETURN YEAR`), collapse = " ") ))) %>% 
   print()
+
+
+
+# Create readme ---------------------------
+readme <- data.frame(`1` = c("date rendered:", 
+                             "source R code:", 
+                             "source EPRO files:",
+                             "source NPAFC file:",
+                             "CWT tag code source:",
+                             "assumptions made/notes:", 
+                             "",
+                             "TAB NAME",
+                             "AllFacilities w RESULTS",
+                             "QC Report",
+                             "QC-..."
+),
+`2` = c(as.character(Sys.Date()), 
+        "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/2-EPRO_biodata_with_results.R , https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/EPROcompile.R", 
+        "SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RETURN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R (saved from online EPRO output)",
+        "SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to {MOST RECENT DATE}.xlsx",
+        "http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice", 
+        "2021 CURRENTLY INCOMPLETE - EPRO STILL UPDATING HISTORICAL YEARS",
+        "",
+        "TAB DESCRIPTION",
+        "All EPRO facilities 2022 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID.",
+        "Summary of QC flags, # of entries belonging to that flag and descriptions.",
+        "QC flag tabs. See QC summary report for details."))
 
 
 #############################################################################################################################################################
@@ -445,28 +450,30 @@ qc_summary <- data.frame(qc_flagName = c("qc1_noID",
 #                                                                           VIII. EXPORT 
 
 
-# ================== Create a blank workbook ==================
+# ================== Create excel file ==================
+
+# Create empty workbook ---------------------------
 R_OUT_EPRO.NPAFC <- openxlsx::createWorkbook()
 
-# Add sheets to the workbook
+# Add empty tabs to the workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "readme")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "AllFacilities w RESULTS")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC summary")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc1 - No Oto stock ID")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc2 - No Oto result")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc3 - No CWT ID")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc4 - No Reslvd ID")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "qc5 - Unreslvd ID")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- No Oto stock ID")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- Oto sample no result")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- No CWT ID")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- No Resolved ID")
+openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- Oto-CWT IDs disagree")
 
-# Write data to the sheets
+# Write data to tabs ---------------------------
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="AllFacilities w RESULTS", x=wcviCNepro_w_Results)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="QC summary", x=qc_summary)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc1 - No Oto stock ID", x=qc1_noOtoID)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc3 - No CWT ID", x=qc3_noCWTID)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc4 - No Reslvd ID", x=qc4_noRslvdID)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc5 - Unreslvd ID", x=qc5_unRslvdID)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- No Oto stock ID", x=qc_noOtoID)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- Oto sample no result", x=qc_noOtoResults)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- No CWT ID", x=qc_noCWTID)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- No Resolved ID", x=qc_noRslvdID)
+openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- Oto-CWT IDs disagree", x=qc_unRslvdID)
 
 
 
@@ -475,28 +482,32 @@ openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "qc5 - Unreslvd ID", x=qc5_unRslvd
 # To github repo ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
                        file=paste0(here("outputs"), 
-                                   "/R_OUT - All EPRO facilities master WITH RESULTS ",
-                                   analysis_year,
+                                   "/R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS ",
+                                   min(wcviCNepro_w_Results$`(R) RETURN YEAR`),
+                                   "-",
+                                   max(wcviCNepro_w_Results$`(R) RETURN YEAR`),
                                    ".xlsx"),
                        overwrite=T,
                        returnValue=T)
 
 
 # To SharePoint ---------------------------
-openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-                       file=paste0(epro_dir, 
-                                   "/R_OUT - All EPRO facilities master WITH RESULTS ",
-                                   analysis_year,
-                                   ".xlsx"),
-                       overwrite=T,
-                       returnValue=T)
+  # Discontinue sharepoint export, too confusing with different syncing to different local computers - commit to git and DFO network 
+    # openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+    #                        file=paste0(epro_dir, 
+    #                                    "/R_OUT - All EPRO facilities master WITH RESULTS ",
+    #                                    analysis_year,
+    #                                    ".xlsx"),
+    #                        overwrite=T,
+    #                        returnValue=T)
 
 # To DFO Network drive ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
-                                   analysis_year,
-                                   "/R_OUT - All EPRO facilities master WITH RESULTS ",
-                                   analysis_year,
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
+                                   "/R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS ",
+                                   min(wcviCNepro_w_Results$`(R) RETURN YEAR`),
+                                   "-",
+                                   max(wcviCNepro_w_Results$`(R) RETURN YEAR`),
                                    ".xlsx"),
                        overwrite=T,
                        returnValue=T)

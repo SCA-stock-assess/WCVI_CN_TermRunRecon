@@ -170,8 +170,6 @@ left_join(crestBio,
 
 # QC flags ---------------------------
 
-
-
 # Otolith sample and age data (for stock ID) available but no result (possible oto processing error)
 qc_otoNoSample <- crestBio_grouped %>% 
   filter(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & !is.na(RESOLVED_AGE) & THERMALMARK!="Not Marked")
@@ -227,19 +225,7 @@ qc_nonstdSex <- crestBio_grouped %>%
 
 
 
-# *********** HERE NEXT DAY: 
-
-# create QC summary report tab that shows error rate for each QC flag  (e.g., # bad records out of total n rows )
-# create readme 
-# (two versions of these below )
-
-
-
-
-
-
-
-# QC Summary ---------------------------
+# QC summary report ---------------------------
 qc_summary <- data.frame(`QC flag/tab name` = c("qc_otoNoSample",
                                          "qc_scaleNoAge",
                                          "qc_WmanNoSample",
@@ -287,8 +273,7 @@ qc_summary <- data.frame(`QC flag/tab name` = c("qc_otoNoSample",
 
 
 
-
-# Create readme ---------------------------
+# Create readme tab ---------------------------
 readme <- data.frame(`1` = c("date rendered:", 
                              "source R code:", 
                              "source CREST files:",
@@ -315,73 +300,76 @@ readme <- data.frame(`1` = c("date rendered:",
 
 
 
-
-
-
-
 #############################################################################################################################################################
 
-#                                                                           VIII. EXPORT 
+#                                                                           EXPORT 
 
 
-# Export ---------------------------
-# Create a blank workbook
+# ==================== CREATE EXCEL FILE ==================== 
+
+# Create Workbook ---------------------------
 R_OUT_CREST.CODED <- openxlsx::createWorkbook()
 
-# Add sheets to the workbook
+# Add tabs to Workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "readme")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "WCVI CN CREST Biodata CODED")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC Report")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Oto sample no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Scale sample no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Whatman sample no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: CWT no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: CWT non-standard")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: CWT/DNA stock ID disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Oto/DNA stock ID disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Uncertain DNA used")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: PBT possible")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: S.US suspicious")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Scale/CWT age disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC: Non-standard sex ID")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto sample no result")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale sample no result")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Whatman sample no result")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT no result")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT non-standard")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT/DNA stock ID disagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto/DNA stock ID disagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Uncertain DNA used")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- PBT possible")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- S.US suspicious")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale/CWT age disagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Non-standard sex ID")
 
 
-# Write data to the sheets
+# Add data to tabs ---------------------------
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=crestBio_grouped)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC Report", x=qc_summary)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Oto sample no result", x=qc_otoNoSample)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Scale sample no result", x=qc_scaleNoAge)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Whatman sample no result", x=qc_WmanNoSample)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: CWT no result", x=qc_CWTnoID)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: CWT non-standard", x=qc_CWTzero)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: CWT/DNA stock ID disagree", x=qc_CWTDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Oto/DNA stock ID disagree", x=qc_otoDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Uncertain DNA used", x=qc_DNAuncert)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: PBT possible", x=qc_PBTmaybe)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: S.US suspicious", x=qc_susSUS)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Scale/CWT age disagree", x=qc_ageDisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC: Non-standard sex ID", x=qc_nonstdSex)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto sample no result", x=qc_otoNoSample)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale sample no result", x=qc_scaleNoAge)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Whatman sample no result", x=qc_WmanNoSample)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT no result", x=qc_CWTnoID)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT non-standard", x=qc_CWTzero)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT/DNA stock ID disagree", x=qc_CWTDNAdisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto/DNA stock ID disagree", x=qc_otoDNAdisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Uncertain DNA used", x=qc_DNAuncert)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- PBT possible", x=qc_PBTmaybe)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- S.US suspicious", x=qc_susSUS)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale/CWT age disagree", x=qc_ageDisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_nonstdSex)
 
 
 
 
-# Export to git and SP ---------------------------
-# To git:
-#openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
-#                       file=paste0(here("outputs"), 
-#                                   sep="/", 
-#                                   "R_OUT - WCVI CN CREST Biodata CODED.xlsx"),
-#                       overwrite=T,
-#                       returnValue=T)
+# ==================== EXPORT EXCEL FILE ==================== 
+
+# To github ---------------------------
+openxlsx::saveWorkbook(R_OUT_CREST.CODED,
+                      file=paste0(here("outputs"),
+                                  "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
+                                  min(crestBio_grouped$YEAR),
+                                  "-",
+                                  max(crestBio_grouped$YEAR),
+                                  ".xlsx"),
+                      overwrite=T,
+                      returnValue=T)
 
 
-# To SP: 
+# To Network: 
 openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
-                       file=paste0("C:/Users", sep="/", 
-                                   Sys.info()[6], 
-                                   sep="/",
-                                   "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2022/Communal data/CREST/R_OUT - WCVI CN CREST Biodata CODED.xlsx"),
+                       file=paste0("//dcbcpsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
+                                   "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
+                                   min(crestBio_grouped$YEAR),
+                                   "-",
+                                   max(crestBio_grouped$YEAR),
+                                   ".xlsx"),
                        overwrite=T,
                        returnValue=T)
 
@@ -390,13 +378,6 @@ openxlsx::saveWorkbook(R_OUT_CREST.CODED,
 
 
 # /END!
-
-
-
-
-
-
-
 
 
 

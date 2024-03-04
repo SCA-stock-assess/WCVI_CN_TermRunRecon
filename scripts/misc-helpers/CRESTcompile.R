@@ -284,7 +284,7 @@ readme <- data.frame(`1` = c("date rendered:",
                              "Tab name:",
                              "WCVI CN CREST Biodata CODED",
                              "QC summary",
-                             "qc_..."),
+                             "QC-..."),
                      `2` = c(as.character(Sys.Date()), 
                              "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/CRESTcompile.R", 
                              "SCD_Stad/WCVI/CHINOOK?WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R",
@@ -319,12 +319,12 @@ openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale sample no result")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Whatman sample no result")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT no result")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT non-standard")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT/DNA stock ID disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto/DNA stock ID disagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT-DNA stock ID disagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto-DNA stock ID disagree")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Uncertain DNA used")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- PBT possible")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- S.US suspicious")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale/CWT age disagree")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale-CWT age disagree")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Non-standard sex ID")
 
 
@@ -337,12 +337,12 @@ openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale sample no result", x=qc_
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Whatman sample no result", x=qc_WmanNoSample)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT no result", x=qc_CWTnoID)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT non-standard", x=qc_CWTzero)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT/DNA stock ID disagree", x=qc_CWTDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto/DNA stock ID disagree", x=qc_otoDNAdisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT-DNA stock ID disagree", x=qc_CWTDNAdisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto-DNA stock ID disagree", x=qc_otoDNAdisagree)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Uncertain DNA used", x=qc_DNAuncert)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- PBT possible", x=qc_PBTmaybe)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- S.US suspicious", x=qc_susSUS)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale/CWT age disagree", x=qc_ageDisagree)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale-CWT age disagree", x=qc_ageDisagree)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_nonstdSex)
 
 
@@ -364,7 +364,7 @@ openxlsx::saveWorkbook(R_OUT_CREST.CODED,
 
 # To Network: 
 openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
-                       file=paste0("//dcbcpsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
                                    "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
                                    min(crestBio_grouped$YEAR),
                                    "-",

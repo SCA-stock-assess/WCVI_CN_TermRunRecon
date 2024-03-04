@@ -10,5 +10,5 @@ outputs/R_OUT - MRPHeadRecoveries_CHINOOK_*.csv
 functions/getAgeDataMRP.R
 functions/getCWTData.R
 functions/getNusedsData.R
-scripts/misc-helpers/CREST_termRR_groups.R
-scripts/misc-helpers/age_summary*.R
+scripts/misc-helpers/CREST_termRR_groups.R    
+scripts/misc-helpers/age_summary-EPRO_backup.R                 

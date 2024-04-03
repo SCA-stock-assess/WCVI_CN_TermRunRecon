@@ -56,7 +56,8 @@ crestBiocompiled <- crestBio %>%
                                   THERMALMARK=="Not Marked" ~ "Natural (assumed)",
                                   TRUE ~ "Unknown"),
          RESOLVED_ID_ORIGIN = paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN),
-         RESOVLED_REGION_ORIGIN = paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP)) %>% 
+         RESOVLED_REGION_ORIGIN = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
+                                            TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP))) %>% 
   print()
 
 

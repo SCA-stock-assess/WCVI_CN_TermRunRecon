@@ -452,7 +452,6 @@ esc_biodata_PADS_otoNPAFC_headsCWT_PBT <- left_join(esc_biodata_PADS_otoNPAFC_he
 
 
 
-
 #############################################################################################################################################################
 
 #                                                                           XIII. ASSIGN FINAL AGE and STOCK ID
@@ -635,6 +634,13 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
 #                                                                           VIII. QC REPORT and README
 
 
+# ======================== Extract PBT parental records ========================  
+
+PBT_parents <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
+  filter(`(R) DNA NUM` %in% c(SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_mFish),]$MGL_mFish, 
+                              SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_dFish),]$MGL_dFish))
+
+
 # QC flags ---------------------------
 
 # NPAFC duplicates - key for assigning final stock IDs for orphan otolith samples with duplicate BY-hatchcodes (already defined above)
@@ -695,13 +701,13 @@ qc_summary <- data.frame(qc_flagName = c("qc0 - EBwR unCert Oto",
                                          "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
                                          "There is a CWT available but no Stock ID.",
                                          "There is a CWT or an NPAFC ID but no Resolved stock ID.",
-                                         "Otolith stock ID does not match CWT stock ID.",
+                                         "Otolith, CWT and/or PBT stock ID(s) do not match.",
                                          "All WCVI CN PADS results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'WCVI Creel Survey' assumed already in CREST. Purpose here is to make sure there are no missing scales expected (i.e., samples not entered in base esc biodata file).",
                                          "All WCVI otolith results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'Sport' assumed already in CREST. Purpose here is to make sure there are no missing otoliths expected (i.e., samples not entered in base esc biodata file).")) %>% 
   print()
 
 
-# Create readme ---------------------------
+# ======================== Create readme ========================
 readme <- data.frame(`1` = c("date rendered:", 
                              "source R code:", 
                              "source escapement file:",
@@ -712,6 +718,7 @@ readme <- data.frame(`1` = c("date rendered:",
                              "",
                              "sheet name:",
                              "Esc biodata w RESULTS",
+                             "PBT parent biodata w RESULTS",
                              "QC summary",
                              "qc0 - EBwR unCert Oto",
                              "!NPAFC_dupl!",
@@ -732,7 +739,8 @@ readme <- data.frame(`1` = c("date rendered:",
         "!NOT IN YET!: http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
         "",
         "sheet description:",
-        "WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, NPAFC mark file to give otolith stock ID, and CWT recoveries. Currently does NOT include DNA results.",
+        "WCVI Chinook escapement biodata joined to PADS scale age results, OtoManager thermal mark results, NPAFC mark file to give otolith stock ID, CWT recoveries, and PBT up to 2021 return year. Currently does NOT include any GSI results.",
+        "Subset of full database, filtered by Whatman IDs of parents contributing to returning fish. I.e., if an adult fish sampled for PBT during broodstock had a hit to a parent in the baseline, here their parents are pulled out of the overall database. This would show parents that contributed to adult recruits. These are parent fish identified through PBT only.",
         "Summary of QC flags and # of entries belonging to that flag.",
         "QC flag 0 tab. Only the Esc biodata w RESULTS ('EBwR') entries that correspond to NPAFC BY-hatchcode duplicates. See QC summary for details.",
         "All duplicate BY-hatchcodes documented by the NPAFC. To inform decisions around QC Flag 0.",
@@ -758,6 +766,7 @@ R_OUT_ESC.RES <- openxlsx::createWorkbook()
 # Add sheets to the workbook --------------------
 openxlsx::addWorksheet(R_OUT_ESC.RES, "readme")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodata w RESULTS")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodat w RES - PBT parents")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "QC summary")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "qc0 - EBwR unCert Oto")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "!NPAFC_dupl!")
@@ -772,6 +781,7 @@ openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - OM unmatched")
 # Write data to the sheets --------------------
 openxlsx::writeData(R_OUT_ESC.RES, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodata w RESULTS", x=esc_biodata_w_RESULTS)
+openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodat w RES - PBT parents", x=PBT_parents)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc0_EBwR_uncertOtoID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="!NPAFC_dupl!", x=NPAFC_dupl.df)
@@ -804,16 +814,16 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 
 
 # To SharePoint working Term Run folder -------------------- 
-openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0("C:/Users/", 
-                                   Sys.info()[6], 
-                                   "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2023/Communal data/Escapement/R_OUT - WCVI_Escapement-FSC_BioData_",
-                                   min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
-                                   "-",
-                                   max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
-                                   "_WithResults.xlsx"),
-                       overwrite=T,
-                       returnValue=T)
+# openxlsx::saveWorkbook(R_OUT_ESC.RES, 
+#                        file=paste0("C:/Users/", 
+#                                    Sys.info()[6], 
+#                                    "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/2023/Communal data/Escapement/R_OUT - WCVI_Escapement-FSC_BioData_",
+#                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+#                                    "-",
+#                                    max(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
+#                                    "_WithResults.xlsx"),
+#                        overwrite=T,
+#                        returnValue=T)
 
 
 

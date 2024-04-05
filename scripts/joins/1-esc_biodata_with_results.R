@@ -29,11 +29,12 @@ library(readxl)
 library(writexl)
 library(openxlsx)
 library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-assess/saaWeb") 
+library(zoo)       # for rollapply()
 
 
 # Helpers ----------------
 "%notin%" <- Negate("%in%")
-#analysis_year <- 2023
+analysis_year <- 2023
 
 
 
@@ -465,7 +466,7 @@ SC_PBT_inventory <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_S
 # TY chatGPT :)
 findFirstFullPBTBY <- function(x, other_col) {
   x <- ifelse(is.na(other_col), NA, x)
-  roll_max <- rollapply(x, width=6, FUN=max, align="right", fill=NA)
+  roll_max <- rollapply(x, width=5, FUN=max, align="right", fill=NA)
   return(roll_max)
 }
 
@@ -478,11 +479,15 @@ SC_PBTreliable <- SC_PBT_inventory %>%
   # *** cheating for now 
   mutate(propn_genotyped = case_when(MGL_Brood_Collection=="San Juan" & `(R) SAMPLE YEAR`%in%c(2022,2023) ~ 0.999999,
                                      TRUE ~ propn_genotyped)) %>% 
+  # ***
   group_by(MGL_Brood_Collection) %>%
-  mutate(firstFullBY = findFirstFullPBTBY(`(R) SAMPLE YEAR`, propn_genotyped),
-         fullPBT_BYid = case_when(!is.na(firstFullBY) ~ paste(MGL_Brood_Collection, "-", `(R) SAMPLE YEAR`),
+  mutate(firstFullBY = findFirstFullPBTBY(`(R) SAMPLE YEAR`, propn_genotyped)+1,
+         fullPBT_BYid = case_when(!is.na(firstFullBY) ~ paste(MGL_Brood_Collection, "-", firstFullBY),
                                   TRUE ~ NA)) %>%
   print()
+
+
+# Export:
 
 
 # **************** next day:: join or index ^^ above to the stock ID/origin process to identify first full RYs for Natural ID ! 

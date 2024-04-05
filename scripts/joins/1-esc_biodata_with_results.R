@@ -488,7 +488,8 @@ SC_PBTreliable <- SC_PBT_inventory %>%
 
 
 # Export:
-
+writexl::write_xlsx(SC_PBTreliable, 
+                    "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/SC - Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
 
 # **************** next day:: join or index ^^ above to the stock ID/origin process to identify first full RYs for Natural ID ! 
 

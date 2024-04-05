@@ -33,7 +33,7 @@ library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-asse
 
 # Helpers ----------------
 "%notin%" <- Negate("%in%")
-analysis_year <- 2023
+#analysis_year <- 2023
 
 
 
@@ -53,7 +53,10 @@ esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mp
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- #cbind(
   readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-              sheet=paste0("Biodata 2015-", analysis_year), guess_max=10000) %>% 
+              sheet=grep("Biodata 2015-", readxl::excel_sheets(paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", 
+                                                                       esc_biodata_recent_filename)),
+                          ignore.case=T, value=T), 
+              guess_max=10000) %>% 
   select(Year, `Sample Month`:Species, `Fishery / River`:Gear, Sex, `POF Length (mm)`:`Egg Retention`, Comments) %>%
   mutate(`(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
                                                 paste0(`Otolith Lab Number`,sep="-",`Otolith Box #`,sep="-",`Otolith Specimen #`)),
@@ -103,10 +106,93 @@ wcviCNescBiodat <- #cbind(
   print()
 
 
+#############################################################################################################################################################
+
+#                                                                           II. LOAD CWT HEAD RECOVERY RECORDS
+
+
+# <<< For each new year: >>> 
+# 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
+# 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
+# FOLLOW NAMING CONVENTION OR ELSE! >:(
+# 3. Run source() line below (Option 1) - only  need to do this once/year. Otherwise run Option 2. 
+
+
+# ======================== Load head recovery data ========================  
+
+# Option 1: Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
+# Do this if you need to add a new year. Otherwise, do option 2. 
+#  source(here("scripts","misc-helpers","HeadRcvyCompile.R")) 
+
+
+# Option 2: Load already saved exported head recovery master file --------------------------- (faster)
+# Do this if you are just loading already compiled head recoveries
+mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
+                                                  pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_2012*.*xlsx",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                  full.names = TRUE),
+                                  sheet="Sheet1",
+                                  trim_ws=T)
+
+
+# !! MAY GET:    Error: Std:: bad_alloc()  
+# It's a memory issue. Either try quitting R session and re-starting, or may have to close programs/restart computer. 
+# If really in a pickle, read in as CSV below: 
+# mrpHeadRcvy <- read.csv(here("outputs" "R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv"))
+
 
 #############################################################################################################################################################
 
-#                                                                           II. AGE DATA LOAD 
+#                                                                           III. JOIN BIODATA to CWT HEAD RECOVERY RECORDS
+
+
+# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC to HEADS ========================  
+intersect(colnames(wcviCNescBiodat), colnames(mrpHeadRcvy))
+
+esc_biodata_heads <- left_join(wcviCNescBiodat,
+                               mrpHeadRcvy %>% 
+                                 mutate_at("(R) SAMPLE YEAR", as.character),
+                               na_matches="never") %>% 
+  mutate(`(R) TAGCODE` = MRP_TagCode) %>%
+  print()
+
+
+
+#############################################################################################################################################################
+
+#                                                                           IV. LOAD CWT TAGCODE IDs
+
+
+
+# 0. RUN CWT RELEASE CODE DUMP ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
+# source(here("scripts", "functions", "pullChinookCWTReleases.R"))
+
+# 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
+SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here("outputs"),
+                                                       pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                                       full.names = TRUE), 
+                                       sheet="Sheet1")  
+
+
+
+#############################################################################################################################################################
+
+#                                                                           V. JOIN BIODATA+HEADS to CWT TAGCODE ID
+
+
+# ======================== JOIN ESCAPEMENT BIODATA+HEADS to TAGCODE ID ========================  
+intersect(colnames(esc_biodata_heads), colnames(SC_cnRelTagCodes))
+
+esc_biodata_headsCWT <- left_join(esc_biodata_heads,
+                                  SC_cnRelTagCodes,
+                                  by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
+  mutate(`(R) TOTAL AGE - CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`) %>%
+  print()
+
+
+
+#############################################################################################################################################################
+
+#                                                                           VI. SCALE AGE DATA LOAD 
 
 
 # ======================== Load age data ========================  
@@ -129,26 +215,28 @@ SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
 
 #############################################################################################################################################################
 
-#                                                                           III. JOIN ESCAPEMENT BIODATA to AGES, CALC BY
+#                                                                           III. JOIN ESCAPEMENT BIODATA+HEADS+CWT IDs to AGES, CALC BY
 
 
 
-# ======================== JOIN ESCAPEMENT BIODATA to PADS, calc BY ========================  
-intersect(colnames(wcviCNescBiodat), colnames(SC_age_data))
+# ======================== JOIN ESCAPEMENT BIODATA+HEADS+CWTs to PADS, calc BY ========================  
+intersect(colnames(esc_biodata_headsCWT), colnames(SC_age_data))
 
 # IF you get a many-to-many error, you have duplicate scalebooks that were handed out to different regions. 
 # Will need to further filter down the SC_age_data file
-esc_biodata_PADS <- left_join(wcviCNescBiodat,
-                              SC_age_data,
-                              na_matches="never") %>%
-  mutate(`(R) RESOLVED TOTAL AGE - SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
-                                              `PADS_GrAge`=="1M" ~ 2,
-                                              `PADS_GrAge`=="2M" ~ 3,
-                                              `PADS_GrAge`=="3M" ~ 4,
-                                              `PADS_GrAge`=="4M" ~ 5,
-                                              `PADS_GrAge`=="5M" ~ 6,
-                                              `PADS_GrAge`=="6M" ~ 7),
-         `(R) BROOD YEAR` = as.numeric(`(R) SAMPLE YEAR`)-`(R) RESOLVED TOTAL AGE - SCALE`) %>% 
+esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
+                                       SC_age_data,
+                                       na_matches="never") %>%
+  mutate(`(R) TOTAL AGE - SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
+                                             `PADS_GrAge`=="1M" ~ 2,
+                                             `PADS_GrAge`=="2M" ~ 3,
+                                             `PADS_GrAge`=="3M" ~ 4,
+                                             `PADS_GrAge`=="4M" ~ 5,
+                                             `PADS_GrAge`=="5M" ~ 6,
+                                             `PADS_GrAge`=="6M" ~ 7),
+         `(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE - CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE - CWT`,
+                                               is.na(`(R) TOTAL AGE - CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE - SCALE`,
+                                               TRUE ~ NA)) %>% 
   arrange(`(R) SAMPLE YEAR`) %>%
   print()
 
@@ -156,8 +244,8 @@ esc_biodata_PADS <- left_join(wcviCNescBiodat,
 
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
 # 1. Extract "successful" scale book-cell values from the joined file (e.g., scale books with attached non-NA scale ages)
-available_age_results <- esc_biodata_PADS %>%
-  filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`) & !is.na(`(R) RESOLVED TOTAL AGE - SCALE`)) %>% 
+available_age_results <- esc_biodata_headsCWT_PADS %>%
+  filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`) & !is.na(`(R) TOTAL AGE - SCALE`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
 # 2. Filter - remove the successful results from the join from the age data dump and save only the non-successful join (orphans)
@@ -192,7 +280,13 @@ wcviOtos <- readxl::read_excel(path=list.files(path = here("outputs"),
                                                   pattern = "^R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
                                   sheet="Sheet1")  %>% 
-  mutate_at("(R) SAMPLE YEAR", as.character)
+  mutate_at("(R) SAMPLE YEAR", as.character) %>% 
+  mutate(OM_FACILITY = case_when(grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
+                                 grepl("INCH CR", OM_FACILITY) ~ "H-INCH CREEK H",
+                                 grepl("NANAIMO", OM_FACILITY) ~ "H-NANAIMO RIVER H",
+                                 grepl("NITINAT", OM_FACILITY) ~ "H-NITINAT RIVER H",
+                                 grepl("QUINSAM", OM_FACILITY) ~ "H-QUINSAM RIVER H",
+                                 grepl("WALLACE", OM_FACILITY) ~ "WALLACE RIVER HATCHERY"))
 
 
 
@@ -201,7 +295,7 @@ wcviOtos <- readxl::read_excel(path=list.files(path = here("outputs"),
 # Extract lab numbers for QC ---------------------------
 write.csv(wcviOtos %>% 
             filter(grepl("scapement", OM_SOURCE)) %>%
-            group_by(`(R) SAMPLE YEAR`, OM_SPECIES, `OM_CATCH SITES`, `(R) OTOLITH LAB NUM`) %>%
+            group_by(`(R) SAMPLE YEAR`, OM_SPECIES, `OM_RCVY LOCATIONS`, `(R) OTOLITH LAB NUM`) %>%
             summarize(n()),
           "C:/Users/DAVIDSONKA/Desktop/oto lab nums.csv", row.names=F)
 
@@ -209,28 +303,28 @@ write.csv(wcviOtos %>%
 
 #############################################################################################################################################################
 
-#                                                                           V. JOIN ESC+PADS to OTOMGR 
+#                                                                           V. JOIN ESC BIODATA+HEADS+CWT IDs+PADS to OTOMGR 
 
 
-# ======================== JOIN ESCAPEMENT BIODATA+PADS to OTOMGR ========================  
-intersect(colnames(esc_biodata_PADS), colnames(wcviOtos))
+# ======================== JOIN ESC+HEADS+CWT IDs+PADS to OTOMGR ========================  
+intersect(colnames(esc_biodata_headsCWT_PADS), colnames(wcviOtos))
 
 
-esc_biodata_PADS_oto <- left_join(esc_biodata_PADS,
-                                  wcviOtos %>%
-                                    filter(OM_SPECIES=="Chinook") %>% 
-                                    mutate_at("(R) SAMPLE YEAR", as.character),
-                                  #by=c("(R) OTOLITH BOX NUM", "(R) OTOLITH VIAL NUM", "(R) SAMPLE YEAR", "(R) OTOLITH LBV CONCAT"),
-                                  na_matches="never") %>% 
-  mutate(`(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR`, " - ", `(R) HATCHCODE`),
-                                TRUE ~ NA)) %>% 
+esc_biodata_headsCWT_PADS_oto <- left_join(esc_biodata_headsCWT_PADS,
+                                           wcviOtos %>%
+                                             filter(OM_SPECIES=="Chinook") %>% 
+                                             mutate_at("(R) SAMPLE YEAR", as.character),
+                                           #by=c("(R) OTOLITH BOX NUM", "(R) OTOLITH VIAL NUM", "(R) SAMPLE YEAR", "(R) OTOLITH LBV CONCAT"),
+                                           na_matches="never") %>% 
+  mutate(`(R) BYHID` = case_when(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
+                                 TRUE ~ NA)) %>% 
   print()
 
 
 
 # ANTI JOINS: Oto samples that didn't make it in to the escapement biodata basefile ---------------------------
 # 1. Extract "successful" otolith lab-box-vial values from the joined file (e.g., vials with attached non-NA BY-hatch code IDs)
-availabe_oto_results <- esc_biodata_PADS_oto %>%
+availabe_oto_results <- esc_biodata_headsCWT_PADS_oto %>%
   filter(!is.na(`(R) OTOLITH LBV CONCAT`) & !is.na(`(R) BYHID`)) %>% 
   pull(`(R) OTOLITH LBV CONCAT`)
 
@@ -257,12 +351,12 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
                             sheet="AC087805 (1)") %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
-         `(R) BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
+         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
                                     TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
                                  TRUE ~ NPAFC_STOCK),
-         `(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR`, " - ", `(R) HATCHCODE`),
+         `(R) BYHID` = case_when(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
                                 TRUE ~ NA)) %>%
   # This filter line below initially removed some marks to avoid duplicates, but the work-around below now addresses this more systematically. Below is just
   #     kept for reference for now
@@ -270,8 +364,8 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
          # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
          #!grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5"
          #) %>%
-  select(`(R) BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
-  distinct(`(R) BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
+  select(`(R) RESOLVED BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
+  distinct(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
   mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
                                      NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
                                      NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
@@ -287,10 +381,10 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
                                      NPAFC_wcvi_prob=="C" ~ "MED",
                                      NPAFC_wcvi_prob=="D" ~ "LOW",
                                      NPAFC_wcvi_prob=="E" ~ "V LOW")) %>%
-  group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  group_by(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
   pivot_wider(names_from = group,
               values_from= c(NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, NPAFC_STATE_PROVINCE, NPAFC_REGION, NPAFC_wcvi_prob, NPAFC_NUMBER_RELEASED)) %>%
-  select(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
+  select(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
   print()
 
 
@@ -306,113 +400,25 @@ NPAFC_dupl <- NPAFC %>%
 
 #############################################################################################################################################################
 
-#                                                                           VII. JOIN BIODATA+PADS+OTO to NPAFC
+#                                                                           VII. JOIN ESC BIODATA+HEADS+CWT IDs+PADS+OTOMGR to NPAFC
 
 
 # # QC flag: duplicate BY-hatchcodes in our esc biodata ------------------------
- esc_biodata_PADS_otoDUPS <- esc_biodata_PADS_oto %>% 
+ esc_biodata_PADS_otoDUPS <- esc_biodata_headsCWT_PADS_oto %>% 
    filter(`(R) BYHID` %in% NPAFC_dupl) %>% 
    print()
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTOMGR to NPAFC ========================  
-intersect(colnames(esc_biodata_PADS_oto), colnames(NPAFC))
+intersect(colnames(esc_biodata_headsCWT_PADS_oto), colnames(NPAFC))
 
 # Joining to NPAFC FIX: 
-  # Originally, there were cases where the same BY received the same hatchcode, so we need a way to join on this. 
-  # Solution: Now that the NPAFC file has been re-organized to identify multiple stock IDs within a BY-HID (e.g., NPAFC_STOCK_1, NPAFC_STOCK_2, etc.), don't need to worry about complex joins/renaming. R will do it all. 
-esc_biodata_PADS_otoNPAFC <- left_join(esc_biodata_PADS_oto,
-                                       NPAFC,
-                                       na_matches="never") %>% 
+# Originally, there were cases where the same BY received the same hatchcode, so we need a way to join on this. 
+# Solution: Now that the NPAFC file has been re-organized to identify multiple stock IDs within a BY-HID (e.g., NPAFC_STOCK_1, NPAFC_STOCK_2, etc.), don't need to worry about complex joins/renaming. R will do it all. 
+esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
+                                                NPAFC,
+                                                na_matches="never") %>% 
   print()
-
-
-
-
-#############################################################################################################################################################
-
-#                                                                           VIII. LOAD HEAD RECOVERY RECORDS
-
-
-# <<< For each new year: >>> 
-  # 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
-  # 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
-    # FOLLOW NAMING CONVENTION OR ELSE! >:(
-  # 3. Run source() line below (Option 1) - only  need to do this once/year. Otherwise run Option 2. 
-
-
-# ======================== Load head recovery data ========================  
-
-# Option 1: Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
-  # Do this if you need to add a new year. Otherwise, do option 2. 
-  #  source(here("scripts","misc-helpers","HeadRcvyCompile.R")) 
-
-
-# Option 2: Load already saved exported head recovery master file --------------------------- (faster)
-  # Do this if you are just loading already compiled head recoveries
-mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
-                                                  pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_2012*.*xlsx",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
-                                                  full.names = TRUE),
-                                  sheet="Sheet1",
-                                  trim_ws=T)
-
-
-# !! MAY GET:    Error: Std:: bad_alloc()  
-# It's a memory issue. Either try quitting R session and re-starting, or may have to close programs/restart computer. 
-# If not, read in as CSV below: 
-  # mrpHeadRcvy <- read.csv(here("outputs" "R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv"))
-
-
-#############################################################################################################################################################
-
-#                                                                           X. JOIN BIODATA+PADS+OTO+NPAFC to HEAD RECOVERY RECORDS
-
-
-# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC to HEADS ========================  
-intersect(colnames(esc_biodata_PADS_otoNPAFC), colnames(mrpHeadRcvy))
-
-esc_biodata_PADS_otoNPAFC_heads <- left_join(esc_biodata_PADS_otoNPAFC,
-                                             mrpHeadRcvy %>% 
-                                               mutate_at("(R) SAMPLE YEAR", as.character),
-                                             na_matches="never") %>% 
-  mutate(`(R) TAGCODE` = MRP_TagCode) %>%
-  print()
-
-
-
-#############################################################################################################################################################
-
-#                                                                           XI. LOAD CWT TAGCODE IDs
-
-
-
-# 0. RUN CWT RELEASE CODE DUMP ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
-  # source(here("scripts", "functions", "pullChinookCWTReleases.R"))
-
-# 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
-SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here("outputs"),
-                                                       pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
-                                                       full.names = TRUE), 
-                                       sheet="Sheet1")  
-
-
-
-
-
-#############################################################################################################################################################
-
-#                                                                           XII. JOIN BIODATA+PADS+OTO+NPAFC+HEADS to CWT TAGCODE ID
-
-
-# ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS to TAGCODE ID ========================  
-intersect(colnames(esc_biodata_PADS_otoNPAFC_heads), colnames(SC_cnRelTagCodes))
-
-esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
-                                                SC_cnRelTagCodes,
-                                                by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
-  mutate(`(R) RESOLVED TOTAL AGE - CWT` = as.numeric(`(R) SAMPLE YEAR`)-`MRP_Brood Year`) %>%
-  print()
-
 
 
 
@@ -420,6 +426,7 @@ esc_biodata_PADS_otoNPAFC_headsCWT <- left_join(esc_biodata_PADS_otoNPAFC_heads,
 
 #                                                                           XIII. LOAD PBT DATA
 
+# ======================== Load PBT results ========================  
 SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
@@ -434,6 +441,58 @@ SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC
   print()
 
 
+# ======================== Load PBT inventory ========================  
+# Load data, calculate % of each BY genotyped -------------------------
+SC_PBT_inventory <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-08-24 Chinook PBT Inventory BYs 2013-2021_draft .xlsx",
+                                       sheet="2013-2021 update", guess_max=10000) %>% 
+  rename(`(R) SAMPLE YEAR`=...1,
+         status=...2) %>% 
+  fill(`(R) SAMPLE YEAR`, .direction="down") %>% 
+  filter(`(R) SAMPLE YEAR`!="Comments") %>%
+  pivot_longer(cols=c(Ashlu:WOSS_RIVER), names_to = "MGL_Brood_Collection", values_to = "n") %>% 
+  filter(grepl("Bedwell|Burman|Campbell|Conuma|Cowichan|Cypre|Gold|Goldstream|Kennedy|Lang|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
+               Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Sucwoa|Tahsis|Thornton|Toquart|Tranquil|Woss", 
+              MGL_Brood_Collection, ignore.case=T)) %>% 
+  pivot_wider(names_from = "status", values_from = n) %>%
+  group_by(`(R) SAMPLE YEAR`, MGL_Brood_Collection) %>% 
+  summarize(propn_genotyped = as.numeric(Genotyped)/as.numeric(Brood)) %>% 
+  mutate_all(~ifelse(is.nan(.), NA, .)) %>%
+  mutate(MGL_Brood_Collection = gsub(str_to_title(gsub(MGL_Brood_Collection, pattern="_", replacement=" ")), pattern=" River", replacement="")) %>%
+  print()
+
+
+# Define function to find rolling 5 year window of full PBT results -------------------------
+# TY chatGPT :)
+findFirstFullPBTBY <- function(x, other_col) {
+  x <- ifelse(is.na(other_col), NA, x)
+  roll_max <- rollapply(x, width=6, FUN=max, align="right", fill=NA)
+  return(roll_max)
+}
+
+# Filter out unreliable years, and create new variable indicating first full reliable BY for PBT -------------------------
+SC_PBTreliable <- SC_PBT_inventory %>% 
+  mutate_at("(R) SAMPLE YEAR", as.numeric) %>%
+  filter(propn_genotyped>=0.85) %>%
+  group_by(MGL_Brood_Collection) %>% 
+  complete(.,  `(R) SAMPLE YEAR`=2013:analysis_year) %>%
+  # *** cheating for now 
+  mutate(propn_genotyped = case_when(MGL_Brood_Collection=="San Juan" & `(R) SAMPLE YEAR`%in%c(2022,2023) ~ 0.999999,
+                                     TRUE ~ propn_genotyped)) %>% 
+  group_by(MGL_Brood_Collection) %>%
+  mutate(firstFullBY = findFirstFullPBTBY(`(R) SAMPLE YEAR`, propn_genotyped),
+         fullPBT_BYid = case_when(!is.na(firstFullBY) ~ paste(MGL_Brood_Collection, "-", `(R) SAMPLE YEAR`),
+                                  TRUE ~ NA)) %>%
+  print()
+
+
+# **************** next day:: join or index ^^ above to the stock ID/origin process to identify first full RYs for Natural ID ! 
+
+
+
+
+
+
+
 
 #############################################################################################################################################################
 
@@ -441,12 +500,12 @@ SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS+CWT ID to PBT!! ========================  
-intersect(colnames(SC_PBT_SEP), colnames(esc_biodata_PADS_otoNPAFC_headsCWT))
+intersect(colnames(SC_PBT_SEP), colnames(esc_biodata_headsCWT_PADS_otoNPAFC))
 
-esc_biodata_PADS_otoNPAFC_headsCWT_PBT <- left_join(esc_biodata_PADS_otoNPAFC_headsCWT,
+esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_otoNPAFC,
                                                     SC_PBT_SEP,
                                                     by=c("(R) SAMPLE YEAR", "(R) DNA NUM", "Fishery / River")) %>% 
-  mutate(`(R) RESOLVED TOTAL AGE - PBT` = MGL_Offspring_Age) %>% 
+  mutate(`(R) TOTAL AGE - PBT` = MGL_Offspring_Age) %>% 
   print()
 
 
@@ -457,24 +516,27 @@ esc_biodata_PADS_otoNPAFC_headsCWT_PBT <- left_join(esc_biodata_PADS_otoNPAFC_he
 #                                                                           XIII. ASSIGN FINAL AGE and STOCK ID
 
 
-esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>% 
+esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>% 
   mutate(# AGE ID: 
-         `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) RESOLVED TOTAL AGE - CWT`) ~ "CWT",
-                                                     is.na(`(R) RESOLVED TOTAL AGE - CWT`) & !is.na(`(R) RESOLVED TOTAL AGE - PBT`) ~ "PBT",
-                                                     is.na(`(R) RESOLVED TOTAL AGE - CWT`) & is.na(`(R) RESOLVED TOTAL AGE - PBT`) ~ "Scale",
+         `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE - CWT`) ~ "CWT",
+                                                     is.na(`(R) TOTAL AGE - CWT`) & !is.na(`(R) TOTAL AGE - PBT`) ~ "PBT",
+                                                     is.na(`(R) TOTAL AGE - CWT`) & is.na(`(R) TOTAL AGE - PBT`) & !is.na(`(R) TOTAL AGE - SCALE`) ~ "Scale",
                                                      TRUE ~ NA),
-         `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) RESOLVED TOTAL AGE - CWT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) RESOLVED TOTAL AGE - PBT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) RESOLVED TOTAL AGE - SCALE`,
+         `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE - CWT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE - PBT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE - SCALE`,
                                               TRUE ~ NA),
+         
+         `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) SAMPLE YEAR`) - `(R) RESOLVED TOTAL AGE`,
 
          # 1. Identify hatchery/natural origin
          `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
                                   `OM_READ STATUS` == "Marked" ~ "Hatchery",
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
-                                  `OM_READ STATUS` == "Not Marked" ~ "Natural",
+                                  `OM_READ STATUS` == "Not Marked" ~ "Natural (assumed)",
+                                  paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
+                                    SC_PBTreliable$sysYr ~ "Natural",
                                   TRUE ~ "Unknown"),
-         
          
          # 2. Identify CWT Stock ID
          `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
@@ -483,7 +545,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                                                ignore.case=F),
                                         TRUE ~ NA),
          
-         # Identify PBT Stock ID
+         # 3. Identify PBT Stock ID
          `(R) PBT STOCK ID` = case_when(!is.na(MGL_Parental_Collection) ~ str_to_title(gsub(" Creek", "",
                                                                                             gsub(" River", "",
                                                                                                  gsub("_", 
@@ -494,7 +556,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                                                                                             ignore.case=T)),
                                         TRUE ~ NA),
          
-         # 3. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
+         # 4. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
          `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
                                              !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
                                                "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
@@ -502,9 +564,9 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                                              TRUE~NA),
          
          
-         # 4. Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
+         # 5. Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
          `(R) OTOLITH STOCK ID` = case_when(
-           # 4 a) Single otolith stock choice (certain ID)
+           # 5 a) Single otolith stock choice (certain ID)
            !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
              gsub(" R", "", 
                   gsub("River", "R",
@@ -517,17 +579,17 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                        ignore.case=F),   
                   ignore.case=F),
            
-           # 4 b) Multiple HIGH probability otolith matches, flag for manual ID: 
+           # 5 b) Multiple HIGH probability otolith matches, flag for manual ID: 
            (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
              (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
              "!! manual decision needed, refer to release sizes!!",
            
-           # 4 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
+           # 5 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
            (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
              (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
              "!! manual decision needed, refer to release sizes!!",
            
-           # 4 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
+           # 5 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
            (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
              (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
              gsub(" R", "",
@@ -537,7 +599,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                        ignore.case = F), 
                   ignore.case=F),
            
-           # 4 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
+           # 5 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
            (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
              (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
              gsub(" R", "",
@@ -547,7 +609,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                        ignore.case = F), 
                   ignore.case=F),
            
-           # 4 f) LOW probability otoliths, just choose stock1:
+           # 5 f) LOW probability otoliths, just choose stock1:
            (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
              (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
              gsub(" R", "",
@@ -557,7 +619,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
                        ignore.case = F), 
                   ignore.case=F),
            
-           # 4 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
+           # 5 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
            `(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" ~
              gsub("H-", "",
                   gsub(" R", "",
@@ -574,7 +636,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
          #//end 4. "(R) OTOLITH STOCK ID"
          
          
-         # 5. Identify where may be able to apply the Fishery/River location as finer scale than Otolith facility for uncertain oto ID cases (e.g., Sooke / Nitinat)
+         # 6. Identify where may be able to apply the Fishery/River location as finer scale than Otolith facility for uncertain oto ID cases (e.g., Sooke / Nitinat)
          `(R) OTO STOCK != FISHERY/RIVER` = case_when(`(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" &
                                                         `(R) OTOLITH STOCK ID` != gsub(" River", "",
                                                                                        gsub(" Creek", "", `Fishery / River`,
@@ -586,38 +648,53 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
          ) %>%
   mutate(
     
-    # 6. Identify the method used to determine the final stock ID: CWT > PBT > Otolith
+    # 7. Identify the method used to determine the final stock ID: CWT > PBT > Otolith
     `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
                                                is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ "PBT",
                                                is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
+                                               `(R) ORIGIN`=="Natural (assumed)" ~ "Otolith (no mark)",
+                                               `(R) ORIGIN`=="Natural" ~ "PBT (no match)",
                                                TRUE ~ NA),
     
     
-    # 7. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
+    # 8. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
     `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
                                         is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
                                         is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
+                                        `(R) ORIGIN`=="Natural (assumed)" ~ paste0(stringr::str_to_title(gsub(" River", "",
+                                                                                                              gsub(" Creek", "",
+                                                                                                                   `Fishery / River`,
+                                                                                                                   ignore.case=F),
+                                                                                                              ignore.case=F)), 
+                                                                                   " (assumed)"),
                                         `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(gsub(" River", "",
                                                                                                     gsub(" Creek", "",
                                                                                                          `Fishery / River`,
                                                                                                          ignore.case=F),
-                                                                                                    ignore.case=F)
-                                                                                               ), 
-                                                                         " (assumed)"), 
+                                                                                                    ignore.case=F))),
                                         TRUE ~ "Unknown"),
     
     
-    # 8. Combine the origin and ID into the final grouping level for the Term Run files 
+    # 9. Combine the origin and ID into the final grouping level for the Term Run files 
     `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`),
     
     
-    # 9. Create flag for cases where CWT and Otolith IDs disagree
+    # 10. Create flag for cases where CWT and Otolith IDs disagree
     `(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "FLAG: CWT/Otolith stock ID disagree",
                                              TRUE ~ NA),
     `(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) CWT STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: CWT/PBT stock ID disagree",
                                              TRUE ~ NA),
     `(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) OTOLITH STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: PBT/Otolith stock ID disagree",
                                              TRUE ~ NA),
+    
+    
+    # 11. Create flag for cases where PBT, CWT and/or scale age(s) disagree
+    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE - CWT` != `(R) TOTAL AGE - SCALE` ~ "FLAG: CWT/scale ages disagree",
+                                          TRUE ~ NA),
+    `(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE - CWT` != `(R) TOTAL AGE - PBT` ~ "FLAG: CWT/PBT ages disagree",
+                                        TRUE ~ NA),
+    `(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE - SCALE` != `(R) TOTAL AGE - PBT` ~ "FLAG: PBT/scale ages disagree",
+                                          TRUE ~ NA)
   ) %>%
   print()
 
@@ -635,8 +712,7 @@ esc_biodata_w_RESULTS <- esc_biodata_PADS_otoNPAFC_headsCWT_PBT %>%
 
 
 # ======================== Extract PBT parental records ========================  
-
-PBT_parents <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
+PBT_parents <- esc_biodata_w_RESULTS %>% 
   filter(`(R) DNA NUM` %in% c(SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_mFish),]$MGL_mFish, 
                               SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_dFish),]$MGL_dFish))
 
@@ -649,51 +725,59 @@ NPAFC_dupl.df <- NPAFC %>%
   print()
 
 # Entries in the escapement biodata that have >1 NPAFC stock ID option due to duplicated BY-hatchcode applications or only assumed via facility
-qc0_EBwR_uncertOtoID <- esc_biodata_w_RESULTS %>% 
+qc_EBwR_uncertOtoID <- esc_biodata_w_RESULTS %>% 
   filter(grepl("assumed", `(R) OTOLITH ID METHOD`)) %>% 
   print()
 
 # Otolith hatch code and BY available but no NPAFC stock ID (Oto read errors)
-qc1_noOtoID <- esc_biodata_w_RESULTS %>%
-  filter(!is.na(`(R) BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
+qc_noOtoID <- esc_biodata_w_RESULTS %>%
+  filter(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
   print()
 
 # Otolith sample available but no result (Oto processing error)
-qc2_noOtoResults <- esc_biodata_w_RESULTS %>%
-  filter(!is.na(`(R) OTOLITH LBV CONCAT`) & !is.na(`(R) BROOD YEAR`) & is.na(`(R) HATCHCODE`) & `OM_READ STATUS`!="Not Marked") %>%
+qc_noOtoResults <- esc_biodata_w_RESULTS %>%
+  filter(!is.na(`(R) OTOLITH LBV CONCAT`) & !is.na(`(R) RESOLVED BROOD YEAR`) & is.na(`(R) HATCHCODE`) & `OM_READ STATUS`!="Not Marked") %>%
   print()
 
 # E-Label collected but missing CWT ID results (CWT processing error)
- qc3_noCWTID <- esc_biodata_w_RESULTS %>%
+ qc_noCWTID <- esc_biodata_w_RESULTS %>%
    filter(!is.na(`(R) HEAD LABEL`) & is.na(`MRP_TagCode`)) %>% 
    print()
 
 # CWT or Otolith stock ID available but not populated in final Stock ID column (R code error)
-qc4_noRslvdID <- esc_biodata_w_RESULTS %>% 
+qc_noRslvdID <- esc_biodata_w_RESULTS %>% 
   filter(`(R) RESOLVED STOCK ID`=="Unknown" & (!is.na(NPAFC_STOCK_1) | !is.na(`MRP_Stock Site Name`))) %>% 
   print()
 
 # Stock IDs contradict (stock ID error?)
-qc5_unRslvdID <- esc_biodata_w_RESULTS %>% 
-  filter(across(c(`(R) STOCK ID FLAG: CWT-OTO`:`(R) STOCK ID FLAG: PBT-OTO`), ~ grepl("FLAG", .x))) %>%
+qc_unRslvdID <- esc_biodata_w_RESULTS %>% 
+  filter(if_any(c(`(R) STOCK ID FLAG: CWT-OTO`:`(R) STOCK ID FLAG: PBT-OTO`), ~ grepl("FLAG", .x))) %>%
   print()
+
+# Ages contradict (aging error?)
+qc_unRslvdAge <- esc_biodata_w_RESULTS %>% 
+  filter(if_any(c(`(R) AGE FLAG: CWT-SCALE`:`(R) AGE FLAG: PBT-SCALE`), ~ grepl("FLAG", .x))) %>%
+  print()
+
 
 
 # QC Summary ---------------------------
 qc_summary <- data.frame(qc_flagName = c("qc0 - EBwR unCert Oto",
-                                         "qc1_noID",
-                                         "qc2_noResults",
-                                         "qc3_noCWTID",
-                                         "qc4_noRslvdID",
-                                         "qc5_unRslvdID",
+                                         "qc_noID",
+                                         "qc_noResults",
+                                         "qc_noCWTID",
+                                         "qc_noRslvdID",
+                                         "qc_unRslvdID",
+                                         "qc_unRslvdAge",
                                          "antijoin - PADS",
                                          "antijoin - Otos"),
-                         number_records = c(nrow(qc0_EBwR_uncertOtoID),
-                                            nrow(qc1_noOtoID),
-                                            nrow(qc2_noOtoResults),
-                                            nrow(qc3_noCWTID),
-                                            nrow(qc4_noRslvdID),
-                                            nrow(qc5_unRslvdID),
+                         number_records = c(nrow(qc_EBwR_uncertOtoID),
+                                            nrow(qc_noOtoID),
+                                            nrow(qc_noOtoResults),
+                                            nrow(qc_noCWTID),
+                                            nrow(qc_noRslvdID),
+                                            nrow(qc_unRslvdID),
+                                            nrow(qc_unRslvdAge),
                                             nrow(antijoin_PADS),
                                             nrow(antijoin_OM)),
                          description = c("Esc biodata entries where there was no CWT and duplicate otolith hatch codes were applied within one Brood Year resulting in >1 stock ID options, OR where unable to resolve to Stock level and are left making assumptions based on Facility. These records are still retained in the full biodata file as well, and assumptions are made based on likelihood or facility. These are indicated in the (R) OTOLITH ID METHOD column.",
@@ -702,6 +786,7 @@ qc_summary <- data.frame(qc_flagName = c("qc0 - EBwR unCert Oto",
                                          "There is a CWT available but no Stock ID.",
                                          "There is a CWT or an NPAFC ID but no Resolved stock ID.",
                                          "Otolith, CWT and/or PBT stock ID(s) do not match.",
+                                         "Scale, CWT and/or PBT age(s) do not match.",
                                          "All WCVI CN PADS results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'WCVI Creel Survey' assumed already in CREST. Purpose here is to make sure there are no missing scales expected (i.e., samples not entered in base esc biodata file).",
                                          "All WCVI otolith results that did not match to a sample in the Escapement Biodata file. Note they may go elsewhere though, e.g., Barkely Sound Test Fishery likely in FOS. ASSUMPTION: Removed 'Sport' assumed already in CREST. Purpose here is to make sure there are no missing otoliths expected (i.e., samples not entered in base esc biodata file).")) %>% 
   print()
@@ -719,14 +804,10 @@ readme <- data.frame(`1` = c("date rendered:",
                              "sheet name:",
                              "Esc biodata w RESULTS",
                              "PBT parent biodata w RESULTS",
-                             "QC summary",
+                             "QC Report",
                              "qc0 - EBwR unCert Oto",
                              "!NPAFC_dupl!",
-                             "qc1 - No stock ID",
-                             "qc2 - No Oto result",
-                             "qc3 - No CWT ID",
-                             "qc4 - No Reslvd ID",
-                             "qc5 - Unreslvd ID",
+                             "QC...",
                              "antijoin - PADS unmatched",
                              "antijoin - OM unmatched"
 ),
@@ -744,11 +825,7 @@ readme <- data.frame(`1` = c("date rendered:",
         "Summary of QC flags and # of entries belonging to that flag.",
         "QC flag 0 tab. Only the Esc biodata w RESULTS ('EBwR') entries that correspond to NPAFC BY-hatchcode duplicates. See QC summary for details.",
         "All duplicate BY-hatchcodes documented by the NPAFC. To inform decisions around QC Flag 0.",
-        "QC flag 1 tab. See QC summary for details.",
-        "QC flag 2 tab. See QC summary for details.",
-        "QC flag 3 tab. See QC summary for details.",
-        "QC flag 4 tab. See QC summary for details.",
-        "QC flag 5 tab. See QC summary for details.",
+        "QC flag tabs. See QC summary report for details.",
         "PADS Antijoin tab. See QC summary for details.",
         "OtoManager Antijoin tab. See QC summary for details."))
 
@@ -770,11 +847,12 @@ openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodat w RES - PBT parents")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "QC summary")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "qc0 - EBwR unCert Oto")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "!NPAFC_dupl!")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "qc1 - No Oto stock ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "qc2 - No Oto result")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "qc3 - No CWT ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "qc4 - No Reslvd ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "qc5 - Unreslvd ID")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Oto stock ID")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Oto result")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No CWT ID")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Reslvd ID")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- Unreslvd ID")
+openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- Unreslvd age")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - PADS unmatched")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - OM unmatched")
 
@@ -785,11 +863,12 @@ openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodat w RES - PBT parents", x=PBT
 openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc0_EBwR_uncertOtoID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="!NPAFC_dupl!", x=NPAFC_dupl.df)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc1 - No Oto stock ID", x=qc1_noOtoID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc2 - No Oto result", x=qc2_noOtoResults)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc3 - No CWT ID", x=qc3_noCWTID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc4 - No Reslvd ID", x=qc4_noRslvdID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "qc5 - Unreslvd ID", x=qc5_unRslvdID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto stock ID", x=qc1_noOtoID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto result", x=qc2_noOtoResults)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No CWT ID", x=qc3_noCWTID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Reslvd ID", x=qc4_noRslvdID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd ID", x=qc5_unRslvdID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd age", x=qc_unRslvdAge)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - PADS unmatched", x=antijoin_PADS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - OM unmatched", x=antijoin_OM)
 

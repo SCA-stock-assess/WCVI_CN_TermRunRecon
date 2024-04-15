@@ -111,7 +111,13 @@ openxlsx::saveWorkbook(R_OUT_CREST.Bio,
                        returnValue=T)
 
 
-
+write.csv(crestBiocompiled, 
+          file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
+                      "/R_OUT - Biological_Data_With_Results ",
+                      min(crestBiocompiled$YEAR),
+                      "-",
+                      max(crestBiocompiled$YEAR),
+                      ".csv"), row.names=F)
 
 
 

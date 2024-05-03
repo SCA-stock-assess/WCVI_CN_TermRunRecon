@@ -317,9 +317,18 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.PBT %>%
                                   Hatch.Code %notin% c("Destroyed", "No Sample", "Not Marked") ~ "Hatchery", 
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
                                   Hatch.Code == "Not Marked" ~ "Natural",
-                                  # paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
-                                  #   SC_PBTreliable$sysYr ~ "Natural",
+                                  # If the system name is present in the Reliable PBT records, and the return year is >= the first full PBT baseline year for that system, then call it natural
+                                  # ******* THIS ISNT WORKING  -- FIX NEXT DAY! 
+                                  str_sub(gsub(" Cr", "",
+                                                       gsub(" R", "",
+                                                            gsub(" Fall Chinook", "", Spawning.Stock)
+                                                            )
+                                                       ),
+                                                  start=6, end=20) %in% SC_PBTreliable$MGL_Brood_Collection & 
+                                     `(R) RETURN YEAR` >= SC_PBTreliable$firstFullBY & 
+                                    is.na(MGL_Parental_Collection) ~ "Natural (PBT flag)",
                                   TRUE ~ "Unknown"),
+         
          
          
          # 2. Identify CWT Stock ID 
@@ -418,7 +427,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.PBT %>%
                                         is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
                                         is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
                                         #is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
-                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", `Spawning Stock`), 6, -1)), 
+                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock), 6, -1)), 
                                                                          " (assumed)"), 
                                         TRUE ~ "Unknown"),
     
@@ -435,11 +444,11 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.PBT %>%
     
     
     # 10. Create flag for cases where PBT, CWT and/or scale age(s) disagree
-    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE - CWT` != `(R) TOTAL AGE - SCALE` ~ "FLAG: CWT/scale ages disagree",
+    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
                                              TRUE ~ NA),
-    `(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE - CWT` != `(R) TOTAL AGE - PBT` ~ "FLAG: CWT/PBT ages disagree",
+    `(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: PBT` ~ "FLAG: CWT/PBT ages disagree",
                                              TRUE ~ NA),
-    `(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE - SCALE` != `(R) TOTAL AGE - PBT` ~ "FLAG: PBT/scale ages disagree",
+    `(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
                                              TRUE ~ NA)
     ) %>% 
   print()

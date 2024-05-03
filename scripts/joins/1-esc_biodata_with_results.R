@@ -549,8 +549,9 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
                                   `OM_READ STATUS` == "Marked" ~ "Hatchery",
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
                                   `OM_READ STATUS` == "Not Marked" ~ "Natural (assumed)",
-                                  paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
-                                    SC_PBTreliable$sysYr ~ "Natural",
+                                  # *** need to add PBT reliable natural designation 
+                                  # paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
+                                  #   SC_PBTreliable$sysYr ~ "Natural",
                                   TRUE ~ "Unknown"),
          
          # 2. Identify CWT Stock ID
@@ -778,7 +779,7 @@ qc_unRslvdAge <- esc_biodata_w_RESULTS %>%
 
 # QC Summary ---------------------------
 qc_summary <- data.frame(qc_flagName = c("qc0 - EBwR unCert Oto",
-                                         "qc_noID",
+                                         "qc_noOtoID",
                                          "qc_noResults",
                                          "qc_noCWTID",
                                          "qc_noRslvdID",
@@ -876,13 +877,13 @@ openxlsx::writeData(R_OUT_ESC.RES, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodata w RESULTS", x=esc_biodata_w_RESULTS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodat w RES - PBT parents", x=PBT_parents)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
-openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc0_EBwR_uncertOtoID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc_EBwR_uncertOtoID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="!NPAFC_dupl!", x=NPAFC_dupl.df)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto stock ID", x=qc1_noOtoID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto result", x=qc2_noOtoResults)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No CWT ID", x=qc3_noCWTID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Reslvd ID", x=qc4_noRslvdID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd ID", x=qc5_unRslvdID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto stock ID", x=qc_noOtoID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto result", x=qc_noOtoResults)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No CWT ID", x=qc_noCWTID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Reslvd ID", x=qc_noRslvdID)
+openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd ID", x=qc_unRslvdID)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd age", x=qc_unRslvdAge)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - PADS unmatched", x=antijoin_PADS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - OM unmatched", x=antijoin_OM)

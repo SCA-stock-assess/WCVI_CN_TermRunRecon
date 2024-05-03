@@ -265,25 +265,9 @@ SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC
 
 
 # ======================== Load PBT inventory ========================  
-SC_PBT_inventory <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-08-24 Chinook PBT Inventory BYs 2013-2021_draft .xlsx",
-                                       sheet="2013-2021 update", guess_max=10000) %>% 
-  rename(`(R) SAMPLE YEAR`=...1,
-         status=...2) %>% 
-  fill(`(R) SAMPLE YEAR`, .direction="down") %>% 
-  filter(`(R) SAMPLE YEAR`!="Comments") %>%
-  pivot_longer(cols=c(Ashlu:WOSS_RIVER), names_to = "MGL_Brood_Collection", values_to = "n") %>% 
-  filter(grepl("Bedwell|Burman|Conuma|Cowichan|Cypre|Gold|Kennedy|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
-               Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Tahsis|Thornton|Toquart|Tranquil", 
-               MGL_Brood_Collection, ignore.case=T)) %>% 
-  pivot_wider(names_from = "status", values_from = n) %>%
-  group_by(`(R) SAMPLE YEAR`, MGL_Brood_Collection) %>% 
-  summarize(propn_genotyped = as.numeric(Genotyped)/as.numeric(Brood)) %>% 
-  print()
-
-SC_PBTreliable <- SC_PBT_inventory %>% 
-  filter(propn_genotyped>=0.95) %>%
-  mutate(sysYr = paste(MGL_Brood_Collection, "-", `(R) SAMPLE YEAR`)) %>%
-  print()
+# Run PBT source code -------------------------   
+source(here("scripts", "misc-helpers", "CalcReliablePBT.R"))
+# saves as SC_PBTreliable
 
 
 
@@ -314,27 +298,27 @@ wcviCNepro_w_NPAFC.MRP.PBT <- left_join(wcviCNepro_w_NPAFC.MRP %>%
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.PBT %>%
   mutate(
          # AGE ID: 
-         `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE - CWT`) ~ "CWT",
-                                                     is.na(`(R) TOTAL AGE - CWT`) & !is.na(`(R) TOTAL AGE - PBT`) ~ "PBT",
-                                                     is.na(`(R) TOTAL AGE - CWT`) & is.na(`(R) TOTAL AGE - PBT`) & !is.na(`(R) TOTAL AGE - SCALE`) ~ "Scale",
+         `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
+                                                     is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
+                                                     is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
                                                      TRUE ~ NA),
-         `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE - CWT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE - PBT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE - SCALE`,
+         `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE: CWT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE: SCALE`,
                                               TRUE ~ NA),
          
          `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) RETURN YEAR`) - `(R) RESOLVED TOTAL AGE`,
     
     
          # 1. Identify hatchery/natural origin
-         `(R) ORIGIN` = case_when((`Hatch Code` %in% c("Destroyed", "No Sample") | is.na(`Hatch Code`)) & (is.na(`CWT Tag Code`) | `CWT Tag Code` =="No tag") & (`External Marks`=="Unclipped") ~ "Unknown",
-                                  `External Marks`=="Clipped" ~ "Hatchery",
-                                  !is.na(`CWT Tag Code`) | `CWT Tag Code` != "No tag" ~ "Hatchery",
-                                  `Hatch Code` %notin% c("Destroyed", "No Sample", "Not Marked") ~ "Hatchery", 
+         `(R) ORIGIN` = case_when((Hatch.Code %in% c("Destroyed", "No Sample") | is.na(Hatch.Code)) & (is.na(CWT.Tag.Code) | CWT.Tag.Code =="No tag") & (External.Marks=="Unclipped") ~ "Unknown",
+                                  External.Marks=="Clipped" ~ "Hatchery",
+                                  !is.na(CWT.Tag.Code) | CWT.Tag.Code != "No tag" ~ "Hatchery",
+                                  Hatch.Code %notin% c("Destroyed", "No Sample", "Not Marked") ~ "Hatchery", 
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
-                                  `Hatch Code` == "Not Marked" ~ "Natural",
-                                  paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
-                                    SC_PBTreliable$sysYr ~ "Natural",
+                                  Hatch.Code == "Not Marked" ~ "Natural",
+                                  # paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
+                                  #   SC_PBTreliable$sysYr ~ "Natural",
                                   TRUE ~ "Unknown"),
          
          

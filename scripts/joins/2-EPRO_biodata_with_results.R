@@ -300,7 +300,7 @@ wcviCNepro_w_NPAFC.MRP.PBT <- left_join(wcviCNepro_w_NPAFC.MRP %>%
                                           mutate_at("(R) RETURN YEAR", as.character),
                                         SC_PBT_SEP ,
                                     by=c("(R) DNA NUM", "(R) RETURN YEAR")) %>%
-  mutate(`(R) TOTAL AGE - PBT` = MGL_Offspring_Age) %>%
+  mutate(`(R) TOTAL AGE: PBT` = MGL_Offspring_Age) %>%
   print()
 
 

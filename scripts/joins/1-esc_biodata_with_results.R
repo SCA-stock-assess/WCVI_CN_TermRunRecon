@@ -189,7 +189,7 @@ intersect(colnames(esc_biodata_heads), colnames(SC_cnRelTagCodes))
 esc_biodata_headsCWT <- left_join(esc_biodata_heads,
                                   SC_cnRelTagCodes,
                                   by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
-  mutate(`(R) TOTAL AGE - CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`) %>%
+  mutate(`(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`) %>%
   print()
 
 
@@ -231,15 +231,15 @@ intersect(colnames(esc_biodata_headsCWT), colnames(SC_age_data))
 esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
                                        SC_age_data,
                                        na_matches="never") %>%
-  mutate(`(R) TOTAL AGE - SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
+  mutate(`(R) TOTAL AGE: SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
                                              `PADS_GrAge`=="1M" ~ 2,
                                              `PADS_GrAge`=="2M" ~ 3,
                                              `PADS_GrAge`=="3M" ~ 4,
                                              `PADS_GrAge`=="4M" ~ 5,
                                              `PADS_GrAge`=="5M" ~ 6,
                                              `PADS_GrAge`=="6M" ~ 7),
-         `(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE - CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE - CWT`,
-                                               is.na(`(R) TOTAL AGE - CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE - SCALE`,
+         `(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: CWT`,
+                                               is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`,
                                                TRUE ~ NA)) %>% 
   arrange(`(R) SAMPLE YEAR`) %>%
   print()
@@ -249,7 +249,7 @@ esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
 # ANTI JOINS: Scale samples that didn't make it in to the escapement biodata basefile ---------------------------
 # 1. Extract "successful" scale book-cell values from the joined file (e.g., scale books with attached non-NA scale ages)
 available_age_results <- esc_biodata_headsCWT_PADS %>%
-  filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`) & !is.na(`(R) TOTAL AGE - SCALE`)) %>% 
+  filter(!is.na(`(R) SCALE BOOK-CELL CONCAT`) & !is.na(`(R) TOTAL AGE: SCALE`)) %>% 
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
 # 2. Filter - remove the successful results from the join from the age data dump and save only the non-successful join (orphans)
@@ -281,9 +281,9 @@ antijoin_PADS <- SC_age_data %>%
 # Option 2: Load already saved exported otolith master file --------------------------- (faster)
 # Do this if you are just loading already compiled data
 wcviOtos <- readxl::read_excel(path=list.files(path = here::here("outputs"),
-                                                  pattern = "^R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
-                                                  full.names = TRUE), 
-                                  sheet="Sheet1")  %>% 
+                                               pattern = "^R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+                                               full.names = TRUE), 
+                               sheet="Sheet1")  %>% 
   mutate_at("(R) SAMPLE YEAR", as.character) %>% 
   mutate(OM_FACILITY = case_when(grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
                                  grepl("INCH CR", OM_FACILITY) ~ "H-INCH CREEK H",
@@ -533,13 +533,13 @@ esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_ot
 
 esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>% 
   mutate(# AGE ID: 
-         `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE - CWT`) ~ "CWT",
-                                                     is.na(`(R) TOTAL AGE - CWT`) & !is.na(`(R) TOTAL AGE - PBT`) ~ "PBT",
-                                                     is.na(`(R) TOTAL AGE - CWT`) & is.na(`(R) TOTAL AGE - PBT`) & !is.na(`(R) TOTAL AGE - SCALE`) ~ "Scale",
+         `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
+                                                     is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
+                                                     is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
                                                      TRUE ~ NA),
-         `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE - CWT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE - PBT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE - SCALE`,
+         `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE: CWT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE: SCALE`,
                                               TRUE ~ NA),
          
          `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) SAMPLE YEAR`) - `(R) RESOLVED TOTAL AGE`,

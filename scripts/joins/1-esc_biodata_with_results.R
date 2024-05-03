@@ -520,7 +520,7 @@ intersect(colnames(SC_PBT_SEP), colnames(esc_biodata_headsCWT_PADS_otoNPAFC))
 esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_otoNPAFC,
                                                     SC_PBT_SEP,
                                                     by=c("(R) SAMPLE YEAR", "(R) DNA NUM", "Fishery / River")) %>% 
-  mutate(`(R) TOTAL AGE - PBT` = MGL_Offspring_Age) %>% 
+  mutate(`(R) TOTAL AGE: PBT` = MGL_Offspring_Age) %>% 
   print()
 
 
@@ -705,11 +705,11 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
     
     
     # 11. Create flag for cases where PBT, CWT and/or scale age(s) disagree
-    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE - CWT` != `(R) TOTAL AGE - SCALE` ~ "FLAG: CWT/scale ages disagree",
+    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
                                           TRUE ~ NA),
-    `(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE - CWT` != `(R) TOTAL AGE - PBT` ~ "FLAG: CWT/PBT ages disagree",
+    `(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: PBT` ~ "FLAG: CWT/PBT ages disagree",
                                         TRUE ~ NA),
-    `(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE - SCALE` != `(R) TOTAL AGE - PBT` ~ "FLAG: PBT/scale ages disagree",
+    `(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
                                           TRUE ~ NA)
   ) %>%
   print()

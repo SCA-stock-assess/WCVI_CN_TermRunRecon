@@ -47,9 +47,9 @@ analysis_year <- 2023
 # list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/"), 
 #            recursive=F, pattern="^[^~]*.xlsx") 
 
-# 2. Select the most recent one. This is manual because the naming convention sucks ----------------
-esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement"),
-                                          recursive=F, pattern="^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx")   # <<<< add a file index value if needed e.g., [1]
+# 2. Select the most recent one. This is manual because the naming convention sucks ----------------  **delete soon if updated file call below works 
+# esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement"),
+#                                           recursive=F, pattern="^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx")   # <<<< add a file index value if needed e.g., [1]
 
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",
@@ -131,7 +131,7 @@ wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT
 
 # Option 2: Load already saved exported head recovery master file --------------------------- (faster)
 # Do this if you are just loading already compiled head recoveries
-mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
+mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                   pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_2012*.*xlsx",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE),
                                   sheet="Sheet1",

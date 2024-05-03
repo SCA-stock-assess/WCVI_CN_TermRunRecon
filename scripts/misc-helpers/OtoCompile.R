@@ -76,7 +76,7 @@ writexl::write_xlsx(wcviOtos,
 
 # Export to github ---------------------------
 writexl::write_xlsx(wcviOtos, 
-                    path=paste0(here("outputs", "R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_"),
+                    path=paste0(here::here("outputs", "R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_"),
                                 min(wcviOtos$`(R) SAMPLE YEAR`),
                                 "-",
                                 max(wcviOtos$`(R) SAMPLE YEAR`),
@@ -145,7 +145,7 @@ writexl::write_xlsx(OtosRef,
 
 # Export to github ---------------------------
 writexl::write_xlsx(wcviOtos, 
-                    path=paste0(here("outputs", "R_OUT - OtoManager_CN_REFERENCEspecimens_BY_"),
+                    path=paste0(here::here("outputs", "R_OUT - OtoManager_CN_REFERENCEspecimens_BY_"),
                                 min(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
                                 "-",
                                 max(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),

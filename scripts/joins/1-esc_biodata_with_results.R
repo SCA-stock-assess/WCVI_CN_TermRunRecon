@@ -23,12 +23,12 @@ rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects
 gc() #free up memory and report the memory usage.
 
 # Load packages ----------------
-library(here)
+#library(here)
 library(tidyverse)
-library(readxl)
-library(writexl)
-library(openxlsx)
-library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-assess/saaWeb") 
+#library(readxl)
+#library(writexl)
+#library(openxlsx)
+#library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-assess/saaWeb") 
 #library(zoo)       # for rollapply()
 
 
@@ -43,21 +43,24 @@ analysis_year <- 2023
 #                                                                           I. ESCAPEMENT BIODATA LOAD 
 
 
-# 1. Examine escapement biodata files available ----------------
-list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/"), 
-           recursive=F, pattern="^[^~]*.xlsx") 
+# 1. Examine escapement biodata files available ----------------  **delete soon if updated file call below works 
+# list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/"), 
+#            recursive=F, pattern="^[^~]*.xlsx") 
 
 # 2. Select the most recent one. This is manual because the naming convention sucks ----------------
 esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement"),
                                           recursive=F, pattern="^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx")   # <<<< add a file index value if needed e.g., [1]
 
 #3. Read in the file and reformat (slow) ----------------
-wcviCNescBiodat <- #cbind(
-  readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", esc_biodata_recent_filename),
-              sheet=grep("Biodata 2015-", readxl::excel_sheets(paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/", 
-                                                                       esc_biodata_recent_filename)),
-                          ignore.case=T, value=T), 
-              guess_max=10000) %>% 
+wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",
+                                                      pattern = "^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx",    
+                                                      full.names = TRUE), 
+                                      sheet=grep("Biodata 2015-", 
+                                                 readxl::excel_sheets(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",
+                                                                                      pattern = "^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx",    
+                                                                                      full.names = TRUE)),
+                                                 ignore.case=T, value=T),
+                                      guess_max=10000) %>% 
   select(Year, `Sample Month`:Species, `Fishery / River`:Gear, Sex, `POF Length (mm)`:`Egg Retention`, Comments) %>%
   mutate(`(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
                                                 paste0(`Otolith Lab Number`,sep="-",`Otolith Box #`,sep="-",`Otolith Specimen #`)),
@@ -123,7 +126,7 @@ wcviCNescBiodat <- #cbind(
 
 # Option 1: Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
 # Do this if you need to add a new year. Otherwise, do option 2. 
-#  source(here("scripts","misc-helpers","HeadRcvyCompile.R")) 
+#  source(here::here("scripts","misc-helpers","HeadRcvyCompile.R")) 
 
 
 # Option 2: Load already saved exported head recovery master file --------------------------- (faster)
@@ -138,7 +141,7 @@ mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here("outputs"),
 # !! MAY GET:    Error: Std:: bad_alloc()  
 # It's a memory issue. Either try quitting R session and re-starting, or may have to close programs/restart computer. 
 # If really in a pickle, read in as CSV below: 
-# mrpHeadRcvy <- read.csv(here("outputs" "R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv"))
+# mrpHeadRcvy <- read.csv(here::here("outputs" "R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv"))
 
 
 #############################################################################################################################################################
@@ -165,10 +168,10 @@ esc_biodata_heads <- left_join(wcviCNescBiodat,
 
 
 # 0. RUN CWT RELEASE CODE DUMP ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
-# source(here("scripts", "functions", "pullChinookCWTReleases.R"))
+# source(here::here("scripts", "functions", "pullChinookCWTReleases.R"))
 
 # 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
-SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here("outputs"),
+SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                        pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                        full.names = TRUE), 
                                        sheet="Sheet1")  
@@ -200,12 +203,12 @@ esc_biodata_headsCWT <- left_join(esc_biodata_heads,
 
 # Option 1: Run helper script to pull/compile scale data (saves as 'SC_age_data') --------------------------- (*slow*)
 # Do this if you need to add a new year. Otherwise, do option 2. 
-#  source(here("scripts", "functions", "pullChinookAgeData.R"))
+#  source(here::here("scripts", "functions", "pullChinookAgeData.R"))
 
 
 # Option 2: Load already saved exported age master file --------------------------- (faster)
 # Do this if you are just loading already compiled data
-SC_age_data <- readxl::read_excel(path=list.files(path = here("outputs"),
+SC_age_data <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                   pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
                                   sheet="Sheet1")  %>% 
@@ -272,12 +275,12 @@ antijoin_PADS <- SC_age_data %>%
 
 # Option 1: Run helper script to pull/compile otolith data (saves as 'wcviOtos') --------------------------- (*slow*)
 # Do this if you need to add a new year. Otherwise, do option 2. 
-#  source(here("scripts","misc-helpers","OtoCompile.R")) 
+#  source(here::here("scripts","misc-helpers","OtoCompile.R")) 
 
 
 # Option 2: Load already saved exported otolith master file --------------------------- (faster)
 # Do this if you are just loading already compiled data
-wcviOtos <- readxl::read_excel(path=list.files(path = here("outputs"),
+wcviOtos <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                   pattern = "^R_OUT - OtoManager_AllSpecies_Area20-27andOffshore_",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
                                   sheet="Sheet1")  %>% 
@@ -493,7 +496,7 @@ SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC
 
 
 # Run PBT source code -------------------------   
-source(here("scripts", "misc-helpers", "CalcReliablePBT.R"))
+source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
 # saves as SC_PBTreliable
 
 
@@ -892,7 +895,7 @@ openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - OM unmatched", x=antijoin
 
 # To github repo --------------------
 openxlsx::saveWorkbook(R_OUT_ESC.RES,
-                       file=paste0(here("outputs"),
+                       file=paste0(here::here("outputs"),
                                    "/R_OUT - WCVI_Escapement-FSC_BioData_",
                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
                                    "-",

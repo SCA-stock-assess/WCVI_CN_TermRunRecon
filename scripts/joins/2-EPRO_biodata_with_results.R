@@ -479,7 +479,7 @@ qc_noOtoResults <- wcviCNepro_w_Results %>%
 
 # There is a useable CWT but no stock ID (e.g., R code errors)
 qc_noCWTID <- wcviCNepro_w_Results %>% 
-  filter(!is.na(`CWT Tag Code`) & `CWT Tag Code`%notin%c("No Tag","Lost Tag","No Head") & `Sample Status`=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
+  filter(!is.na(CWT.Tag.Code) & CWT.Tag.Code%notin%c("No Tag","Lost Tag","No Head") & Sample.Status=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
   filter()
 
 # Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)

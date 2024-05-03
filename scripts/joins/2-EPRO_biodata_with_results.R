@@ -3,9 +3,8 @@
 
 # Work flow is:
 # 1.1. Download all facility files 'All Adult Biosampling' reports from EPRO: https://epro-stage.azure.cloud.dfo-mpo.gc.ca/EProWeb/#home
-#       1.2. Store EPRO files on Term Run working SharePoint site: https://086gc.sharepoint.com/:f:/r/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/WCVI%20STAD/Terminal%20CN%20Run%20Recon/2022/Communal%20data/EPRO?csf=1&web=1&e=LggAxf
-# 2.1. Load EPRO files into R from SharePoint (Step I) 
-#       2.2. Export to git and SharePoint for records
+#       1.2. Store EPRO files on Network drive location
+# 2.   Load EPRO files into R from Network drive (Step I) 
 # 3.   Load NPAFC mark master file from SCD_Stad network drive (Step II): dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks....xlsx
 # 4.   Join EPRO to NPAFC mark master file (Step III)
 # 5.   Load CWT release tag codes from last 10 years (Step IV)
@@ -212,7 +211,7 @@ wcviCNepro_w_NPAFC <- left_join(wcviCNepro ,
 
 
 # Option 1: Load function to query MRPIS CWT releases --------------------------- 
-  # Run this if it hasn't been refreshed in a while (**SLOW**)
+  # Run this if it hasn't been refreshed in a while (**VERY SLOW**)
 # source(here("scripts","functions","pullChinookCWTReleases.R"))
 
 

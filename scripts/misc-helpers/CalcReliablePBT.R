@@ -53,6 +53,9 @@ SC_PBTreliable <- SC_PBT_inventory %>%
   print()
 
 
+# Clean up for joins -------------------------
+remove(findFirstFullPBTBY, SC_PBT_inventory)
+
 
 
 # ======================== EXPORT ========================  

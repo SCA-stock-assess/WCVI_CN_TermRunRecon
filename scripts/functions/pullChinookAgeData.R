@@ -94,7 +94,7 @@ SC_ages.NuSEDS <- read.csv(here("outputs", "R_OUT - NuSEDS Chinook Age results 2
          PADS_GrAge = PADS_GR.Age,
          PADS_EuAge = PADS_EU.Age) %>%
   mutate(`(R) SAMPLE YEAR` = PADS_Fiscal.Year,
-         `(R) SCALE BOOK NUM` = PADS_FIELDcontainerLabel,
+         `(R) SCALE BOOK NUM` = PADS_Container.Label,
          `(R) SCALE CELL NUM` = PADS_Container.Address,
          `(R) scale data source` = "NuSEDs",
          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) SCALE BOOK NUM`) & !is.na(`(R) SCALE CELL NUM`) ~ paste0(`(R) SCALE BOOK NUM`, sep="-",

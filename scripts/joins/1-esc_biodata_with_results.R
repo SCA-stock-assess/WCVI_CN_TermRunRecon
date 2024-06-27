@@ -117,7 +117,7 @@ wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT
 
 # <<< For each new year: >>> 
 # 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
-# 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
+# 2. Save to SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
 # FOLLOW NAMING CONVENTION OR ELSE! >:(
 # 3. Run source() line below (Option 1) - only  need to do this once/year. Otherwise run Option 2. 
 
@@ -171,7 +171,7 @@ esc_biodata_heads <- left_join(wcviCNescBiodat,
 # source(here::here("scripts", "functions", "pullChinookCWTReleases.R"))
 
 # 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
-SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
+cn_relTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                        pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                        full.names = TRUE), 
                                        sheet="Sheet1")  
@@ -184,10 +184,10 @@ SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here::here("output
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+HEADS to TAGCODE ID ========================  
-intersect(colnames(esc_biodata_heads), colnames(SC_cnRelTagCodes))
+intersect(colnames(esc_biodata_heads), colnames(cn_relTagCodes))
 
 esc_biodata_headsCWT <- left_join(esc_biodata_heads,
-                                  SC_cnRelTagCodes,
+                                  cn_relTagCodes,
                                   by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
   mutate(`(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`) %>%
   print()

@@ -136,23 +136,11 @@ writexl::write_xlsx(SC_allAgesMaster,
 
 
 # 4.2. Export to github repo ------------------------
-writexl::write_xlsx(SC_allAgesMaster, here("outputs", 
+writexl::write_xlsx(SC_allAgesMaster, here::here("outputs", 
                                            paste0("R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx")))
 
 
 
-# 4.3. Export to Sharepoint ------------------------
-writexl::write_xlsx(SC_allAgesMaster, 
-                    paste0("C:/Users/",
-                           Sys.info()["login"],
-                           "/DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon/",
-                           analysis_year,
-                           "/Communal data/Misc biodata dumps",
-                           "/R_OUT - ALL South Coast Chinook Age results ", 
-                           min(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
-                           "-", 
-                           max(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
-                           ".xlsx"))
 
 
 

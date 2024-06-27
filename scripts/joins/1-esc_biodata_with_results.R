@@ -35,7 +35,7 @@ library(tidyverse)
 # Helpers ----------------
 "%notin%" <- Negate("%in%")
 analysis_year <- 2023
-
+options(scipen = 9999)
 
 
 #############################################################################################################################################################
@@ -208,7 +208,7 @@ esc_biodata_headsCWT <- left_join(esc_biodata_heads,
 
 # Option 2: Load already saved exported age master file --------------------------- (faster)
 # Do this if you are just loading already compiled data
-SC_age_data <- readxl::read_excel(path=list.files(path = here::here("outputs"),
+SC_allAgesMaster <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                   pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
                                   sheet="Sheet1")  %>% 
@@ -224,12 +224,12 @@ SC_age_data <- readxl::read_excel(path=list.files(path = here::here("outputs"),
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+HEADS+CWTs to PADS, calc BY ========================  
-intersect(colnames(esc_biodata_headsCWT), colnames(SC_age_data))
+intersect(colnames(esc_biodata_headsCWT), colnames(SC_allAgesMaster))
 
 # IF you get a many-to-many error, you have duplicate scalebooks that were handed out to different regions. 
 # Will need to further filter down the SC_age_data file
 esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
-                                       SC_age_data,
+                                       SC_allAgesMaster,
                                        na_matches="never") %>%
   mutate(`(R) TOTAL AGE: SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
                                              `PADS_GrAge`=="1M" ~ 2,
@@ -253,7 +253,7 @@ available_age_results <- esc_biodata_headsCWT_PADS %>%
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
 # 2. Filter - remove the successful results from the join from the age data dump and save only the non-successful join (orphans)
-antijoin_PADS <- SC_age_data %>% 
+antijoin_PADS <- SC_allAgesMaster %>% 
   filter(`(R) SCALE BOOK-CELL CONCAT` %notin% available_age_results & !grepl("creel|test", PADS_ProjectName, ignore.case=T)) %>% 
   print()
 
@@ -431,7 +431,7 @@ esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
 #                                                                           XIII. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+PBT_results <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,
@@ -446,61 +446,49 @@ SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC
 
 
 # ======================== Load PBT inventory ========================  
-# Load data, calculate % of each BY genotyped -------------------------   *** DELETE SOON ONCE TRANSITION SOLID
-# SC_PBT_inventory <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-08-24 Chinook PBT Inventory BYs 2013-2021_draft .xlsx",
-#                                        sheet="2013-2021 update", guess_max=10000) %>% 
-#   rename(`(R) SAMPLE YEAR`=...1,
-#          status=...2) %>% 
-#   fill(`(R) SAMPLE YEAR`, .direction="down") %>% 
-#   filter(`(R) SAMPLE YEAR`!="Comments") %>%
-#   pivot_longer(cols=c(Ashlu:WOSS_RIVER), names_to = "MGL_Brood_Collection", values_to = "n") %>% 
-#   filter(grepl("Bedwell|Burman|Campbell|Conuma|Cowichan|Cypre|Gold|Goldstream|Kennedy|Lang|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
-#                Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Sucwoa|Tahsis|Thornton|Toquart|Tranquil|Woss", 
-#               MGL_Brood_Collection, ignore.case=T)) %>% 
-#   pivot_wider(names_from = "status", values_from = n) %>%
-#   group_by(`(R) SAMPLE YEAR`, MGL_Brood_Collection) %>% 
-#   summarize(propn_genotyped = as.numeric(Genotyped)/as.numeric(Brood)) %>% 
-#   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-#   mutate(MGL_Brood_Collection = gsub(str_to_title(gsub(MGL_Brood_Collection, pattern="_", replacement=" ")), pattern=" River", replacement="")) %>%
-#   print()
-# 
-# 
-# # Define function to find rolling 5 year window of full PBT results -------------------------
+# Load tag rate file -------------------------   *** slowww, had to make 1 manual update 
+
+ #SC_PBT_tagrate <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.xlsx",
+  #                                      sheet="ch_supplementary_file_to-check", guess_max=10000) 
+
+# Load from github csv for now -------------------------
+# Extract reliable PBT baseline BYs
+PBT_tagrate <- read.csv(here::here("data", "bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.csv")) %>%  
+  filter(grepl("Tag_Rate", collection_extract)) %>%
+  pivot_longer(cols=c(ALOUETTE_RIVER:YUKON_RIVER.WHITEHORSE), names_to = "System", values_to = "Tag_Rate") %>% 
+  rename(`(R) SAMPLE YEAR` = collection_extract) %>% 
+  mutate(`(R) SAMPLE YEAR` = str_sub(`(R) SAMPLE YEAR`, start=1, end=4)) %>%
+  mutate(Tag_Rate = case_when(grepl(">1", Tag_Rate) ~ "1",
+                              grepl("\\*", Tag_Rate) ~ "1",
+                              TRUE ~ Tag_Rate)) %>%
+  mutate_at("Tag_Rate", as.numeric) %>%
+  filter(Tag_Rate > 0.70) %>%
+  left_join(.,
+            read.csv(here::here("data", "bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.csv")) %>%  
+              filter(grepl("ProvState_extract", collection_extract)) %>% 
+              pivot_longer(cols=c(ALOUETTE_RIVER:YUKON_RIVER.WHITEHORSE), names_to = "System", values_to = "Province") %>%
+              select(-collection_extract),
+            by="System") %>%
+  relocate("Province", .before=Tag_Rate) %>% 
+  mutate(System = str_to_title(gsub(x=gsub(x=System, pattern="_", replacement=" "), pattern="\\.", replacement=" ")),
+         `(R) SYSTEM-YEAR` = paste0(System, sep= "-", `(R) SAMPLE YEAR`))
+  
+
+  # 
+# # Define function to find rolling 5 year window of full PBT results ------------------------- (not needed)
 # # TY chatGPT :)
 # findFirstFullPBTBY <- function(x, other_col) {
 #   x <- ifelse(is.na(other_col), NA, x)
 #   roll_max <- rollapply(x, width=5, FUN=max, align="right", fill=NA)
 #   return(roll_max)
 # }
-# 
-# # Filter out unreliable years, and create new variable indicating first full reliable BY for PBT -------------------------
-# SC_PBTreliable <- SC_PBT_inventory %>% 
-#   mutate_at("(R) SAMPLE YEAR", as.numeric) %>%
-#   filter(propn_genotyped>=0.85) %>%
-#   group_by(MGL_Brood_Collection) %>% 
-#   complete(.,  `(R) SAMPLE YEAR`=2013:analysis_year) %>%
-#   # *** cheating for now 
-#   mutate(propn_genotyped = case_when(MGL_Brood_Collection=="San Juan" & `(R) SAMPLE YEAR`%in%c(2022,2023) ~ 0.999999,
-#                                      TRUE ~ propn_genotyped)) %>% 
-#   # ***
-#   group_by(MGL_Brood_Collection) %>%
-#   mutate(firstFullBY = findFirstFullPBTBY(`(R) SAMPLE YEAR`, propn_genotyped)+1,
-#          fullPBT_BYid = case_when(!is.na(firstFullBY) ~ paste(MGL_Brood_Collection, "-", firstFullBY),
-#                                   TRUE ~ NA)) %>%
-#   print()
-# 
-# 
-# # Export:
-# writexl::write_xlsx(SC_PBTreliable, 
-#                     "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/SC - Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
 
 
-# Run PBT source code -------------------------   
-source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
-# saves as SC_PBTreliable
+# # Export -------------------------:
+writexl::write_xlsx(PBT_tagrate,
+                    "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Reliable PBT (over 0.7) BYs by stock - draft working.xlsx")
 
 
-# **************** next day:: join or index ^^ above to the stock ID/origin process to identify first full RYs for Natural ID ! 
 
 
 
@@ -515,10 +503,10 @@ source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS+CWT ID to PBT!! ========================  
-intersect(colnames(SC_PBT_SEP), colnames(esc_biodata_headsCWT_PADS_otoNPAFC))
+intersect(colnames(PBT_results), colnames(esc_biodata_headsCWT_PADS_otoNPAFC))
 
 esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_otoNPAFC,
-                                                    SC_PBT_SEP,
+                                                    PBT_results,
                                                     by=c("(R) SAMPLE YEAR", "(R) DNA NUM", "Fishery / River")) %>% 
   mutate(`(R) TOTAL AGE: PBT` = MGL_Offspring_Age) %>% 
   print()
@@ -543,16 +531,16 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
                                               TRUE ~ NA),
          
          `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) SAMPLE YEAR`) - `(R) RESOLVED TOTAL AGE`,
+         
+         `(R) SYSTEM-YEAR` = paste0(`Fishery / River`, sep="-", `(R) RESOLVED FINAL BROOD YEAR`),
 
          # 1. Identify hatchery/natural origin
          `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
                                   `OM_READ STATUS` == "Marked" ~ "Hatchery",
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
                                   `OM_READ STATUS` == "Not Marked" ~ "Natural (assumed)",
-                                  # *** need to add PBT reliable natural designation 
-                                  # paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
-                                  #   SC_PBTreliable$sysYr ~ "Natural",
-                                  TRUE ~ "Unknown"),
+                                  is.na(MGL_Parental_Collection) & `(R) SYSTEM-YEAR` %in% PBT_tagrate$`(R) SYSTEM-YEAR`  ~ "Natural (PBT)",
+                                  TRUE ~ "Unknown")),
          
          # 2. Identify CWT Stock ID
          `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 

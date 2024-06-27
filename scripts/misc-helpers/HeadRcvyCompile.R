@@ -54,7 +54,7 @@ remove(mrpHeadRcvy.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(mrpHeadRcvy, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Export",
+                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
                                 "/R_OUT - MRPHeadRecoveries_CHINOOK_",
                                 min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
                                 "-",
@@ -66,7 +66,7 @@ writexl::write_xlsx(mrpHeadRcvy,
 
 # Export to github ---------------------------
 writexl::write_xlsx(mrpHeadRcvy, 
-                    path = paste0(here("outputs"),
+                    path = paste0(here::here("outputs"),
                                   "/R_OUT - MRPHeadRecoveries_CHINOOK_",
                                   min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
                                   "-",

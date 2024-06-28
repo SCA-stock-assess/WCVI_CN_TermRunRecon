@@ -39,7 +39,13 @@ wcviOtos <- do.call("rbind", wcviOtos.LL) %>%
   setNames(paste0('OM_', names(.))) %>% 
   mutate(OM_FACILITY = case_when(OM_FACILITY=="H-ROBERTSON CR" ~ "H-ROBERTSON CREEK H",
                                  OM_FACILITY=="H-CONUMA R " ~ "H-CONUMA RIVER H ",
-                                 TRUE~as.character(OM_FACILITY)),
+                                 grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
+                                 grepl("INCH CR", OM_FACILITY) ~ "H-INCH CREEK H",
+                                 grepl("NANAIMO", OM_FACILITY) ~ "H-NANAIMO RIVER H",
+                                 grepl("NITINAT", OM_FACILITY) ~ "H-NITINAT RIVER H",
+                                 grepl("QUINSAM", OM_FACILITY) ~ "H-QUINSAM RIVER H",
+                                 grepl("WALLACE", OM_FACILITY) ~ "WALLACE RIVER HATCHERY",
+                                 TRUE ~ as.character(OM_FACILITY)),
          `(R) OTOLITH BOX NUM` = `OM_BOX CODE`,
          `(R) OTOLITH VIAL NUM` = `OM_CELL NUMBER`,
          `(R) OTOLITH LAB NUM` = `OM_LAB NUMBER`,
@@ -48,6 +54,7 @@ wcviOtos <- do.call("rbind", wcviOtos.LL) %>%
   rename(`(R) HATCHCODE` = `OM_HATCH CODE`,
          `(R) SAMPLE YEAR` = `OM_SAMPLE YR`) %>%
   mutate_at("(R) OTOLITH VIAL NUM", as.character) %>%
+  mutate_at("(R) SAMPLE YEAR", as.character) %>% 
   print()
 
 # Clean up ---------------------------

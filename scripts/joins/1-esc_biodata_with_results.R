@@ -289,7 +289,9 @@ wcviOtos <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                full.names = TRUE), 
                                sheet="Sheet1")  %>% 
   mutate_at("(R) SAMPLE YEAR", as.character) %>% 
-  mutate(OM_FACILITY = case_when(grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
+  mutate(OM_FACILITY = case_when(OM_FACILITY=="H-ROBERTSON CR" ~ "H-ROBERTSON CREEK H",
+                                 OM_FACILITY=="H-CONUMA R " ~ "H-CONUMA RIVER H ",
+                                 grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
                                  grepl("INCH CR", OM_FACILITY) ~ "H-INCH CREEK H",
                                  grepl("NANAIMO", OM_FACILITY) ~ "H-NANAIMO RIVER H",
                                  grepl("NITINAT", OM_FACILITY) ~ "H-NITINAT RIVER H",
@@ -324,8 +326,9 @@ esc_biodata_headsCWT_PADS_oto <- left_join(esc_biodata_headsCWT_PADS,
                                              mutate_at("(R) SAMPLE YEAR", as.character),
                                            #by=c("(R) OTOLITH BOX NUM", "(R) OTOLITH VIAL NUM", "(R) SAMPLE YEAR", "(R) OTOLITH LBV CONCAT"),
                                            na_matches="never") %>% 
-  mutate(`(R) BYHID` = case_when(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
-                                 TRUE ~ NA)) %>% 
+  mutate(`(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR: SCALE`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR: SCALE`, " - ", `(R) HATCHCODE`),
+                                 TRUE ~ NA),
+         `(R) oto join BY` = `(R) BROOD YEAR: SCALE`) %>% 
   print()
 
 
@@ -359,12 +362,12 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
                             sheet="AC087805 (1)") %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
-         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
+         `(R) oto join BY` = NPAFC_BROOD_YEAR) %>% 
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
                                     TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
                                  TRUE ~ NPAFC_STOCK),
-         `(R) BYHID` = case_when(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
+         `(R) BYHID` = case_when(!is.na(`(R) oto join BY`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) oto join BY`, " - ", `(R) HATCHCODE`),
                                 TRUE ~ NA)) %>%
   # This filter line below initially removed some marks to avoid duplicates, but the work-around below now addresses this more systematically. Below is just
   #     kept for reference for now
@@ -372,8 +375,8 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
          # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
          #!grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5"
          #) %>%
-  select(`(R) RESOLVED BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
-  distinct(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
+  select(`(R) oto join BY`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
+  distinct(`(R) oto join BY`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
   mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
                                      NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
                                      NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
@@ -389,10 +392,10 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
                                      NPAFC_wcvi_prob=="C" ~ "MED",
                                      NPAFC_wcvi_prob=="D" ~ "LOW",
                                      NPAFC_wcvi_prob=="E" ~ "V LOW")) %>%
-  group_by(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  group_by(`(R) oto join BY`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
   pivot_wider(names_from = group,
               values_from= c(NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, NPAFC_STATE_PROVINCE, NPAFC_REGION, NPAFC_wcvi_prob, NPAFC_NUMBER_RELEASED)) %>%
-  select(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
+  select(`(R) oto join BY`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
   print()
 
 
@@ -426,6 +429,87 @@ intersect(colnames(esc_biodata_headsCWT_PADS_oto), colnames(NPAFC))
 esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
                                                 NPAFC,
                                                 na_matches="never") %>% 
+  relocate(c(`(R) BROOD YEAR: CWT`, `(R) TOTAL AGE: CWT`, `(R) STOCK ID: CWT`, `(R) BROOD YEAR: SCALE`, `(R) TOTAL AGE: SCALE`), 
+           .after=last_col()) %>%
+  select(-`(R) oto join BY`) %>%
+  mutate(# Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
+    `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
+                                        !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
+                                          "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
+                                        is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
+                                        TRUE~NA),
+    
+    
+    # Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
+    `(R) STOCK ID: OTOLITH` = case_when(
+      # 5 a) Single otolith stock choice (certain ID)
+      !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
+        gsub(" R", "", 
+             gsub("River", "R",
+                  gsub(" Cr", "",  
+                       gsub("S-", "",
+                            stringr::str_to_title(
+                              stringr::str_sub(NPAFC_STOCK_1,1,100)), 
+                            ignore.case = F), 
+                       ignore.case = F), 
+                  ignore.case=F),   
+             ignore.case=F),
+      
+      # 5 b) Multiple HIGH probability otolith matches, flag for manual ID: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
+        "!! manual decision needed, refer to release sizes!!",
+      
+      # 5 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
+        "!! manual decision needed, refer to release sizes!!",
+      
+      # 5 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 5 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 5 f) LOW probability otoliths, just choose stock1:
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 5 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
+      `(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" ~
+        gsub("H-", "",
+             gsub(" R", "",
+                  gsub(" River H", "",
+                       gsub(" Creek H", "",
+                            stringr::str_to_title(OM_FACILITY),
+                            ignore.case = F),
+                       ignore.case = F),
+                  ignore.case=F),
+             ignore.case=F),
+      
+      
+      TRUE ~ NA)) %>%
+    #//end "(R) STOCK ID: OTOLITH")
   print()
 
 

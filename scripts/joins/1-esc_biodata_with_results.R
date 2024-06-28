@@ -189,7 +189,9 @@ intersect(colnames(esc_biodata_heads), colnames(cn_relTagCodes))
 esc_biodata_headsCWT <- left_join(esc_biodata_heads,
                                   cn_relTagCodes,
                                   by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
-  mutate(`(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`) %>%
+  mutate(`(R) BROOD YEAR: CWT` = `MRP_Brood Year`,
+         `(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`,
+         `(R) STOCK ID: CWT` = `MRP_Stock Site Name`) %>%
   print()
 
 
@@ -238,10 +240,12 @@ esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
                                              `PADS_GrAge`=="4M" ~ 5,
                                              `PADS_GrAge`=="5M" ~ 6,
                                              `PADS_GrAge`=="6M" ~ 7),
-         `(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: CWT`,
-                                               is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`,
-                                               TRUE ~ NA)) %>% 
+         `(R) BROOD YEAR: SCALE` = as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`) %>%
+         #`(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: CWT`,
+          #                                     is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`,
+           #                                    TRUE ~ NA)) %>% 
   arrange(`(R) SAMPLE YEAR`) %>%
+  relocate(c(`(R) BROOD YEAR: CWT`, `(R) TOTAL AGE: CWT`, `(R) STOCK ID: CWT`), .before=`(R) TOTAL AGE: SCALE`) %>%
   print()
 
 
@@ -540,7 +544,7 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
                                   `OM_READ STATUS` == "Not Marked" ~ "Natural (assumed)",
                                   is.na(MGL_Parental_Collection) & `(R) SYSTEM-YEAR` %in% PBT_tagrate$`(R) SYSTEM-YEAR`  ~ "Natural (PBT)",
-                                  TRUE ~ "Unknown")),
+                                  TRUE ~ "Unknown"),
          
          # 2. Identify CWT Stock ID
          `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
@@ -717,8 +721,8 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
 
 # ======================== Extract PBT parental records ========================  
 PBT_parents <- esc_biodata_w_RESULTS %>% 
-  filter(`(R) DNA NUM` %in% c(SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_mFish),]$MGL_mFish, 
-                              SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_dFish),]$MGL_dFish))
+  filter(`(R) DNA NUM` %in% c(PBT_results[!is.na(PBT_results$MGL_mFish),]$MGL_mFish, 
+                              PBT_results[!is.na(PBT_results$MGL_dFish),]$MGL_dFish))
 
 
 # QC flags ---------------------------

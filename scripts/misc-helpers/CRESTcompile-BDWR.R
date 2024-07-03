@@ -27,14 +27,14 @@ library(writexl)
 # Read CREST files as large list ---------------------------
 # Load base files to compile
 crestBio.LL <- lapply(list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="^[^~]*_Biological_Data_With_Results*.*xlsx", full.names=T), 
+                                 pattern="^[^~]*_Biological_Data_with_FOS*.*xlsx", full.names=T), 
                       function(x) {
-                        readxl::read_excel(x, sheet="Biological_Data_With", guess_max=20000)
+                        readxl::read_excel(x, sheet="WCVI_Chinook_Run_Rec", guess_max=20000)
                       })
 
 # Change filenames in the List:
 names(crestBio.LL) <- list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="^[^~]*_Biological_Data_With_Results*.*xlsx", full.names=F)
+                                 pattern="^[^~]*_Biological_Data_with_FOS*.*xlsx", full.names=F)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
@@ -52,7 +52,7 @@ remove(crestBio.LL)
 #                                                                           ADD VARIABLES
 
 crestBiocompiled <- crestBio %>% 
-  mutate(`(R) Origin` = case_when(HATCHERY_ORIGIN=="Y" | PBT_BROOD_YEAR > 2000 ~ "Hatchery",
+  mutate(`(R) Origin` = case_when(HATCHERY_ORIGIN=="Y" ~ "Hatchery",
                                   THERMALMARK=="Not Marked" ~ "Natural (assumed)",
                                   TRUE ~ "Unknown"),
          `(R) RESOLVED ORIGIN-STOCK ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
@@ -90,7 +90,7 @@ openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBioc
 # To github ---------------------------
 openxlsx::saveWorkbook(R_OUT_CREST.Bio,
                        file=paste0(here("outputs"),
-                                   "/R_OUT - Biological_Data_With_Results ",
+                                   "/R_OUT - Biological_Data_With_FOS ",
                                    min(crestBiocompiled$YEAR),
                                    "-",
                                    max(crestBiocompiled$YEAR),
@@ -102,7 +102,7 @@ openxlsx::saveWorkbook(R_OUT_CREST.Bio,
 # To Network: 
 openxlsx::saveWorkbook(R_OUT_CREST.Bio, 
                        file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
-                                   "/R_OUT - Biological_Data_With_Results ",
+                                   "/R_OUT - Biological_Data_With_FOS ",
                                    min(crestBiocompiled$YEAR),
                                    "-",
                                    max(crestBiocompiled$YEAR),
@@ -113,7 +113,7 @@ openxlsx::saveWorkbook(R_OUT_CREST.Bio,
 
 write.csv(crestBiocompiled, 
           file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
-                      "/R_OUT - Biological_Data_With_Results ",
+                      "/R_OUT - Biological_Data_With_FOS ",
                       min(crestBiocompiled$YEAR),
                       "-",
                       max(crestBiocompiled$YEAR),

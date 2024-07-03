@@ -35,7 +35,7 @@ library(tidyverse)
 # Helpers ----------------
 "%notin%" <- Negate("%in%")
 analysis_year <- 2023
-
+options(scipen = 9999)
 
 
 #############################################################################################################################################################
@@ -117,7 +117,7 @@ wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT
 
 # <<< For each new year: >>> 
 # 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
-# 2. Store in SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
+# 2. Save to SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
 # FOLLOW NAMING CONVENTION OR ELSE! >:(
 # 3. Run source() line below (Option 1) - only  need to do this once/year. Otherwise run Option 2. 
 
@@ -171,7 +171,7 @@ esc_biodata_heads <- left_join(wcviCNescBiodat,
 # source(here::here("scripts", "functions", "pullChinookCWTReleases.R"))
 
 # 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
-SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
+cn_relTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                        pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                        full.names = TRUE), 
                                        sheet="Sheet1")  
@@ -184,12 +184,18 @@ SC_cnRelTagCodes <- readxl::read_excel(path=list.files(path = here::here("output
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+HEADS to TAGCODE ID ========================  
-intersect(colnames(esc_biodata_heads), colnames(SC_cnRelTagCodes))
+intersect(colnames(esc_biodata_heads), colnames(cn_relTagCodes))
 
 esc_biodata_headsCWT <- left_join(esc_biodata_heads,
-                                  SC_cnRelTagCodes,
+                                  cn_relTagCodes,
                                   by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
-  mutate(`(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`) %>%
+  mutate(`(R) BROOD YEAR: CWT` = `MRP_Brood Year`,
+         `(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`,
+         `(R) STOCK ID: CWT` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+                                           gsub(" Cr", "", 
+                                                gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+                                                ignore.case=F),
+                                         TRUE ~ NA)) %>%
   print()
 
 
@@ -208,7 +214,7 @@ esc_biodata_headsCWT <- left_join(esc_biodata_heads,
 
 # Option 2: Load already saved exported age master file --------------------------- (faster)
 # Do this if you are just loading already compiled data
-SC_age_data <- readxl::read_excel(path=list.files(path = here::here("outputs"),
+SC_allAgesMaster <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                   pattern = "^R_OUT - ALL South Coast Chinook Age results",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
                                                   full.names = TRUE), 
                                   sheet="Sheet1")  %>% 
@@ -224,12 +230,12 @@ SC_age_data <- readxl::read_excel(path=list.files(path = here::here("outputs"),
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+HEADS+CWTs to PADS, calc BY ========================  
-intersect(colnames(esc_biodata_headsCWT), colnames(SC_age_data))
+intersect(colnames(esc_biodata_headsCWT), colnames(SC_allAgesMaster))
 
 # IF you get a many-to-many error, you have duplicate scalebooks that were handed out to different regions. 
 # Will need to further filter down the SC_age_data file
 esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
-                                       SC_age_data,
+                                       SC_allAgesMaster,
                                        na_matches="never") %>%
   mutate(`(R) TOTAL AGE: SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
                                              `PADS_GrAge`=="1M" ~ 2,
@@ -238,10 +244,12 @@ esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
                                              `PADS_GrAge`=="4M" ~ 5,
                                              `PADS_GrAge`=="5M" ~ 6,
                                              `PADS_GrAge`=="6M" ~ 7),
-         `(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: CWT`,
-                                               is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`,
-                                               TRUE ~ NA)) %>% 
+         `(R) BROOD YEAR: SCALE` = as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`) %>%
+         #`(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: CWT`,
+          #                                     is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`,
+           #                                    TRUE ~ NA)) %>% 
   arrange(`(R) SAMPLE YEAR`) %>%
+  relocate(c(`(R) BROOD YEAR: CWT`, `(R) TOTAL AGE: CWT`, `(R) STOCK ID: CWT`), .before=`(R) TOTAL AGE: SCALE`) %>%
   print()
 
 
@@ -253,7 +261,7 @@ available_age_results <- esc_biodata_headsCWT_PADS %>%
   pull(`(R) SCALE BOOK-CELL CONCAT`)
 
 # 2. Filter - remove the successful results from the join from the age data dump and save only the non-successful join (orphans)
-antijoin_PADS <- SC_age_data %>% 
+antijoin_PADS <- SC_allAgesMaster %>% 
   filter(`(R) SCALE BOOK-CELL CONCAT` %notin% available_age_results & !grepl("creel|test", PADS_ProjectName, ignore.case=T)) %>% 
   print()
 
@@ -285,7 +293,9 @@ wcviOtos <- readxl::read_excel(path=list.files(path = here::here("outputs"),
                                                full.names = TRUE), 
                                sheet="Sheet1")  %>% 
   mutate_at("(R) SAMPLE YEAR", as.character) %>% 
-  mutate(OM_FACILITY = case_when(grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
+  mutate(OM_FACILITY = case_when(OM_FACILITY=="H-ROBERTSON CR" ~ "H-ROBERTSON CREEK H",
+                                 OM_FACILITY=="H-CONUMA R " ~ "H-CONUMA RIVER H ",
+                                 grepl("GWA'NI", OM_FACILITY) ~ "H-GAW'NI H",
                                  grepl("INCH CR", OM_FACILITY) ~ "H-INCH CREEK H",
                                  grepl("NANAIMO", OM_FACILITY) ~ "H-NANAIMO RIVER H",
                                  grepl("NITINAT", OM_FACILITY) ~ "H-NITINAT RIVER H",
@@ -320,8 +330,9 @@ esc_biodata_headsCWT_PADS_oto <- left_join(esc_biodata_headsCWT_PADS,
                                              mutate_at("(R) SAMPLE YEAR", as.character),
                                            #by=c("(R) OTOLITH BOX NUM", "(R) OTOLITH VIAL NUM", "(R) SAMPLE YEAR", "(R) OTOLITH LBV CONCAT"),
                                            na_matches="never") %>% 
-  mutate(`(R) BYHID` = case_when(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
-                                 TRUE ~ NA)) %>% 
+  mutate(`(R) BYHID` = case_when(!is.na(`(R) BROOD YEAR: SCALE`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) BROOD YEAR: SCALE`, " - ", `(R) HATCHCODE`),
+                                 TRUE ~ NA),
+         `(R) oto join BY` = `(R) BROOD YEAR: SCALE`) %>% 
   print()
 
 
@@ -355,12 +366,12 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
                             sheet="AC087805 (1)") %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
-         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
+         `(R) oto join BY` = NPAFC_BROOD_YEAR) %>% 
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
                                     TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
                                  TRUE ~ NPAFC_STOCK),
-         `(R) BYHID` = case_when(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
+         `(R) BYHID` = case_when(!is.na(`(R) oto join BY`) & !is.na(`(R) HATCHCODE`) ~ paste0(`(R) oto join BY`, " - ", `(R) HATCHCODE`),
                                 TRUE ~ NA)) %>%
   # This filter line below initially removed some marks to avoid duplicates, but the work-around below now addresses this more systematically. Below is just
   #     kept for reference for now
@@ -368,8 +379,8 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
          # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
          #!grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5"
          #) %>%
-  select(`(R) RESOLVED BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
-  distinct(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
+  select(`(R) oto join BY`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
+  distinct(`(R) oto join BY`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
   mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
                                      NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
                                      NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
@@ -385,10 +396,10 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
                                      NPAFC_wcvi_prob=="C" ~ "MED",
                                      NPAFC_wcvi_prob=="D" ~ "LOW",
                                      NPAFC_wcvi_prob=="E" ~ "V LOW")) %>%
-  group_by(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  group_by(`(R) oto join BY`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
   pivot_wider(names_from = group,
               values_from= c(NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, NPAFC_STATE_PROVINCE, NPAFC_REGION, NPAFC_wcvi_prob, NPAFC_NUMBER_RELEASED)) %>%
-  select(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
+  select(`(R) oto join BY`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
   print()
 
 
@@ -422,6 +433,87 @@ intersect(colnames(esc_biodata_headsCWT_PADS_oto), colnames(NPAFC))
 esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
                                                 NPAFC,
                                                 na_matches="never") %>% 
+  relocate(c(`(R) BROOD YEAR: CWT`, `(R) TOTAL AGE: CWT`, `(R) STOCK ID: CWT`, `(R) BROOD YEAR: SCALE`, `(R) TOTAL AGE: SCALE`), 
+           .after=last_col()) %>%
+  select(-`(R) oto join BY`) %>%
+  mutate(# Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
+    `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
+                                        !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
+                                          "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
+                                        is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
+                                        TRUE~NA),
+    
+    
+    # Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
+    `(R) STOCK ID: OTOLITH` = case_when(
+      # 5 a) Single otolith stock choice (certain ID)
+      !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
+        gsub(" R", "", 
+             gsub("River", "R",
+                  gsub(" Cr", "",  
+                       gsub("S-", "",
+                            stringr::str_to_title(
+                              stringr::str_sub(NPAFC_STOCK_1,1,100)), 
+                            ignore.case = F), 
+                       ignore.case = F), 
+                  ignore.case=F),   
+             ignore.case=F),
+      
+      # 5 b) Multiple HIGH probability otolith matches, flag for manual ID: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
+        "!! manual decision needed, refer to release sizes!!",
+      
+      # 5 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
+        "!! manual decision needed, refer to release sizes!!",
+      
+      # 5 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 5 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 5 f) LOW probability otoliths, just choose stock1:
+      (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+        (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
+        gsub(" R", "",
+             gsub(" Cr", "",  
+                  stringr::str_to_title(
+                    stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+                  ignore.case = F), 
+             ignore.case=F),
+      
+      # 5 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
+      `(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" ~
+        gsub("H-", "",
+             gsub(" R", "",
+                  gsub(" River H", "",
+                       gsub(" Creek H", "",
+                            stringr::str_to_title(OM_FACILITY),
+                            ignore.case = F),
+                       ignore.case = F),
+                  ignore.case=F),
+             ignore.case=F),
+      
+      
+      TRUE ~ NA)) %>%
+    #//end "(R) STOCK ID: OTOLITH")
   print()
 
 
@@ -431,7 +523,7 @@ esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
 #                                                                           XIII. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+PBT_results <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,
@@ -446,66 +538,48 @@ SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC
 
 
 # ======================== Load PBT inventory ========================  
-# Load data, calculate % of each BY genotyped -------------------------   *** DELETE SOON ONCE TRANSITION SOLID
-# SC_PBT_inventory <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-08-24 Chinook PBT Inventory BYs 2013-2021_draft .xlsx",
-#                                        sheet="2013-2021 update", guess_max=10000) %>% 
-#   rename(`(R) SAMPLE YEAR`=...1,
-#          status=...2) %>% 
-#   fill(`(R) SAMPLE YEAR`, .direction="down") %>% 
-#   filter(`(R) SAMPLE YEAR`!="Comments") %>%
-#   pivot_longer(cols=c(Ashlu:WOSS_RIVER), names_to = "MGL_Brood_Collection", values_to = "n") %>% 
-#   filter(grepl("Bedwell|Burman|Campbell|Conuma|Cowichan|Cypre|Gold|Goldstream|Kennedy|Lang|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
-#                Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Sucwoa|Tahsis|Thornton|Toquart|Tranquil|Woss", 
-#               MGL_Brood_Collection, ignore.case=T)) %>% 
-#   pivot_wider(names_from = "status", values_from = n) %>%
-#   group_by(`(R) SAMPLE YEAR`, MGL_Brood_Collection) %>% 
-#   summarize(propn_genotyped = as.numeric(Genotyped)/as.numeric(Brood)) %>% 
-#   mutate_all(~ifelse(is.nan(.), NA, .)) %>%
-#   mutate(MGL_Brood_Collection = gsub(str_to_title(gsub(MGL_Brood_Collection, pattern="_", replacement=" ")), pattern=" River", replacement="")) %>%
-#   print()
-# 
-# 
-# # Define function to find rolling 5 year window of full PBT results -------------------------
+# Load tag rate file -------------------------   
+
+#*** Don't use network version for now. Slowww, had to make 1 manual update to SJ for BY 2018
+ #SC_PBT_tagrate <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.xlsx",
+  #                                      sheet="ch_supplementary_file_to-check", guess_max=10000) 
+
+# Load from github csv for now -------------------------
+# Extract reliable PBT baseline BYs
+PBT_tagrate <- read.csv(here::here("data", "bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.csv")) %>%  
+  filter(grepl("Tag_Rate", collection_extract)) %>%
+  pivot_longer(cols=c(ALOUETTE_RIVER:YUKON_RIVER.WHITEHORSE), names_to = "System", values_to = "Tag_Rate") %>% 
+  rename(`(R) SAMPLE YEAR` = collection_extract) %>% 
+  mutate(`(R) SAMPLE YEAR` = str_sub(`(R) SAMPLE YEAR`, start=1, end=4)) %>%
+  mutate(Tag_Rate = case_when(grepl(">1", Tag_Rate) ~ "1",
+                              grepl("\\*", Tag_Rate) ~ "1",
+                              TRUE ~ Tag_Rate)) %>%
+  mutate_at("Tag_Rate", as.numeric) %>%
+  filter(Tag_Rate > 0.70) %>%
+  left_join(.,
+            read.csv(here::here("data", "bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.csv")) %>%  
+              filter(grepl("ProvState_extract", collection_extract)) %>% 
+              pivot_longer(cols=c(ALOUETTE_RIVER:YUKON_RIVER.WHITEHORSE), names_to = "System", values_to = "Province") %>%
+              select(-collection_extract),
+            by="System") %>%
+  relocate("Province", .before=Tag_Rate) %>% 
+  mutate(System = str_to_title(gsub(x=gsub(x=System, pattern="_", replacement=" "), pattern="\\.", replacement=" ")),
+         `(R) SYSTEM-YEAR` = paste0(System, sep= "-", `(R) SAMPLE YEAR`))
+  
+
+  # 
+# # Define function to find rolling 5 year window of full PBT results ------------------------- (not needed)
 # # TY chatGPT :)
 # findFirstFullPBTBY <- function(x, other_col) {
 #   x <- ifelse(is.na(other_col), NA, x)
 #   roll_max <- rollapply(x, width=5, FUN=max, align="right", fill=NA)
 #   return(roll_max)
 # }
-# 
-# # Filter out unreliable years, and create new variable indicating first full reliable BY for PBT -------------------------
-# SC_PBTreliable <- SC_PBT_inventory %>% 
-#   mutate_at("(R) SAMPLE YEAR", as.numeric) %>%
-#   filter(propn_genotyped>=0.85) %>%
-#   group_by(MGL_Brood_Collection) %>% 
-#   complete(.,  `(R) SAMPLE YEAR`=2013:analysis_year) %>%
-#   # *** cheating for now 
-#   mutate(propn_genotyped = case_when(MGL_Brood_Collection=="San Juan" & `(R) SAMPLE YEAR`%in%c(2022,2023) ~ 0.999999,
-#                                      TRUE ~ propn_genotyped)) %>% 
-#   # ***
-#   group_by(MGL_Brood_Collection) %>%
-#   mutate(firstFullBY = findFirstFullPBTBY(`(R) SAMPLE YEAR`, propn_genotyped)+1,
-#          fullPBT_BYid = case_when(!is.na(firstFullBY) ~ paste(MGL_Brood_Collection, "-", firstFullBY),
-#                                   TRUE ~ NA)) %>%
-#   print()
-# 
-# 
-# # Export:
-# writexl::write_xlsx(SC_PBTreliable, 
-#                     "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/SC - Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
 
 
-# Run PBT source code -------------------------   
-source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
-# saves as SC_PBTreliable
-
-
-# **************** next day:: join or index ^^ above to the stock ID/origin process to identify first full RYs for Natural ID ! 
-
-
-
-
-
+# # Export -------------------------:
+writexl::write_xlsx(PBT_tagrate,
+                    "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Reliable PBT (over 0.7) BYs by stock - draft working.xlsx")
 
 
 
@@ -515,12 +589,24 @@ source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC+HEADS+CWT ID to PBT!! ========================  
-intersect(colnames(SC_PBT_SEP), colnames(esc_biodata_headsCWT_PADS_otoNPAFC))
+intersect(colnames(PBT_results), colnames(esc_biodata_headsCWT_PADS_otoNPAFC))
 
 esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_otoNPAFC,
-                                                    SC_PBT_SEP,
+                                                    PBT_results,
                                                     by=c("(R) SAMPLE YEAR", "(R) DNA NUM", "Fishery / River")) %>% 
-  mutate(`(R) TOTAL AGE: PBT` = MGL_Offspring_Age) %>% 
+  mutate(`(R) TOTAL AGE: PBT` = MGL_Offspring_Age,
+         `(R) BROOD YEAR: PBT` = as.numeric(`(R) SAMPLE YEAR`) - MGL_Offspring_Age,
+         `(R) STOCK ID: PBT` = case_when(!is.na(MGL_Parental_Collection) ~ str_to_title(gsub(" Creek", "",
+                                                                                             gsub(" River", "",
+                                                                                                  gsub("_", 
+                                                                                                       " ", 
+                                                                                                       MGL_Parental_Collection, 
+                                                                                                       ignore.case = T),
+                                                                                                  ignore.case=T),
+                                                                                             ignore.case=T)),
+                                         TRUE ~ NA)) %>% 
+  relocate(c(`(R) BROOD YEAR: CWT`, `(R) TOTAL AGE: CWT`, `(R) STOCK ID: CWT`, `(R) BROOD YEAR: SCALE`, `(R) TOTAL AGE: SCALE`, `(R) OTOLITH ID METHOD`,
+             `(R) STOCK ID: OTOLITH`), .before=`(R) TOTAL AGE: PBT`) %>% 
   print()
 
 
@@ -532,129 +618,139 @@ esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_ot
 
 
 esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>% 
-  mutate(# AGE ID: 
+  mutate(# AGE METHOD: CWT > PBT > scales
          `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
                                                      is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
                                                      is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
                                                      TRUE ~ NA),
+         # AGE APPLIED: CWT > PBT > scales
          `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE: CWT`,
                                               `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
                                               `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE: SCALE`,
                                               TRUE ~ NA),
          
-         `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) SAMPLE YEAR`) - `(R) RESOLVED TOTAL AGE`,
+         # BROOD YEAR: CWT > PBT > scales
+         `(R) RESOLVED BROOD YEAR` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) BROOD YEAR: CWT`,
+                                                     `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) BROOD YEAR: PBT`,
+                                                     `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) BROOD YEAR: SCALE`,
+                                                     TRUE ~ NA),
+         
+         # Assign a System-Year designation to help with identifying natural-origin PBT results for stocks with those BYs completed (used below)
+         `(R) SYSTEM-YEAR` = paste0(`Fishery / River`, sep="-", `(R) RESOLVED BROOD YEAR`),
 
-         # 1. Identify hatchery/natural origin
+         
+         # Identify hatchery/natural origin - not using stock ID columns to avoid any issues with assigning stock ID. 
          `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
                                   `OM_READ STATUS` == "Marked" ~ "Hatchery",
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
+                                  #This line below is probably redundant as all CWT fish will be ad-clipped
+                                  !is.na(`(R) TAGCODE`) ~ "Hatchery",
                                   `OM_READ STATUS` == "Not Marked" ~ "Natural (assumed)",
-                                  # *** need to add PBT reliable natural designation 
-                                  # paste(gsub(" Creek", "", gsub(" River", "", `Fishery / River`, ignore.case=T), ignore.case=T), sep=" - ", `(R) SAMPLE YEAR`) %in% 
-                                  #   SC_PBTreliable$sysYr ~ "Natural",
+                                  # This line below looks up any system-year that doesn't have a PBT hit in the tag rate baseline. If the system-year was PBT tagged, but there is no PBT hit, it assigns "natural"
+                                  is.na(MGL_Parental_Collection) & `(R) SYSTEM-YEAR` %in% PBT_tagrate$`(R) SYSTEM-YEAR`  ~ "Natural (PBT)",
                                   TRUE ~ "Unknown"),
          
          # 2. Identify CWT Stock ID
-         `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
-                                          gsub(" Cr", "", 
-                                               gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
-                                               ignore.case=F),
-                                        TRUE ~ NA),
+         # `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+         #                                  gsub(" Cr", "", 
+         #                                       gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+         #                                       ignore.case=F),
+         #                                TRUE ~ NA),
          
          # 3. Identify PBT Stock ID
-         `(R) PBT STOCK ID` = case_when(!is.na(MGL_Parental_Collection) ~ str_to_title(gsub(" Creek", "",
-                                                                                            gsub(" River", "",
-                                                                                                 gsub("_", 
-                                                                                                      " ", 
-                                                                                                      MGL_Parental_Collection, 
-                                                                                                      ignore.case = T),
-                                                                                                 ignore.case=T),
-                                                                                            ignore.case=T)),
-                                        TRUE ~ NA),
+         # `(R) PBT STOCK ID` = case_when(!is.na(MGL_Parental_Collection) ~ str_to_title(gsub(" Creek", "",
+         #                                                                                    gsub(" River", "",
+         #                                                                                         gsub("_", 
+         #                                                                                              " ", 
+         #                                                                                              MGL_Parental_Collection, 
+         #                                                                                              ignore.case = T),
+         #                                                                                         ignore.case=T),
+         #                                                                                    ignore.case=T)),
+         #                                TRUE ~ NA),
          
          # 4. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
-         `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
-                                             !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
-                                               "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
-                                             is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
-                                             TRUE~NA),
+         # `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
+         #                                     !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
+         #                                       "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
+         #                                     is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",
+         #                                     TRUE~NA),
          
          
          # 5. Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
-         `(R) OTOLITH STOCK ID` = case_when(
-           # 5 a) Single otolith stock choice (certain ID)
-           !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
-             gsub(" R", "", 
-                  gsub("River", "R",
-                       gsub(" Cr", "",  
-                            gsub("S-", "",
-                                 stringr::str_to_title(
-                                   stringr::str_sub(NPAFC_STOCK_1,1,100)), 
-                                 ignore.case = F), 
-                            ignore.case = F), 
-                       ignore.case=F),   
-                  ignore.case=F),
-           
-           # 5 b) Multiple HIGH probability otolith matches, flag for manual ID: 
-           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-             (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
-             "!! manual decision needed, refer to release sizes!!",
-           
-           # 5 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
-           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-             (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
-             "!! manual decision needed, refer to release sizes!!",
-           
-           # 5 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
-           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-             (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
-             gsub(" R", "",
-                  gsub(" Cr", "",  
-                       stringr::str_to_title(
-                         stringr::str_sub(NPAFC_STOCK_1,3,100)), 
-                       ignore.case = F), 
-                  ignore.case=F),
-           
-           # 5 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
-           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-             (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
-             gsub(" R", "",
-                  gsub(" Cr", "",  
-                       stringr::str_to_title(
-                         stringr::str_sub(NPAFC_STOCK_1,3,100)), 
-                       ignore.case = F), 
-                  ignore.case=F),
-           
-           # 5 f) LOW probability otoliths, just choose stock1:
-           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
-             (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
-             gsub(" R", "",
-                  gsub(" Cr", "",  
-                       stringr::str_to_title(
-                         stringr::str_sub(NPAFC_STOCK_1,3,100)), 
-                       ignore.case = F), 
-                  ignore.case=F),
-           
-           # 5 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
-           `(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" ~
-             gsub("H-", "",
-                  gsub(" R", "",
-                       gsub(" River H", "",
-                            gsub(" Creek H", "",
-                                 stringr::str_to_title(OM_FACILITY),
-                                 ignore.case = F),
-                            ignore.case = F),
-                       ignore.case=F),
-                  ignore.case=F),
-           
-           
-           TRUE ~ NA),
-         #//end 4. "(R) OTOLITH STOCK ID"
+         # `(R) OTOLITH STOCK ID` = case_when(
+         #   # 5 a) Single otolith stock choice (certain ID)
+         #   !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
+         #     gsub(" R", "", 
+         #          gsub("River", "R",
+         #               gsub(" Cr", "",  
+         #                    gsub("S-", "",
+         #                         stringr::str_to_title(
+         #                           stringr::str_sub(NPAFC_STOCK_1,1,100)), 
+         #                         ignore.case = F), 
+         #                    ignore.case = F), 
+         #               ignore.case=F),   
+         #          ignore.case=F),
+         #   
+         #   # 5 b) Multiple HIGH probability otolith matches, flag for manual ID: 
+         #   (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+         #     (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
+         #     "!! manual decision needed, refer to release sizes!!",
+         #   
+         #   # 5 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
+         #   (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+         #     (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
+         #     "!! manual decision needed, refer to release sizes!!",
+         #   
+         #   # 5 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
+         #   (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+         #     (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
+         #     gsub(" R", "",
+         #          gsub(" Cr", "",  
+         #               stringr::str_to_title(
+         #                 stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+         #               ignore.case = F), 
+         #          ignore.case=F),
+         #   
+         #   # 5 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, still choose Otolith stock 1: 
+         #   (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+         #     (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
+         #     gsub(" R", "",
+         #          gsub(" Cr", "",  
+         #               stringr::str_to_title(
+         #                 stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+         #               ignore.case = F), 
+         #          ignore.case=F),
+         #   
+         #   # 5 f) LOW probability otoliths, just choose stock1:
+         #   (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+         #     (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
+         #     gsub(" R", "",
+         #          gsub(" Cr", "",  
+         #               stringr::str_to_title(
+         #                 stringr::str_sub(NPAFC_STOCK_1,3,100)), 
+         #               ignore.case = F), 
+         #          ignore.case=F),
+         #   
+         #   # 5 g) Otolith ID method is uncertain and requires using the Oto Manager Facility (due to duplicate BY-hatch codes)
+         #   `(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" ~
+         #     gsub("H-", "",
+         #          gsub(" R", "",
+         #               gsub(" River H", "",
+         #                    gsub(" Creek H", "",
+         #                         stringr::str_to_title(OM_FACILITY),
+         #                         ignore.case = F),
+         #                    ignore.case = F),
+         #               ignore.case=F),
+         #          ignore.case=F),
+         #   
+         #   
+         #   TRUE ~ NA),
+         #//end 5. "(R) OTOLITH STOCK ID"
          
          
          # 6. Identify where may be able to apply the Fishery/River location as finer scale than Otolith facility for uncertain oto ID cases (e.g., Sooke / Nitinat)
          `(R) OTO STOCK != FISHERY/RIVER` = case_when(`(R) OTOLITH ID METHOD` == "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)" &
-                                                        `(R) OTOLITH STOCK ID` != gsub(" River", "",
+                                                        `(R) STOCK ID: OTOLITH` != gsub(" River", "",
                                                                                        gsub(" Creek", "", `Fishery / River`,
                                                                                             ignore.case = F),
                                                                                        ignore.case = F) ~
@@ -664,30 +760,31 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
          ) %>%
   mutate(
     
-    # 7. Identify the method used to determine the final stock ID: CWT > PBT > Otolith
-    `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
-                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ "PBT",
-                                               is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
+    # 7. Identify the method used to determine the final stock ID: CWT > PBT > Otolith > No PBT 
+    `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ "CWT",
+                                               is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ "PBT",
+                                               is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
                                                `(R) ORIGIN`=="Natural (assumed)" ~ "Otolith (no mark)",
-                                               `(R) ORIGIN`=="Natural" ~ "PBT (no match)",
+                                               `(R) ORIGIN`=="Natural (PBT)" ~ "PBT (no match)",
                                                TRUE ~ NA),
     
     
-    # 8. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
-    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
-                                        is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
-                                        is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
+    # 8. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty) > Natural IDs
+    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: CWT`,
+                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ `(R) STOCK ID: PBT`,
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,
                                         `(R) ORIGIN`=="Natural (assumed)" ~ paste0(stringr::str_to_title(gsub(" River", "",
                                                                                                               gsub(" Creek", "",
                                                                                                                    `Fishery / River`,
                                                                                                                    ignore.case=F),
                                                                                                               ignore.case=F)), 
                                                                                    " (assumed)"),
-                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(gsub(" River", "",
+                                        `(R) ORIGIN`=="Natural (PBT)" ~ paste0(stringr::str_to_title(gsub(" River", "",
                                                                                                     gsub(" Creek", "",
                                                                                                          `Fishery / River`,
                                                                                                          ignore.case=F),
-                                                                                                    ignore.case=F))),
+                                                                                                    ignore.case=F)),
+                                                                               " (assumed)"),
                                         TRUE ~ "Unknown"),
     
     
@@ -696,11 +793,11 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
     
     
     # 10. Create flag for cases where CWT and Otolith IDs disagree
-    `(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "FLAG: CWT/Otolith stock ID disagree",
+    `(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) STOCK ID: CWT` != `(R) STOCK ID: OTOLITH` ~ "FLAG: CWT/Otolith stock ID disagree",
                                              TRUE ~ NA),
-    `(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) CWT STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: CWT/PBT stock ID disagree",
+    `(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) STOCK ID: CWT` != `(R) STOCK ID: PBT` ~ "FLAG: CWT/PBT stock ID disagree",
                                              TRUE ~ NA),
-    `(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) OTOLITH STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: PBT/Otolith stock ID disagree",
+    `(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) STOCK ID: OTOLITH` != `(R) STOCK ID: PBT` ~ "FLAG: PBT/Otolith stock ID disagree",
                                              TRUE ~ NA),
     
     
@@ -729,8 +826,8 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
 
 # ======================== Extract PBT parental records ========================  
 PBT_parents <- esc_biodata_w_RESULTS %>% 
-  filter(`(R) DNA NUM` %in% c(SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_mFish),]$MGL_mFish, 
-                              SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_dFish),]$MGL_dFish))
+  filter(`(R) DNA NUM` %in% c(PBT_results[!is.na(PBT_results$MGL_mFish),]$MGL_mFish, 
+                              PBT_results[!is.na(PBT_results$MGL_dFish),]$MGL_dFish))
 
 
 # QC flags ---------------------------

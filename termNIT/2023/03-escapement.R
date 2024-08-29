@@ -33,7 +33,7 @@ NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Sta
 
 ############################################################################################################################################################
 
-#                                                              Join mapping file to AGE summary 
+#                                                              CALCULATE BROODSTOCK AGES 
 
 
 # 1. Age summary for return year of interest 
@@ -52,15 +52,19 @@ NITage_summary <- full_join(NITepro %>%
                            Maturity.Class=="Unsexed Adult" ~ 9999999999999999)) %>%
   mutate(TermRun_AGEStemp = "Broodstock, morts, other",
          TermRun_AGESspat = "Broodstock, morts, other",
-         TermRun_AGESsex = case_when(Maturity.Class=="Male" ~ "Broodstock, morts, other - Males",
-                                     Maturity.Class=="Female" ~ "Broodstock, morts, other - Females",
-                                     Maturity.Class=="Jack" ~ "Broodstock, morts, other - Jacks",
+         TermRun_AGESsex = case_when(Maturity.Class %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Maturity.Class),
                                      Maturity.Class=="Unsexed Adult" ~ "Broodstock, morts, other - Total",
                                      TRUE ~ "FLAG"),
          TermRun_AGES_year = max(NITepro$`(R) RETURN YEAR`)) %>%
   pivot_wider(names_from=`(R) RESOLVED TOTAL AGE`, values_from=c(n, propn), names_prefix="age ") %>%
   print()
   
+
+
+############################################################################################################################################################
+
+#                                                            Join mapping file to AGE summary
+
 
 # JOIN to mapping file
 tt <- left_join(NITmap,

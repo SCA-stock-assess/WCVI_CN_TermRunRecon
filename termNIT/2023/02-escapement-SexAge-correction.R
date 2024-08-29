@@ -9,7 +9,10 @@ library(tidyverse)
 
 # Helpers
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
+fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
+                           fecundity = c(0,3000,3500,4000,4000))
 "%notin%" <- Negate("%in%")
+
 
 
 # ============================= LOAD DATA =============================
@@ -34,8 +37,11 @@ NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Sta
 
 #                                                             Recreating the green (black) box
 
-# 1. Summarize broodstock age and sampling data and force jack correction
-#   "Age proportions from SAMPLE (close to 50:50)"  and "CORRECTED age proportions" 
+
+
+# 1. Work through the correction to the point where it is still broken out by Male, Female, Jack ---------------------------------------------
+#   "Age proportions from SAMPLE (close to 50:50)"  to "Number by age and sex (CORRECTED): Broken Out" 
+
 sexAgeCorrection_brokenOut <- 
   # ---- Age proportions from SAMPLE (close to 50:50): 
   full_join(NITepro %>% 
@@ -87,6 +93,9 @@ sexAgeCorrection_brokenOut <-
 
 
 
+
+# 1. Work through the correction following that as it is rolled up by Female and Male (incl Jacks) ---------------------------------------------
+#   "Number by age and sex (CORRECTED): Rolled up"  to  "Proportion by age and sex (CORRECTED): Rolled up"
 sexAgeCorrection_rolledUp <- sexAgeCorrection_brokenOut %>% 
   mutate(Maturity.Class.rollup = case_when(Maturity.Class %in% c("Male", "Jack") ~ "Male (incl Jacks)",
                                            TRUE ~ Maturity.Class)) %>%
@@ -95,21 +104,29 @@ sexAgeCorrection_rolledUp <- sexAgeCorrection_brokenOut %>%
   group_by(Maturity.Class.rollup) %>% 
   mutate(n_sex_CORR.rollup = sum(n_sexAge_CORR.rollup)) %>% 
   ungroup() %>% 
-  mutate(total_n_sexAge_corr.rollup = sum(n_sexAge_CORR.rollup,na.rm=T))
-  group_by(Maturity.Class.rollup, `(R) RESOLVED TOTAL AGE`) %>%
-  mutate(n_sex_CORR.rollup)
+  mutate(total_n_sexAge_corr.rollup = sum(n_sexAge_CORR.rollup,na.rm=T)) %>% 
+  ungroup() %>%
+  mutate(propn_sexAge_CORR.rollup = n_sexAge_CORR.rollup/unique(total_n_sexAge_corr.rollup)) %>%
+  group_by(`(R) RESOLVED TOTAL AGE`) %>% 
+  mutate(propn_sexAge_CORR.rollup = case_when(Maturity.Class.rollup=="Total" ~ sum(propn_sexAge_CORR.rollup/1,na.rm=T),
+                                              TRUE ~ propn_sexAge_CORR.rollup)) %>%
   print()
 
   
 
 
+##########################################################################
+
+#                                                                    CALCULATE EGG DEPOSITION
 
 
-
-
-
-
-
+fecundityAgePropn <- left_join(sexAgeCorrection_brokenOut %>%
+                                 filter(Maturity.Class=="Female"),
+                               fecundity_at_age) %>% 
+  mutate(fecundity_AgeCorr = n_sexAge_CORR*fecundity,
+         total_egg_deposition = sum(fecundity_AgeCorr)) %>%
+  print()
+ 
 
 
 

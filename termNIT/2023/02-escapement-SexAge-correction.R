@@ -36,7 +36,7 @@ NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Sta
 
 # 1. Summarize broodstock age and sampling data and force jack correction
 #   "Age proportions from SAMPLE (close to 50:50)"  and "CORRECTED age proportions" 
-agePropnSAMPLE <- 
+sexAgeCorrection_brokenOut <- 
   # ---- Age proportions from SAMPLE (close to 50:50): 
   full_join(NITepro %>% 
                               filter(`(R) RETURN YEAR` %in% NITmap$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(1:6)) %>%
@@ -74,9 +74,30 @@ agePropnSAMPLE <-
                                     TRUE ~ CORR_propn_age)) %>%
   # (Import escapement estimate from mapping file to do the rest of the math): 
   mutate(escapement_estimate = NITmap[NITmap$TermRun_sector01=="Escapement - mainstem" & NITmap$TermRun_sex_strata=="Total (incl Jacks)",]$Enumeration,
-         true_sex_ratio = case_when(Maturity.Class=="Male" ~ )) %>%
+         true_sex_ratio = case_when(Maturity.Class=="Male" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                      NITmap$TermRun_sex_strata=="Male",]$Enumeration,
+                                    Maturity.Class=="Female" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                      NITmap$TermRun_sex_strata=="Female",]$Enumeration,
+                                    Maturity.Class=="Jack" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                        NITmap$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
   # ---- Number by age and sex (CORRECTED): 
-  mutate(n_ageSex_CORR = )
+  mutate(n_sex_CORR = escapement_estimate*true_sex_ratio,
+         n_sexAge_CORR = n_sex_CORR*CORR_propn_age) %>% 
+  print()
+
+
+
+sexAgeCorrection_rolledUp <- sexAgeCorrection_brokenOut %>% 
+  mutate(Maturity.Class.rollup = case_when(Maturity.Class %in% c("Male", "Jack") ~ "Male (incl Jacks)",
+                                           TRUE ~ Maturity.Class)) %>%
+  group_by(Maturity.Class.rollup, `(R) RESOLVED TOTAL AGE`) %>% 
+  summarize(n_sexAge_CORR.rollup = sum(n_sexAge_CORR)) %>%
+  group_by(Maturity.Class.rollup) %>% 
+  mutate(n_sex_CORR.rollup = sum(n_sexAge_CORR.rollup)) %>% 
+  ungroup() %>% 
+  mutate(total_n_sexAge_corr.rollup = sum(n_sexAge_CORR.rollup,na.rm=T))
+  group_by(Maturity.Class.rollup, `(R) RESOLVED TOTAL AGE`) %>%
+  mutate(n_sex_CORR.rollup)
   print()
 
   

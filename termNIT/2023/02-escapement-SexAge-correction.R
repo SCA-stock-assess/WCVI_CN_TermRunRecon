@@ -88,7 +88,12 @@ sexAgeCorrection_brokenOut <-
                                                                         NITmap$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
   # ---- Number by age and sex (CORRECTED): 
   mutate(n_sex_CORR = escapement_estimate*true_sex_ratio,
-         n_sexAge_CORR = n_sex_CORR*CORR_propn_age) %>% 
+         n_sexAge_CORR.breakout = n_sex_CORR*CORR_propn_age) %>%  
+  group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
+  mutate(propn_sexAge_Corr.breakout = n_sexAge_CORR.breakout/unique(escapement_estimate),
+         TermRun_AGEStemp = "Broodstock corrected",
+         TermRun_AGESspat = "Broodstock corrected",
+         TermRun_AGESsex = paste0("Broodstock corrected - ", Maturity.Class)) %>%
   print()
 
 
@@ -97,10 +102,10 @@ sexAgeCorrection_brokenOut <-
 # 1. Work through the correction following that as it is rolled up by Female and Male (incl Jacks) ---------------------------------------------
 #   "Number by age and sex (CORRECTED): Rolled up"  to  "Proportion by age and sex (CORRECTED): Rolled up"
 sexAgeCorrection_rolledUp <- sexAgeCorrection_brokenOut %>% 
-  mutate(Maturity.Class.rollup = case_when(Maturity.Class %in% c("Male", "Jack") ~ "Male (incl Jacks)",
+  mutate(Maturity.Class.rollup = case_when(Maturity.Class %in% c("Male", "Jack") ~ "Males (incl Jacks)",
                                            TRUE ~ Maturity.Class)) %>%
   group_by(Maturity.Class.rollup, `(R) RESOLVED TOTAL AGE`) %>% 
-  summarize(n_sexAge_CORR.rollup = sum(n_sexAge_CORR)) %>%
+  summarize(n_sexAge_CORR.rollup = sum(n_sexAge_CORR.breakout)) %>%
   group_by(Maturity.Class.rollup) %>% 
   mutate(n_sex_CORR.rollup = sum(n_sexAge_CORR.rollup)) %>% 
   ungroup() %>% 
@@ -109,7 +114,11 @@ sexAgeCorrection_rolledUp <- sexAgeCorrection_brokenOut %>%
   mutate(propn_sexAge_CORR.rollup = n_sexAge_CORR.rollup/unique(total_n_sexAge_corr.rollup)) %>%
   group_by(`(R) RESOLVED TOTAL AGE`) %>% 
   mutate(propn_sexAge_CORR.rollup = case_when(Maturity.Class.rollup=="Total" ~ sum(propn_sexAge_CORR.rollup/1,na.rm=T),
-                                              TRUE ~ propn_sexAge_CORR.rollup)) %>%
+                                              TRUE ~ propn_sexAge_CORR.rollup),
+         TermRun_AGEStemp = "Broodstock corrected",
+         TermRun_AGESspat = "Broodstock corrected",
+         TermRun_AGESsex = paste0("Broodstock corrected - ", Maturity.Class.rollup),
+         ) %>%
   print()
 
   

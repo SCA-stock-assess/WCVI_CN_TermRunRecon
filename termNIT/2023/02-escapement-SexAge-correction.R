@@ -10,7 +10,8 @@ library(tidyverse)
 # Helpers
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
-                           fecundity = c(0,3000,3500,4000,4000))
+                           fecundity = c(0,3000,3500,4000,4000),
+                           Maturity.Class = "Female")
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
 
@@ -36,16 +37,17 @@ NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Sta
 
 ############################################################################################################################################################
 
-#                                                             Recreating the green (black) box
+#                                                     Recreating the green (black) sex/age correction box
 
 
+# ============================== SEX/AGE CORRECTION ==============================
 
 # 1. Work through the correction to the point where it is still broken out by Male, Female, Jack ---------------------------------------------
 #   "Age proportions from SAMPLE (close to 50:50)"  to "Number by age and sex (CORRECTED): Broken Out" 
 
 sexAgeCorrection <- full_join(
   # ---- Age proportions from SAMPLE (close to 50:50): 
-  full_join(NITepro %>% 
+  sexAgeCorrection_brokenOut <- full_join(NITepro %>% 
               filter(`(R) RETURN YEAR` %in% NITmap$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
               group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
               summarize(n_age=n()) %>% 
@@ -107,7 +109,7 @@ sexAgeCorrection <- full_join(
   ,
 
 
-# 1. Work through the correction following that as it is rolled up by Female and Male (incl Jacks) ---------------------------------------------
+# 2. Work through the correction following that as it is rolled up by Female and Male (incl Jacks) ---------------------------------------------
 #   "Number by age and sex (CORRECTED): Rolled up"  to  "Proportion by age and sex (CORRECTED): Rolled up"
 sexAgeCorrection_brokenOut %>% 
   mutate(Maturity.Class = case_when(Maturity.Class %in% c("Male", "Jack") ~ "Males (incl Jacks)",
@@ -124,31 +126,52 @@ sexAgeCorrection_brokenOut %>%
          TermRun_AGEStemp = "Broodstock corrected",
          TermRun_AGESspat = "Broodstock corrected",
          TermRun_AGESsex = paste0("Broodstock corrected - ", Maturity.Class),
-         ) 
-)
-
-  
-
-
-##########################################################################
-
-#                                                                    CALCULATE EGG DEPOSITION
-
-
-fecundityAgePropn <- left_join(sexAgeCorrection %>%
-                                 filter(Maturity.Class=="Female"),
-                               fecundity_at_age) %>% 
+  ) 
+) %>% 
+  # 3. Fecundity/egg deposition ---------------------------------------------
+  left_join(.,
+            fecundity_at_age) %>% 
   mutate(total_fecundity = n_sexAge_CORR*fecundity,
          total_egg_deposition = sum(total_fecundity, na.rm=T)) %>%
   print()
- 
+
+
+
+# Remove temporary table for sake of join above
+remove(sexAgeCorrection_brokenOut) 
+  
+
+
+# ============================== EXPORT for record ==============================
+# To github repo ---------------------------
+writexl::write_xlsx(sexAgeCorrection, 
+                    path=paste0(here::here("outputs"), 
+                                "/R_OUT - Nitinat sex correction ",
+                                max(NITmap$TermRun_Year),
+                                ".xlsx"))
+
+
+
+# To DFO Network drive ---------------------------
+openxlsx::saveWorkbook(sexAgeCorrection, 
+                       path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/TERMNIT/Nit",
+                                   max(NITmap$TermRun_Year),
+                                   "/R_OUT - Nitinat sex correction ",
+                                   max(NITmap$TermRun_Year),
+                                   ".xlsx"))
 
 
 
 
+####################################################################################################################################################
+
+#                                                                     JOIN to mapping file
 
 
-
+# Join a simplified output 
+tt <- left_join(NITmap,
+                NITage_summary,
+                by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year"))
 
 
 

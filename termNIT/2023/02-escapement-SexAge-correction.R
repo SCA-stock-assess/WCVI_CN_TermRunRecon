@@ -43,7 +43,7 @@ NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Sta
 # 1. Work through the correction to the point where it is still broken out by Male, Female, Jack ---------------------------------------------
 #   "Age proportions from SAMPLE (close to 50:50)"  to "Number by age and sex (CORRECTED): Broken Out" 
 
-sexAgeCorrection_brokenOut <- 
+sexAgeCorrection <- full_join(
   # ---- Age proportions from SAMPLE (close to 50:50): 
   full_join(NITepro %>% 
               filter(`(R) RETURN YEAR` %in% NITmap$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
@@ -82,11 +82,11 @@ sexAgeCorrection_brokenOut <-
                                     Maturity.Class=="Jack" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
                                                                       NITmap$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
   # ---- Number by age and sex (CORRECTED): 
-  mutate(n_sex_CORR.breakout = escapement_estimate*true_sex_ratio,
-         n_sexAge_CORR.breakout = n_sex_CORR.breakout*propn_age_sample_jackCORR) %>%  
+  mutate(n_sex_CORR = escapement_estimate*true_sex_ratio,
+         n_sexAge_CORR = n_sex_CORR*propn_age_sample_jackCORR) %>%  
   group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
   # ---- (new) Proportion by age and sex (CORRECTED):
-  mutate(propn_sexAge_Corr.breakout = n_sexAge_CORR.breakout/unique(escapement_estimate)) %>%
+  mutate(propn_sexAge_CORR = n_sexAge_CORR/unique(escapement_estimate)) %>%
   full_join(.,
             NITepro %>%
               filter(`(R) RETURN YEAR` %in% NITmap$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
@@ -97,52 +97,49 @@ sexAgeCorrection_brokenOut <-
                      n_sample=sum(n_age))) %>%
   select(-c(n_age)) %>%
   group_by(`(R) RESOLVED TOTAL AGE`) %>% 
-  mutate(propn_sexAge_Corr.breakout = case_when(Maturity.Class=="Total" ~ sum(propn_sexAge_Corr.breakout,na.rm=T)/1,
-                                                TRUE ~ propn_sexAge_Corr.breakout),
+  mutate(propn_sexAge_CORR = case_when(Maturity.Class=="Total" ~ sum(propn_sexAge_CORR,na.rm=T)/1,
+                                                TRUE ~ propn_sexAge_CORR),
          TermRun_AGEStemp = "Broodstock corrected",
          TermRun_AGESspat = "Broodstock corrected",
          TermRun_AGESsex = paste0("Broodstock corrected - ", Maturity.Class)) %>%
-  fill(escapement_estimate, .direction="down") %>%
-  print()
-
-
+  fill(escapement_estimate, .direction="down") 
+  
+  ,
 
 
 # 1. Work through the correction following that as it is rolled up by Female and Male (incl Jacks) ---------------------------------------------
 #   "Number by age and sex (CORRECTED): Rolled up"  to  "Proportion by age and sex (CORRECTED): Rolled up"
-sexAgeCorrection_rolledUp <- sexAgeCorrection_brokenOut %>% 
+sexAgeCorrection_brokenOut %>% 
   mutate(Maturity.Class = case_when(Maturity.Class %in% c("Male", "Jack") ~ "Males (incl Jacks)",
                                            TRUE ~ Maturity.Class)) %>%
   group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`, escapement_estimate) %>% 
   summarize(n_sample = sum(n_sample),
-            n_sexAge_CORR.rollup = sum(n_sexAge_CORR.breakout)) %>%
+            n_sexAge_CORR = sum(n_sexAge_CORR)) %>%
   group_by(Maturity.Class) %>% 
-  mutate(n_sex_CORR.rollup = sum(n_sexAge_CORR.rollup),
-         propn_sexAge_CORR.rollup = n_sexAge_CORR.rollup/unique(escapement_estimate)) %>%
+  mutate(n_sex_CORR = sum(n_sexAge_CORR),
+         propn_sexAge_CORR = n_sexAge_CORR/unique(escapement_estimate)) %>%
   group_by(`(R) RESOLVED TOTAL AGE`) %>% 
-  mutate(propn_sexAge_CORR.rollup = case_when(Maturity.Class=="Total" ~ sum(propn_sexAge_CORR.rollup/1,na.rm=T),
-                                              TRUE ~ propn_sexAge_CORR.rollup),
+  mutate(propn_sexAge_CORR = case_when(Maturity.Class=="Total" ~ sum(propn_sexAge_CORR/1,na.rm=T),
+                                              TRUE ~ propn_sexAge_CORR),
          TermRun_AGEStemp = "Broodstock corrected",
          TermRun_AGESspat = "Broodstock corrected",
          TermRun_AGESsex = paste0("Broodstock corrected - ", Maturity.Class),
-         ) %>%
-  print()
+         ) 
+)
 
   
 
-tt<- full_join(sexAgeCorrection_brokenOut,sexAgeCorrection_rolledUp)
 
-#***** clean up this join ^^ next day  and join to mapping file.... 
 ##########################################################################
 
 #                                                                    CALCULATE EGG DEPOSITION
 
 
-fecundityAgePropn <- left_join(sexAgeCorrection_brokenOut %>%
+fecundityAgePropn <- left_join(sexAgeCorrection %>%
                                  filter(Maturity.Class=="Female"),
                                fecundity_at_age) %>% 
-  mutate(fecundity_AgeCorr = n_sexAge_CORR*fecundity,
-         total_egg_deposition = sum(fecundity_AgeCorr)) %>%
+  mutate(total_fecundity = n_sexAge_CORR*fecundity,
+         total_egg_deposition = sum(total_fecundity, na.rm=T)) %>%
   print()
  
 

@@ -14,8 +14,8 @@ fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
                            Maturity.Class = "Female")
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
-
 analysis_year <- 2023
+
 
 
 # ============================= LOAD DATA =============================
@@ -189,9 +189,9 @@ NITmap02 <- left_join(NITmap,
 # To github repo ---------------------------
 writexl::write_xlsx(NITmap02, 
                     path=paste0(here::here("termNIT"), "/", analysis_year, 
-                                "/TERMNIT_mapping_",
+                                "/R_OUT - TERMNIT_mapping_",
                                 analysis_year,
-                                "-02",
+                                "-output_from_02",
                                 ".xlsx"))
 
 

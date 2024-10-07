@@ -9,16 +9,23 @@ library(tidyverse)
 
 # Helpers
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
+fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
+                           fecundity = c(0,3000,3500,4000,4000),
+                           Maturity.Class = "Female")
 "%notin%" <- Negate("%in%")
+options(scipen=9999)
+analysis_year <- 2023
+
 
 
 # ============================= LOAD DATA =============================
 
 # Read mapping file -------------------------------
-NITmap <- readxl::read_excel(path=here::here("termNIT", "2023", list.files(path=here::here("termNIT", "2023"),
-                                                                           pattern="^TERMNIT_mapping*")),
-                             skip=1,
-                             sheet="termNIT_map")
+NITmap02 <- readxl::read_excel(path=paste0(here::here("termNIT"), "/", analysis_year, "/", 
+                                           list.files(path=paste0(here::here("termNIT"), "/", analysis_year),
+                                                                  pattern="R_OUT - TERMNIT_mapping_[0-9]{4}-output_from_02\\.xlsx$",
+                                                      full.names=F)),   
+                             sheet="Sheet1")
 
 
 

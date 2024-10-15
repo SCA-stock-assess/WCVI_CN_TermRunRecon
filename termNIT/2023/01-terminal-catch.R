@@ -8,10 +8,6 @@ library(tidyverse)
 
 
 # Helpers
-full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
-fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
-                           fecundity = c(0,3000,3500,4000,4000),
-                           Maturity.Class = "Female")
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
 analysis_year <- 2023
@@ -25,7 +21,7 @@ NITmap <- readxl::read_excel(path=paste0(here::here("termNIT"), "/", analysis_ye
                                          list.files(path=paste0(here::here("termNIT"), "/", analysis_year),
                                                     pattern="^TERMNIT_mapping_[0-9]{4}\\.xlsx$",
                                                     full.names=F)),   
-                             sheet="Sheet1")
+                             sheet="termNIT_map")
 
 
 
@@ -75,7 +71,7 @@ SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_St
 
 ########################################################################################################################################################
 
-#                                                      JOIN catch estimates + ages to calculate sample size flag
+#                                                      SUMMARIZE/JOIN catch estimates + ages to calculate sample size flag
 
 NITrecCatchbyAge <- full_join(SCrecCatch %>%
                                 filter(SPECIES=="CHINOOK SALMON", DISPOSITION=="Kept", MONTH%in%c("July", "August", "September"), 
@@ -90,7 +86,9 @@ NITrecCatchbyAge <- full_join(SCrecCatch %>%
   mutate(MONTH = factor(MONTH, levels=month.name)) %>% 
   arrange(YEAR, MONTH, RESOLVED_AGE) %>%
   group_by(YEAR, MONTH) %>%
-  mutate(month_sample_size = sum(n, na.rm=T),
+  mutate(n = case_when(is.na(n) ~ 0,
+                       TRUE ~ n),
+         month_sample_size = sum(n, na.rm=T),
          propn = n/month_sample_size,
          biosample_rate = month_sample_size/monthly_catch_estimate) %>%
   print()
@@ -111,6 +109,7 @@ ggplot() +
 ########################################################################################################################################################
 
 #                                                                 AGE SAMPLE POOLING
+
 
 #  Pool age samples for nearby months if sample rate <10% ---------------------------------
 # IDEAL RULES: 
@@ -133,15 +132,13 @@ ggplot(data = NITrecCatchbyAge,
 
 
 # Pooled ages ----------------------
+
 NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>% 
-  group_by(YEAR) %>%
-  mutate(n_age_2_pooled = sum(n_age_2, na.rm=T),
-         n_age_3_pooled = sum(n_age_3, na.rm=T),
-         n_age_4_pooled = sum(n_age_4, na.rm=T),
-         n_age_5_pooled = sum(n_age_5, na.rm=T),
-         n_age_6_pooled = sum(n_age_6, na.rm=T),
-         propn_age_2_pooled = sum(n_age_2_pooled,na.rm=T)/sum(month_sample_size,na.rm=T))
-  
+  group_by(YEAR, RESOLVED_AGE) %>% 
+  mutate(pooled_sample_size = sum(month_sample_size, na.rm=T)) %>% 
+  group_by(YEAR) %>% 
+  mutate(pooled_age_propn = pooled_sample_size/sum(month_sample_size, na.rm=T)) %>% 
+  print()
 
 
 

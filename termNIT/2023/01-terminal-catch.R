@@ -8,6 +8,7 @@ library(tidyverse)
 
 
 # Helpers
+full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
 analysis_year <- 2023
@@ -90,7 +91,9 @@ NITrecCatchbyAge <- full_join(SCrecCatch %>%
                        TRUE ~ n),
          month_sample_size = sum(n, na.rm=T),
          propn = n/month_sample_size,
-         biosample_rate = month_sample_size/monthly_catch_estimate) %>%
+         biosample_rate = case_when(MONTH=="June" ~ NA,
+                                    MONTH %notin% "June" & monthly_catch_estimate==0 ~ 0,
+                                    TRUE ~ month_sample_size/monthly_catch_estimate)) %>%
   print()
 
 
@@ -111,39 +114,132 @@ ggplot() +
 #                                                                 AGE SAMPLE POOLING
 
 
-#  Pool age samples for nearby months if sample rate <10% ---------------------------------
+#  ========================= POOLING DESCISIONS =========================
 # IDEAL RULES: 
 #   If >2/3 months have a <10% sample rate FLAG, then pool all 3 months age samples together 
 #   If 1/3 months has a <10% sample rate FLAG, pool it together with the month that has the next-lowest sample size, provided they are next to each other in time (e.g., do not pool June + Aug) - if not together in time, pool with the month next to it.
 #   If no months have a <10% sample rate FLAG, no pooling! 
 
 
-# Sample rate visualization: 
+# Sample rate visualization -------------------------------
 ggplot(data = NITrecCatchbyAge, 
        aes(x=MONTH, y=biosample_rate, fill=as.factor(YEAR), colour=as.factor(YEAR), label=as.factor(YEAR), group=as.factor(YEAR))) +
-  geom_hline(yintercept=0.1, colour="gray60", linetype="dashed") +
+  geom_hline(yintercept=0.1, colour="gray60", linetype="dashed", size=1) +
   geom_point(size=3, alpha=0.5) +
-  geomtextpath::geom_textline(linewidth=1, show.legend=F, hjust=0.38, text_smoothing=30, size=4, fontface=2) +
-  theme_bw()
+  geomtextpath::geom_textline(linewidth=1.5, show.legend=F, hjust=0.38, text_smoothing=30, size=4, fontface=2, alpha=0.8) +
+  #geom_text(aes(label=month_sample_size)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y="Sampling rate", x="", fill="Biosampling rate over \nmost recent 10 years:", colour="Biosampling rate over \nmost recent 10 years:") +
+  theme_bw() +
+  theme(axis.title = element_text(face="bold"),
+        axis.text = element_text(colour="black"),
+        legend.position = c(0.1,0.8),
+        legend.background = element_rect(colour="black"),
+        legend.title = element_text(face='bold'))
 
 
-# THERE HAS NEVER REALLY BEEN A CASE WHERE ANY GIVEN MONTH HAS A GOOD SAMPLE RATE FOR AREA 21/121.
-# THEREFORE, ages are pooled ACROSS ALL SUB-AREAS/MONTHS WITHIN A YEAR  
+# --> THERE HAS NEVER REALLY BEEN A CASE WHERE ANY GIVEN MONTH HAS A GOOD SAMPLE RATE FOR AREA 21/121.
+#     THEREFORE, ages are pooled ACROSS ALL SUB-AREAS/MONTHS WITHIN A YEAR  
 
 
-# Pooled ages ----------------------
-
-NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>% 
-  group_by(YEAR, RESOLVED_AGE) %>% 
-  mutate(pooled_sample_size = sum(month_sample_size, na.rm=T)) %>% 
-  group_by(YEAR) %>% 
-  mutate(pooled_age_propn = pooled_sample_size/sum(month_sample_size, na.rm=T)) %>% 
+# Pooling samples based on rules above -------------------------------
+NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>%
+  group_by(YEAR) %>%
+  mutate(
+    # --- POOL ITERATION 1: Combine June/July and August/September if any month's sample rate is < 10% OR the monthly sample size is <5  samples
+    temporal_pool_it1 = case_when(biosample_rate > 0.1 & month_sample_size >= 5 ~ MONTH, 
+                                  TRUE ~ NA)) %>% 
+  mutate(temporal_pool_it1 = case_when(any(temporal_pool_it1=="July") & MONTH=="June" ~ "June",
+                                       (MONTH=="July" & (biosample_rate < 0.1 | month_sample_size<5)) | 
+                                         (MONTH=="June" & is.na(biosample_rate)) ~ "June, July",
+                                       (MONTH=="August" & (biosample_rate < 0.1 | month_sample_size<5)) | 
+                                         (MONTH=="September" & (biosample_rate < 0.1 | month_sample_size<5)) ~ "August, September",
+                                       monthly_catch_estimate==0 ~ NA,
+                                       TRUE ~ temporal_pool_it1)
+  ) %>% 
+  group_by(YEAR, temporal_pool_it1) %>% 
+  # Calculate new pooled sample size resulting from pooling iteration 1: 
+  mutate(pool_sample_size = sum(n, na.rm=T)) %>% 
+  # Calculate the new total catch estimate for the pooling results from iteration 1, starting with pasting in July's catch alone (don't want June catch):
+  mutate(pool_catch_estimate = case_when(MONTH=="July" ~ monthly_catch_estimate)) %>% 
+  group_by(YEAR, temporal_pool_it1) %>% 
+  # Now insert the pooled catch estimate for cases where Aug and Sept were pooled:
+  mutate(pool_catch_estimate = case_when(MONTH%in%c("August", "September") ~ sum(unique(monthly_catch_estimate),na.rm=T),
+                                         TRUE ~ pool_catch_estimate),
+         # Calculate the new sample rate after pooling iteration 1: 
+         pool_sample_rate = case_when(pool_catch_estimate==0 ~ NA,
+                                      TRUE ~ pool_sample_size/pool_catch_estimate)) %>% 
+  group_by(YEAR) %>%
+  # --- POOL ITERATION 2: If, after iteration 1, sample rates are still < 10%, pool all months together for the entire year 
+  mutate(temporal_pool_it2 = case_when(temporal_pool_it1 %in% c("June, July", "August, September") & 
+                                          (pool_sample_rate < 0.1 | pool_sample_size<5 | is.na(pool_sample_rate)) ~
+                                          "Pool all months within the year unless otherwise specified",
+                                       TRUE ~ MONTH)) %>% 
+  ungroup() %>%
   print()
 
 
 
+# Calculate new age composition ------------------------------- 
+tt<-NITrecCatchbyAge_pooled %>% 
+  group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
+  summarize(n = sum(n, na.rm=T)) %>% 
+  group_by(YEAR, temporal_pool_it2) %>% 
+  mutate(sample_size = sum(n, na.rm=T),
+         propn = case_when(sample_size==0 ~ 0,
+                           TRUE ~ n/sample_size)) %>% 
+  filter(!is.na(RESOLVED_AGE)) %>%
+  arrange(RESOLVED_AGE) %>%
+  pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn)) %>%
+  arrange(YEAR)
 
 
+
+########################################################################################################################################################
+
+#                                                                        JOIN + Export
+
+# ============================== JOIN rec catch, pooled ages to NITmapping file ==============================
+
+NITmap03 <- left_join(NITmap,
+                      #full_age_range,
+                      NITrecCatchbyAge_pooled %>% 
+                        group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
+                        summarize(n = unique(month_sample_size)) %>%
+                        filter(!is.na(RESOLVED_AGE)) %>%
+                        arrange(RESOLVED_AGE) %>% 
+                        pivot_wider(names_from=RESOLVED_AGE, values_from=c(n, propn), names_prefix = "age_") %>% 
+                        rename(Enumeration = monthly_catch_estimate) %>% 
+                        mutate(TermRun_AGEStemp = "",
+                               TermRun_AGESspat = "Broodstock, morts, other",
+                               TermRun_AGESsex = case_when(Maturity.Class %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Maturity.Class),
+                                                           Maturity.Class=="Unsexed Adult" ~ "Broodstock, morts, other - Total",
+                                                           ## ^^ If there were any "unknown" broodstock, this should be where they are accounted for (as "...Total") ^^
+                                                           TRUE ~ "FLAG"),
+                               TermRun_AGES_year = max(NITepro$`(R) RETURN YEAR`))
+                      
+                      
+                        
+                        
+                        ,
+                        
+                        
+                        
+                        
+                        
+                        
+                      by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year")) %>%
+  
+  
+  
+  
+  mutate(Maturity.Class = coalesce(Maturity.Class.x, Maturity.Class.y),
+         propn_age_2 = coalesce(propn_age_2.x, propn_age_2.y),
+         propn_age_3 = coalesce(propn_age_3.x, propn_age_3.y),
+         propn_age_4 = coalesce(propn_age_4.x, propn_age_4.y),
+         propn_age_5 = coalesce(propn_age_5.x, propn_age_5.y),
+         propn_age_6 = coalesce(propn_age_6.x, propn_age_6.y),
+         .keep="unused") 
 
 
 

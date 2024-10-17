@@ -23,7 +23,7 @@ NITmap <- readxl::read_excel(path=paste0(here::here("termNIT"), "/", analysis_ye
                                          list.files(path=paste0(here::here("termNIT"), "/", analysis_year),
                                                     pattern="^TERMNIT_mapping_[0-9]{4}\\.xlsx$",
                                                     full.names=F)),   
-                             sheet="termNIT_map")
+                             sheet="termNIT_map", skip=1)
 
 
 
@@ -79,8 +79,10 @@ SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_St
 NITrecCatchbyAge <- full_join(SCrecCatch %>%
                                 filter(SPECIES=="CHINOOK SALMON", DISPOSITION=="Kept", MONTH%in%c("July", "August", "September"), 
                                        CREEL_SUB_AREA %in%c("21A", "21B", "121C", "Area 21")) %>% 
+                                group_by(YEAR) %>% 
+                                mutate(subareas = paste0(unique(CREEL_SUB_AREA), collapse=", ")) %>%
                                 group_by(YEAR, MONTH) %>% 
-                                summarize(monthly_catch_estimate = sum(ESTIMATE, na.rm=T)),
+                                summarize(monthly_catch_estimate = sum(ESTIMATE, na.rm=T), subareas = unique(subareas)),
                               SCrecBio %>% 
                                 filter(SPECIES=="124", DISPOSITION=="Kept", SUBAREA%in%c("21A", "21B", "121C"), SAMPLE_TYPE=="Sport", !is.na(RESOLVED_AGE)) %>% 
                                 group_by(YEAR, MONTH, RESOLVED_AGE) %>% 
@@ -212,20 +214,6 @@ NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>%
 
 
 
-# Calculate new age composition ------------------------------- 
-tt<- NITrecCatchbyAge_pooled %>% 
-  group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
-  summarize(n = sum(n, na.rm=T), monthly_catch_estimate=unique(monthly_catch_estimate), MONTH=unique(MONTH), 
-            month_sample_size=unique(month_sample_size)) %>% 
-  group_by(YEAR, temporal_pool_it2) %>% 
-  mutate(sample_size = sum(unique(n), na.rm=T),
-         propn = case_when(sample_size==0 ~ 0,
-                           TRUE ~ n/sample_size)) %>% 
-  
-  arrange(RESOLVED_AGE) %>%
-  pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>%
-  arrange(YEAR)
-
 
 
 
@@ -236,77 +224,36 @@ tt<- NITrecCatchbyAge_pooled %>%
 
 # ============================== JOIN rec catch, pooled ages to NITmapping file ==============================
 
-NITmap03 <- left_join(NITmap,
-                      #full_age_range,
+NITmap01 <- left_join(NITmap %>% 
+                        mutate(across(everything(), as.character)),
+                      
                       NITrecCatchbyAge_pooled %>% 
+                        # Calculate new pooled age composition: 
                         group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
                         summarize(n = sum(n, na.rm=T), monthly_catch_estimate=unique(monthly_catch_estimate), MONTH=unique(MONTH), 
-                                  month_sample_size=unique(month_sample_size)) %>% 
+                                  month_sample_size=unique(month_sample_size), subareas=subareas) %>% 
                         group_by(YEAR, temporal_pool_it2) %>% 
-                        mutate(sample_size = sum(n, na.rm=T),
+                        mutate(sample_size = sum(unique(n), na.rm=T),
                                propn = case_when(sample_size==0 ~ 0,
                                                  TRUE ~ n/sample_size)) %>% 
-                        #filter(!is.na(RESOLVED_AGE)) %>%
                         arrange(RESOLVED_AGE) %>%
                         pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>%
                         arrange(YEAR) %>%
-                        filter(MONTH!="June") %>%     # Remove June samples from cases where they aren't required to pool with July:
+                        # Rename/create columns to assist with joining
                         rename(Enumeration = monthly_catch_estimate,
-                               TermRun_AGEStemp = temporal_pool_it2) %>% 
-                        mutate(TermRun_AGEStemp = "",
-                               TermRun_AGESspat = "Broodstock, morts, other",
-                               TermRun_AGESsex = case_when(Maturity.Class %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Maturity.Class),
-                                                           Maturity.Class=="Unsexed Adult" ~ "Broodstock, morts, other - Total",
-                                                           ## ^^ If there were any "unknown" broodstock, this should be where they are accounted for (as "...Total") ^^
-                                                           TRUE ~ "FLAG"),
-                               TermRun_AGES_year = max(NITepro$`(R) RETURN YEAR`))
-                      
-                      
+                               TermRun_AGEStemp = temporal_pool_it2,
+                               TermRun_temp_strata = MONTH,
+                               TermRun_AGESspat = subareas,
+                               TermRUn_Year = YEAR) %>% 
+                        mutate(TermRun_AGES_year = max(NITrecCatchbyAge_pooled$YEAR),
+                               TermRun_sector02 = "Area 21 Terminal") %>% 
+                        mutate(across(everything(), as.character)),
                         
-                        
-                        ,
-                        
-                        
-                        
-                        
-                        
-                        
-                      by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year")) %>%
+                      by=c("TermRun_temp_strata", "TermRun_sector02", "TermRun_AGES_year")) %>%
+  print()
   
   
   
-  
-  mutate(Maturity.Class = coalesce(Maturity.Class.x, Maturity.Class.y),
-         propn_age_2 = coalesce(propn_age_2.x, propn_age_2.y),
-         propn_age_3 = coalesce(propn_age_3.x, propn_age_3.y),
-         propn_age_4 = coalesce(propn_age_4.x, propn_age_4.y),
-         propn_age_5 = coalesce(propn_age_5.x, propn_age_5.y),
-         propn_age_6 = coalesce(propn_age_6.x, propn_age_6.y),
-         .keep="unused") 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# mutate(TermRun_sector01 = "Recreational",
-#        TermRun_sector02 = "Area 21 Terminal") %>% 

@@ -8,7 +8,8 @@ library(tidyverse)
 
 
 # Helpers
-full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
+full_age_range <- tibble(#MONTH=c("June", "July", "August", "September"),
+                              RESOLVED_AGE = c(2:6)) 
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
 analysis_year <- 2023
@@ -74,6 +75,7 @@ SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_St
 
 #                                                      SUMMARIZE/JOIN catch estimates + ages to calculate sample size flag
 
+# Joining catch and age data, calculating sample rate -------------------------------
 NITrecCatchbyAge <- full_join(SCrecCatch %>%
                                 filter(SPECIES=="CHINOOK SALMON", DISPOSITION=="Kept", MONTH%in%c("July", "August", "September"), 
                                        CREEL_SUB_AREA %in%c("21A", "21B", "121C", "Area 21")) %>% 
@@ -82,9 +84,14 @@ NITrecCatchbyAge <- full_join(SCrecCatch %>%
                               SCrecBio %>% 
                                 filter(SPECIES=="124", DISPOSITION=="Kept", SUBAREA%in%c("21A", "21B", "121C"), SAMPLE_TYPE=="Sport", !is.na(RESOLVED_AGE)) %>% 
                                 group_by(YEAR, MONTH, RESOLVED_AGE) %>% 
-                                summarize(n = n())) %>%
+                                summarize(n = n()) %>% 
+                                ungroup() %>%
+                                complete(YEAR, MONTH, RESOLVED_AGE, fill=list(n=0)) 
+                              ) %>%
   ungroup() %>% 
-  mutate(MONTH = factor(MONTH, levels=month.name)) %>% 
+  mutate(MONTH = factor(MONTH, levels=month.name)) %>%
+  arrange(YEAR, MONTH, RESOLVED_AGE) %>% 
+  ungroup() %>%
   arrange(YEAR, MONTH, RESOLVED_AGE) %>%
   group_by(YEAR, MONTH) %>%
   mutate(n = case_when(is.na(n) ~ 0,
@@ -97,7 +104,12 @@ NITrecCatchbyAge <- full_join(SCrecCatch %>%
   print()
 
 
-# Do ages vary by month/year?
+# Do ages vary by month/year? -------------------------------
+pdf(file = here::here("termNIT", "2023", "figures", 
+                      paste0("Recreational fishery age composition ", min(NITrecCatchbyAge$YEAR), "-", max(NITrecCatchbyAge$YEAR), ".pdf")),   
+    width = 11, # The width of the plot in inches
+    height = 8.5) # The height of the plot in inches
+
 ggplot() +
   geom_bar(data=NITrecCatchbyAge,
            aes(x=MONTH, y=propn, group=as.factor(RESOLVED_AGE), fill=as.factor(RESOLVED_AGE), colour=as.factor(RESOLVED_AGE)), stat="identity") +
@@ -108,6 +120,7 @@ ggplot() +
   facet_wrap(~YEAR)
 # Yes, mostly
 
+dev.off()
 
 ########################################################################################################################################################
 
@@ -184,11 +197,18 @@ NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>%
 tt<- NITrecCatchbyAge_pooled %>% 
   group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
   summarize(n = sum(n, na.rm=T), monthly_catch_estimate=unique(monthly_catch_estimate), MONTH=unique(MONTH), 
-            month_sample_size=unique(month_sample_size)) 
+            month_sample_size=unique(month_sample_size)) %>% 
+  group_by(YEAR, temporal_pool_it2) %>% 
+  mutate(sample_size = sum(unique(n), na.rm=T),
+         propn = case_when(sample_size==0 ~ 0,
+                           TRUE ~ n/sample_size)) %>% 
+  
+  arrange(RESOLVED_AGE) %>%
+  pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>%
+  arrange(YEAR)
 
 
-# ****** HERE NEXT DAY: FIGURE OUT HOW TO SUMMARIZE THE POOLED AGE COMPS TO JOIN TO MAPPING FILE. Remember, it doesn't haev to look EXACLTY like the old run 
-#     recon files,but it does have to link the individual month to the pooling decision! 
+
 
 
 ########################################################################################################################################################

@@ -238,21 +238,34 @@ NITmap01 <- left_join(NITmap %>%
                                                  TRUE ~ n/sample_size)) %>% 
                         arrange(RESOLVED_AGE) %>%
                         pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>%
+                        select(-c(contains("_NA"))) %>% 
                         arrange(YEAR) %>%
+                        # If the year of interest is present in the data series, then retain that year only; otherwise, select last year's data:
+                        filter(if_else(YEAR%in%NITmap$TermRun_Year, TRUE,  YEAR==(YEAR-1))) %>%
                         # Rename/create columns to assist with joining
+                        mutate(TermRun_sector01 = "Recreational",
+                               TermRun_sector02 = "Area 21 Terminal") %>% 
                         rename(Enumeration = monthly_catch_estimate,
                                TermRun_AGEStemp = temporal_pool_it2,
                                TermRun_temp_strata = MONTH,
                                TermRun_AGESspat = subareas,
-                               TermRUn_Year = YEAR) %>% 
-                        mutate(TermRun_AGES_year = max(NITrecCatchbyAge_pooled$YEAR),
-                               TermRun_sector02 = "Area 21 Terminal") %>% 
+                               TermRun_AGES_year = YEAR) %>% 
                         mutate(across(everything(), as.character)),
                         
-                      by=c("TermRun_temp_strata", "TermRun_sector02", "TermRun_AGES_year")) %>%
+                      by=c("TermRun_sector01", "TermRun_sector02", "TermRun_temp_strata")) %>%
+  mutate(across(everything(), as.character)) %>%
+  mutate(Enumeration = coalesce(Enumeration.x, Enumeration.y),
+         TermRun_AGEStemp = coalesce(TermRun_AGEStemp.x, TermRun_AGEStemp.y),
+         TermRun_AGESspat = coalesce(TermRun_AGESspat.x, TermRun_AGESspat.y),
+         TermRun_AGEStemp = coalesce(TermRun_AGEStemp.x, TermRun_AGEStemp.y),
+         TermRun_AGESspat = coalesce(TermRun_AGESspat.x, TermRun_AGESspat.y),
+         TermRun_AGES_year = coalesce(TermRun_AGES_year.x, TermRun_AGES_year.y),
+         .keep="unused") %>%
+  relocate(c(Enumeration, contains("?"), contains("TermRun_AGES")), .after=TermRun_spatial_substrata) %>%
   print()
   
-  
+
+
   
 
 

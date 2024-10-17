@@ -106,18 +106,31 @@ NITrecCatchbyAge <- full_join(SCrecCatch %>%
 
 # Do ages vary by month/year? -------------------------------
 pdf(file = here::here("termNIT", "2023", "figures", 
-                      paste0("Recreational fishery age composition ", min(NITrecCatchbyAge$YEAR), "-", max(NITrecCatchbyAge$YEAR), ".pdf")),   
+                      paste0("Recreational fishery age composition ", 
+                             min(NITrecCatchbyAge$YEAR), "-", max(NITrecCatchbyAge$YEAR), 
+                             " (Terminal Nitinat areas).pdf")),   
     width = 11, # The width of the plot in inches
     height = 8.5) # The height of the plot in inches
 
 ggplot() +
-  geom_bar(data=NITrecCatchbyAge,
-           aes(x=MONTH, y=propn, group=as.factor(RESOLVED_AGE), fill=as.factor(RESOLVED_AGE), colour=as.factor(RESOLVED_AGE)), stat="identity") +
+  geom_bar(data=NITrecCatchbyAge %>% 
+             filter(!is.na(RESOLVED_AGE)),
+           aes(x=plyr::mapvalues(MONTH, from=month.name, to=month.abb), y=propn, 
+               fill=as.factor(RESOLVED_AGE), colour=as.factor(RESOLVED_AGE)), stat="identity", alpha=0.8) +
   geom_text(data=NITrecCatchbyAge %>% 
               group_by(YEAR, MONTH) %>% 
               summarize(month_sample_size=unique(month_sample_size)),
-             aes(x=MONTH, y=1, label=month_sample_size)) +
-  facet_wrap(~YEAR)
+             aes(x=plyr::mapvalues(MONTH, from=month.name, to=month.abb), y=1, label=month_sample_size)) +
+  labs(x="", y="Age composition (%)", fill="Age: ", colour="Age: ") +
+  facet_wrap(~YEAR) +
+  theme_bw()   +
+  theme(axis.text = element_text(colour="black"),
+        axis.title = element_text(face="bold"),
+        legend.position = "bottom",
+        legend.direction = "horizontal",
+        legend.key.spacing.x = unit(5, "mm"),
+        legend.title = element_text(face="bold"))
+
 # Yes, mostly
 
 dev.off()
@@ -135,21 +148,27 @@ dev.off()
 
 
 # Sample rate visualization -------------------------------
+pdf(file = here::here("termNIT", "2023", "figures", 
+                      paste0("Recreational fishery sample rate ", 
+                             min(NITrecCatchbyAge$YEAR), "-", max(NITrecCatchbyAge$YEAR), 
+                             " (Terminal Nitinat areas).pdf")),   
+    width = 11, # The width of the plot in inches
+    height = 8.5) # The height of the plot in inches
+
 ggplot(data = NITrecCatchbyAge, 
        aes(x=MONTH, y=biosample_rate, fill=as.factor(YEAR), colour=as.factor(YEAR), label=as.factor(YEAR), group=as.factor(YEAR))) +
   geom_hline(yintercept=0.1, colour="gray60", linetype="dashed", size=1) +
   geom_point(size=3, alpha=0.5) +
-  geomtextpath::geom_textline(linewidth=1.5, show.legend=F, hjust=0.38, text_smoothing=30, size=4, fontface=2, alpha=0.8) +
+  geomtextpath::geom_textline(linewidth=1, show.legend=F, hjust=0.38, text_smoothing=30, size=4, fontface=2, alpha=0.8) +
   #geom_text(aes(label=month_sample_size)) +
   scale_y_continuous(labels = scales::percent) +
   labs(y="Sampling rate", x="", fill="Biosampling rate over \nmost recent 10 years:", colour="Biosampling rate over \nmost recent 10 years:") +
   theme_bw() +
   theme(axis.title = element_text(face="bold"),
         axis.text = element_text(colour="black"),
-        legend.position = c(0.1,0.8),
-        legend.background = element_rect(colour="black"),
-        legend.title = element_text(face='bold'))
+        legend.position = "none")
 
+dev.off()
 
 # --> THERE HAS NEVER REALLY BEEN A CASE WHERE ANY GIVEN MONTH HAS A GOOD SAMPLE RATE FOR AREA 21/121.
 #     THEREFORE, ages are pooled ACROSS ALL SUB-AREAS/MONTHS WITHIN A YEAR  

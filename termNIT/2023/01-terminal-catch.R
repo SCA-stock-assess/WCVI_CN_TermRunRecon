@@ -171,28 +171,24 @@ NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>%
                                       TRUE ~ pool_sample_size/pool_catch_estimate)) %>% 
   group_by(YEAR) %>%
   # --- POOL ITERATION 2: If, after iteration 1, sample rates are still < 10%, pool all months together for the entire year 
-  mutate(temporal_pool_it2 = case_when(temporal_pool_it1 %in% c("June, July", "August, September") & 
+  mutate(temporal_pool_it2 = case_when((any(temporal_pool_it1=="June, July") & any(temporal_pool_it1=="August, September")) & 
                                           (pool_sample_rate < 0.1 | pool_sample_size<5 | is.na(pool_sample_rate)) ~
-                                          "Pool all months within the year unless otherwise specified",
-                                       TRUE ~ MONTH)) %>% 
+                                         paste(unique(temporal_pool_it1), collapse = ", "),
+                                       TRUE ~ temporal_pool_it1)) %>% 
   ungroup() %>%
   print()
 
 
 
 # Calculate new age composition ------------------------------- 
-tt<-NITrecCatchbyAge_pooled %>% 
+tt<- NITrecCatchbyAge_pooled %>% 
   group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
-  summarize(n = sum(n, na.rm=T)) %>% 
-  group_by(YEAR, temporal_pool_it2) %>% 
-  mutate(sample_size = sum(n, na.rm=T),
-         propn = case_when(sample_size==0 ~ 0,
-                           TRUE ~ n/sample_size)) %>% 
-  filter(!is.na(RESOLVED_AGE)) %>%
-  arrange(RESOLVED_AGE) %>%
-  pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn)) %>%
-  arrange(YEAR)
+  summarize(n = sum(n, na.rm=T), monthly_catch_estimate=unique(monthly_catch_estimate), MONTH=unique(MONTH), 
+            month_sample_size=unique(month_sample_size)) 
 
+
+# ****** HERE NEXT DAY: FIGURE OUT HOW TO SUMMARIZE THE POOLED AGE COMPS TO JOIN TO MAPPING FILE. Remember, it doesn't haev to look EXACLTY like the old run 
+#     recon files,but it does have to link the individual month to the pooling decision! 
 
 
 ########################################################################################################################################################
@@ -205,11 +201,19 @@ NITmap03 <- left_join(NITmap,
                       #full_age_range,
                       NITrecCatchbyAge_pooled %>% 
                         group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
-                        summarize(n = unique(month_sample_size)) %>%
-                        filter(!is.na(RESOLVED_AGE)) %>%
-                        arrange(RESOLVED_AGE) %>% 
-                        pivot_wider(names_from=RESOLVED_AGE, values_from=c(n, propn), names_prefix = "age_") %>% 
-                        rename(Enumeration = monthly_catch_estimate) %>% 
+                        summarize(n = sum(n, na.rm=T), monthly_catch_estimate=unique(monthly_catch_estimate), MONTH=unique(MONTH), 
+                                  month_sample_size=unique(month_sample_size)) %>% 
+                        group_by(YEAR, temporal_pool_it2) %>% 
+                        mutate(sample_size = sum(n, na.rm=T),
+                               propn = case_when(sample_size==0 ~ 0,
+                                                 TRUE ~ n/sample_size)) %>% 
+                        #filter(!is.na(RESOLVED_AGE)) %>%
+                        arrange(RESOLVED_AGE) %>%
+                        pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>%
+                        arrange(YEAR) %>%
+                        filter(MONTH!="June") %>%     # Remove June samples from cases where they aren't required to pool with July:
+                        rename(Enumeration = monthly_catch_estimate,
+                               TermRun_AGEStemp = temporal_pool_it2) %>% 
                         mutate(TermRun_AGEStemp = "",
                                TermRun_AGESspat = "Broodstock, morts, other",
                                TermRun_AGESsex = case_when(Maturity.Class %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Maturity.Class),

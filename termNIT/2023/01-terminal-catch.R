@@ -41,38 +41,6 @@ SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_St
 
 ########################################################################################################################################################
 
-#                                     CALCULATE CATCH ESTIMATE TO POPULATE COLUMN J "Enumeration" of TermNIT MAPPING FILE
-
-
-# Area 21/22 terminal rec catch -------------------------------
-  # Creel sub-area 21A + 121C (121C used to be 21B prior to 2022), July/Aug/Sept. 
-  # No creel in Area 22 so manual estimate comes from Nitinat River Hatchery staff (if available)
-# NITrecCatch <- SCrecCatch %>%
-#   filter(SPECIES=="CHINOOK SALMON", DISPOSITION=="Kept", MONTH%in%c("July", "August", "September"), 
-#          CREEL_SUB_AREA %in%c("21A", "21B", "121C", "Area 21")) %>% 
-#   group_by(YEAR, MONTH) %>% 
-#   summarize(monthly_catch_estimate = sum(ESTIMATE, na.rm=T)) %>% 
-#   print()
-
-
-########################################################################################################################################################
-
-#                                                                  CALCULATE AGE SUMMARY by MONTH and YEAR
-
-# NITrecAges <- SCrecBio %>% 
-#   filter(SPECIES=="124", DISPOSITION=="Kept", SUBAREA%in%c("21A", "21B", "121C"), SAMPLE_TYPE=="Sport", !is.na(RESOLVED_AGE)) %>% 
-#   group_by(YEAR, MONTH, RESOLVED_AGE) %>% 
-#   summarize(n = n()) %>% 
-#   group_by(YEAR, MONTH) %>% 
-#   mutate(month_sample_size = sum(n),
-#          propn = n/month_sample_size) %>%
-#   arrange(RESOLVED_AGE) %>%
-#   #pivot_wider(names_from=RESOLVED_AGE, values_from=c(n, propn), names_prefix="age_") %>%
-#   print()
-  
-
-########################################################################################################################################################
-
 #                                                      SUMMARIZE/JOIN catch estimates + ages to calculate sample size flag
 
 # Joining catch and age data, calculating sample rate -------------------------------
@@ -109,10 +77,7 @@ NITrecCatchbyAge <- full_join(SCrecCatch %>%
                               subareas_sample!=subareas_catch ~ select(., subareas_sample, subareas_catch) %>% reduce(stringr::str_c, sep=", "),
                               is.na(subareas_sample) | is.na(subareas_catch) ~ coalesce(subareas_sample, subareas_catch))) %>% 
   select(-c(subareas_catch, subareas_sample)) %>%
-  #complete(YEAR, MONTH, RESOLVED_AGE, fill=list(n=0)) %>%
-  #filter(!is.na(RESOLVED_AGE)) %>% 
   group_by(YEAR, MONTH) %>%
-  #fill(c(monthly_catch_estimate, subareas_catch), .direction="updown") %>%
   mutate(MONTH = factor(MONTH, levels=month.name)) %>%
   arrange(YEAR, MONTH, RESOLVED_AGE) %>% 
   ungroup() %>%
@@ -256,13 +221,15 @@ NITmap01 <- left_join(NITmap %>%
                         mutate(across(everything(), as.character)),
                       
                       NITrecCatchbyAge_pooled %>% 
+                        # Summarize the core data to join into the NITmap file 
                         group_by(YEAR, temporal_pool_it2, RESOLVED_AGE, MONTH) %>% 
                         summarize(monthly_catch_estimate = unique(monthly_catch_estimate),
                                   original_n = unique(month_sample_size),
                                   n = unique(pool_n),
                                   propn = unique(pool_propn),
                                   subareas = unique(subareas)
-                                  ) %>% 
+                                  ) %>%
+                        # Pivot wider for formatting:
                         pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn)) %>% 
                         arrange(YEAR) %>%
                         # If the year of interest is present in the data series, then retain that year only; otherwise, select last year's data:
@@ -279,6 +246,7 @@ NITmap01 <- left_join(NITmap %>%
                         
                       by=c("TermRun_sector01", "TermRun_sector02", "TermRun_temp_strata")) %>%
   mutate(across(everything(), as.character)) %>%
+  # The following coalesces replaces NA values in the original NITmap file with the values calculated in the scrips above:
   mutate(Enumeration = coalesce(Enumeration.x, Enumeration.y),
          TermRun_AGEStemp = coalesce(TermRun_AGEStemp.x, TermRun_AGEStemp.y),
          TermRun_AGESspat = coalesce(TermRun_AGESspat.x, TermRun_AGESspat.y),

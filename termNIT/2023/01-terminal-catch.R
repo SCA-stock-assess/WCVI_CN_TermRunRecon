@@ -246,51 +246,6 @@ NITrecCatchbyAge_pooled <- NITrecCatchbyAge %>%
 
 
 
-
-
-
-tt<-NITrecCatchbyAge_pooled %>% 
-  mutate(MONTH = factor(MONTH, levels=month.name)) %>%
-  arrange(YEAR, MONTH, RESOLVED_AGE) %>%
-  # # Roll up sample sizes etc for each age/month within the year-pooling categories: 
-  # group_by(YEAR, temporal_pool_it2, RESOLVED_AGE, MONTH) %>% 
-  # summarize(n_samples=sum(n, na.rm=T), monthly_catch_estimate=unique(monthly_catch_estimate),  
-  #           month_sample_size=unique(month_sample_size), subareas=unique(subareas)
-  #           ) %>% 
-
-  
-  # Then roll it up further by calculating the # of age samples per year/pooling category (i.e., pooled numerator):
-  #group_by(YEAR, temporal_pool_it2, RESOLVED_AGE) %>% 
-  #summarize(n = sum(n_samples, na.rm=T), MONTH=unique(MONTH)) %>%
-  # Roll up further to calculate the total sample size for each year/pool category (i.e., pooled denominator), and then calculate final rolled-up age comp: 
-  # group_by(YEAR, temporal_pool_it2) %>%
-  # mutate(pool_sample_size2 = sum(unique(n), na.rm=T),
-  #        propn = case_when(pool_sample_size2==0 ~ 0,
-  #                          TRUE ~ n/pool_sample_size2)) %>% 
-
-  # Sort by age so that when pivoted wide-form, the columns are in order of age smallest-largest left-right:
-  arrange(RESOLVED_AGE) %>%
-  # Pivot wide-form: 
-  pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>%
-  
-  
-  distinct()
-  select(-c(contains("_NA"))) %>% 
-  arrange(YEAR) %>%
-  # If the year of interest is present in the data series, then retain that year only; otherwise, select last year's data:
-  filter(if_else(YEAR%in%NITmap$TermRun_Year, TRUE,  YEAR==(YEAR-1))) %>%
-  # Rename/create columns to assist with joining
-  mutate(TermRun_sector01 = "Recreational",
-         TermRun_sector02 = "Area 21 Terminal") %>% 
-  rename(Enumeration = monthly_catch_estimate,
-         TermRun_AGEStemp = temporal_pool_it2,
-         TermRun_temp_strata = MONTH,
-         TermRun_AGESspat = subareas,
-         TermRun_AGES_year = YEAR) %>% 
-  mutate(across(everything(), as.character))
-
-
-
 ########################################################################################################################################################
 
 #                                                                        JOIN + Export

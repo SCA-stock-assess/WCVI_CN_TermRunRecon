@@ -293,7 +293,7 @@ NITmap01 <- left_join(NITmap %>%
 
 
 # ============================== EXPORT ==============================
-# To github repo ---------------------------
+# Final mapped file to github repo ---------------------------
 writexl::write_xlsx(NITmap01, 
                     path=paste0(here::here("termNIT"), "/", analysis_year, 
                                 "/R_OUT - TERMNIT_mapping_",
@@ -302,5 +302,12 @@ writexl::write_xlsx(NITmap01,
                                 ".xlsx"))
 
 
+# Detailed pooled data to Supplementary folder ---------------------------
+writexl::write_xlsx(NITrecCatchbyAge_pooled, 
+                    path=paste0(here::here("termNIT"), "/", analysis_year, "/", "supplementary",
+                                "/R_OUT - Recreational fishery age sample pooling details ",
+                                analysis_year,
+                                "-output_from_01",
+                                ".xlsx"))
 
 

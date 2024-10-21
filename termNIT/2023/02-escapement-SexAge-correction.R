@@ -3,11 +3,12 @@
 # aug 2024
 
 
-# SET UP 
+# ============================= SET UP  ============================
+# Load high-use packages -------------------------------
 library(tidyverse)
 
 
-# Helpers
+# Helpers -------------------------------
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
                            fecundity = c(0,3000,3500,4000,4000),
@@ -21,10 +22,11 @@ analysis_year <- 2023
 # ============================= LOAD DATA =============================
 
 # Read mapping file -------------------------------
-NITmap <- readxl::read_excel(path=here::here("termNIT", "2023", list.files(path=here::here("termNIT", "2023"),
-                                                                           pattern="^TERMNIT_mapping*")),
-                             skip=1,
-                             sheet="termNIT_map")
+NITmap01 <- readxl::read_excel(path=here::here("termNIT", "2023", list.files(path=here::here("termNIT", "2023"),
+                                                                             pattern="^R_OUT - TERMNIT_mapping_[0-9]{4}-output_from_01\\.xlsx$",
+                                                                             full.names = F)),
+                               skip=1,
+                               sheet="Sheet1")
 
 
 

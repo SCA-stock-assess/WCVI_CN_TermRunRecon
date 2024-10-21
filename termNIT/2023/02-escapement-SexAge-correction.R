@@ -7,7 +7,6 @@
 # Load high-use packages -------------------------------
 library(tidyverse)
 
-
 # Helpers -------------------------------
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),

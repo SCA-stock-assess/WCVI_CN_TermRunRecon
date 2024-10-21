@@ -25,7 +25,6 @@ analysis_year <- 2023
 NITmap01 <- readxl::read_excel(path=here::here("termNIT", "2023", list.files(path=here::here("termNIT", "2023"),
                                                                              pattern="^R_OUT - TERMNIT_mapping_[0-9]{4}-output_from_01\\.xlsx$",
                                                                              full.names = F)),
-                               skip=1,
                                sheet="Sheet1")
 
 
@@ -52,7 +51,7 @@ sexAgeCorrection <- full_join(
   # ---- Age proportions from SAMPLE (close to 50:50): 
   sexAgeCorrection_brokenOut <- full_join(
     NITepro %>% 
-      filter(`(R) RETURN YEAR` %in% NITmap$TermRun_Year &     ## change this line if you want to do a multi-year average (would need to add extra code for this)
+      filter(`(R) RETURN YEAR` %in% NITmap01$TermRun_Year &     ## change this line if you want to do a multi-year average (would need to add extra code for this)
                grepl("Nitinat R Fall Chinook", Spawning.Stock) & 
                `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
       group_by(`(R) RETURN YEAR`, Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
@@ -83,22 +82,22 @@ sexAgeCorrection <- full_join(
   group_by(Maturity.Class) %>%
   fill(c(TermRun_AGES_year, n_sample), .direction="updown") %>% 
   # (Import escapement estimate and observed sex ratio from mapping file to do the rest of the math): 
-  mutate(escapement_estimate = NITmap[NITmap$TermRun_sector01=="Escapement - mainstem" & NITmap$TermRun_sex_strata=="Total (incl Jacks)",]$Enumeration,
-         true_sex_ratio = case_when(Maturity.Class=="Male" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
-                                                                      NITmap$TermRun_sex_strata=="Male",]$Enumeration,
-                                    Maturity.Class=="Female" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
-                                                                        NITmap$TermRun_sex_strata=="Female",]$Enumeration,
-                                    Maturity.Class=="Jack" ~ NITmap[NITmap$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
-                                                                      NITmap$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
+  mutate(escapement_estimate = NITmap01[NITmap01$TermRun_sector01=="Escapement - mainstem" & NITmap01$TermRun_sex_strata=="Total (incl Jacks)",]$Enumeration,
+         true_sex_ratio = case_when(Maturity.Class=="Male" ~ NITmap01[NITmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                      NITmap01$TermRun_sex_strata=="Male",]$Enumeration,
+                                    Maturity.Class=="Female" ~ NITmap01[NITmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                        NITmap01$TermRun_sex_strata=="Female",]$Enumeration,
+                                    Maturity.Class=="Jack" ~ NITmap01[NITmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                      NITmap01$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
   # ---- Number by age and sex (CORRECTED): 
-  mutate(n_sex_CORR = escapement_estimate*true_sex_ratio,
+  mutate(n_sex_CORR = as.numeric(escapement_estimate)*as.numeric(true_sex_ratio),
          n_sexAge_CORR = n_sex_CORR*propn_age_sample_jackCORR) %>%  
   group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
   # ---- (new) Proportion by age and sex (CORRECTED):
-  mutate(propn_sexAge_CORR = n_sexAge_CORR/unique(escapement_estimate)) %>%
+  mutate(propn_sexAge_CORR = n_sexAge_CORR/unique(as.numeric(escapement_estimate))) %>%
   full_join(.,
             NITepro %>%
-              filter(`(R) RETURN YEAR` %in% NITmap$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
+              filter(`(R) RETURN YEAR` %in% NITmap01$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
               group_by(`(R) RETURN YEAR`, `(R) RESOLVED TOTAL AGE`) %>%
               summarize(n_age = n()) %>%
               mutate(propn_age_sample = n_age/sum(n_age),
@@ -127,7 +126,7 @@ sexAgeCorrection_brokenOut %>%
             n_sexAge_CORR = sum(n_sexAge_CORR)) %>%
   group_by(Maturity.Class) %>% 
   mutate(n_sex_CORR = sum(n_sexAge_CORR),
-         propn_sexAge_CORR = n_sexAge_CORR/unique(escapement_estimate)) %>%
+         propn_sexAge_CORR = n_sexAge_CORR/unique(as.numeric(escapement_estimate))) %>%
   group_by(`(R) RESOLVED TOTAL AGE`) %>% 
   mutate(propn_sexAge_CORR = case_when(Maturity.Class=="Total" ~ sum(propn_sexAge_CORR/1,na.rm=T),
                                               TRUE ~ propn_sexAge_CORR),
@@ -180,11 +179,18 @@ writexl::write_xlsx(sexAgeCorrection,
 
 
 # ============================== JOIN simplified output to mapping file ==============================
-NITmap02 <- left_join(NITmap,
+NITmap02 <- left_join(NITmap01,
                       sexAgeCorrection %>% 
                         select(TermRun_AGES_year, Maturity.Class, `(R) RESOLVED TOTAL AGE`, propn_sexAge_CORR:TermRun_AGESsex) %>% 
                         pivot_wider(names_from=`(R) RESOLVED TOTAL AGE`, names_prefix="propn_age_", values_from=propn_sexAge_CORR),
-                      by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year"))
+                      by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year")) %>%
+  mutate(across(everything(), as.character)) %>%
+  mutate(propn_age_2 = coalesce(propn_age_2.x, propn_age_2.y),
+         propn_age_3 = coalesce(propn_age_3.x, propn_age_3.y),
+         propn_age_4 = coalesce(propn_age_4.x, propn_age_4.y),
+         propn_age_5 = coalesce(propn_age_5.x, propn_age_5.y),
+         propn_age_6 = coalesce(propn_age_6.x, propn_age_6.y),
+         .keep="unused") 
 
 
 # ============================== EXPORT ==============================

@@ -154,7 +154,7 @@ remove(sexAgeCorrection_brokenOut)
 # ============================== EXPORT for record ==============================
 # To github repo ---------------------------
 writexl::write_xlsx(sexAgeCorrection, 
-                    path=paste0(here::here("outputs"), 
+                    path=paste0(here::here("termNIT", analysis_year, "supplementary"), 
                                 "/R_OUT - Nitinat sex correction ",
                                 max(sexAgeCorrection$TermRun_AGES_year),
                                 ".xlsx"))
@@ -162,12 +162,12 @@ writexl::write_xlsx(sexAgeCorrection,
 
 
 # To DFO Network drive ---------------------------
-writexl::write_xlsx(sexAgeCorrection, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/TERMNIT/Nit",
-                                max(sexAgeCorrection$TermRun_AGES_year),
-                                "/R_OUT - Nitinat sex correction ",
-                                max(sexAgeCorrection$TermRun_AGES_year),
-                                ".xlsx"))
+# writexl::write_xlsx(sexAgeCorrection, 
+#                     path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/TERMNIT/Nit",
+#                                 max(sexAgeCorrection$TermRun_AGES_year),
+#                                 "/R_OUT - Nitinat sex correction ",
+#                                 max(sexAgeCorrection$TermRun_AGES_year),
+#                                 ".xlsx"))
 
 
 

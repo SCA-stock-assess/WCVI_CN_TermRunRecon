@@ -33,8 +33,8 @@ SCrecCatch <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/Salmon$/FMC
 
 
 # WCVI rec catch biodata -------------------------------
-SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R/",
-                                             list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R/",
+SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R/",
+                                             list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R/",
                                                         "^R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS [0-9]{4}-[0-9]{4}.xlsx$")),
                                  sheet="WCVI CN CREST Biodata CODED")
 
@@ -230,8 +230,9 @@ NITmap01 <- left_join(NITmap %>%
                                   subareas = unique(subareas)
                                   ) %>%
                         # Pivot wider for formatting:
-                        pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn)) %>% 
+                        pivot_wider(names_from = RESOLVED_AGE, values_from = c(n, propn), names_prefix = "age_") %>% 
                         arrange(YEAR) %>%
+                        select(-c(contains("_NA"))) %>%
                         # If the year of interest is present in the data series, then retain that year only; otherwise, select last year's data:
                         filter(if_else(YEAR%in%NITmap$TermRun_Year, TRUE,  YEAR==(YEAR-1))) %>%
                         # Rename/create columns to assist with joining

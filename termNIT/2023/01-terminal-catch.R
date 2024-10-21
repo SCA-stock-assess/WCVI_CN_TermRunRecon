@@ -274,7 +274,7 @@ writexl::write_xlsx(NITmap01,
 # Detailed pooled data to Supplementary folder ---------------------------
 writexl::write_xlsx(NITrecCatchbyAge_pooled, 
                     path=paste0(here::here("termNIT"), "/", analysis_year, "/", "supplementary",
-                                "/R_OUT - Recreational fishery age sample pooling details ",
+                                "/R_OUT - Recreational fishery age sample pooling details (Terminal Nitinat areas) ",
                                 analysis_year,
                                 "-output_from_01",
                                 ".xlsx"))

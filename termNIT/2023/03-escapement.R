@@ -3,11 +3,11 @@
 # aug 2024
 
 
-# SET UP 
+# ============================= SET UP  ============================
+# Load high-use packages -------------------------------
 library(tidyverse)
 
-
-# Helpers
+# Helpers -------------------------------
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
                            fecundity = c(0,3000,3500,4000,4000),
@@ -80,6 +80,7 @@ NIT_broodstock_ages <- full_join(NITepro %>%
 NITmap03 <- left_join(NITmap02,
                       NIT_broodstock_ages,
                       by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year")) %>%
+  mutate(across(everything(), as.character)) %>%
   mutate(Maturity.Class = coalesce(Maturity.Class.x, Maturity.Class.y),
          propn_age_2 = coalesce(propn_age_2.x, propn_age_2.y),
          propn_age_3 = coalesce(propn_age_3.x, propn_age_3.y),

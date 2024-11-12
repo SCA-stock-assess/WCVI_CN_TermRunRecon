@@ -1,4 +1,4 @@
-# termNIT 
+# termREN
 # 03-escapement
 # aug 2024
 
@@ -11,7 +11,7 @@ library(tidyverse)
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
                            fecundity = c(0,3000,3500,4000,4000),
-                           Maturity.Class = "Female")
+                           Sex = "Female")
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
 analysis_year <- 2023
@@ -21,19 +21,23 @@ analysis_year <- 2023
 # ============================= LOAD DATA =============================
 
 # Read mapping file -------------------------------
-NITmap02 <- readxl::read_excel(path=paste0(here::here("termNIT"), "/", analysis_year, "/", 
-                                           list.files(path=paste0(here::here("termNIT"), "/", analysis_year),
-                                                                  pattern="^R_OUT - TERMNIT_mapping_[0-9]{4}-output_from_02\\.xlsx$",
+RENmap02 <- readxl::read_excel(path=paste0(here::here("termREN"), "/", analysis_year, "/", 
+                                           list.files(path=paste0(here::here("termREN"), "/", analysis_year),
+                                                                  pattern="^R_OUT - TERMREN_mapping_[0-9]{4}-output_from_02\\.xlsx$",
                                                       full.names=F)),   
                              sheet="Sheet1")
 
 
 
-# Read EPRO data -------------------------------
-NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R/", 
-                                          list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
-                                                     pattern="^R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS*")),
-                              sheet="AllFacilities w RESULTS")
+# Read Hatchery data joined to results -------------------------------
+RENhatch <- readxl::read_excel(path=here::here("outputs", list.files(pat=here::here("outputs"),
+                                                                     pattern="^R_OUT - WCVI_Escapement-FSC_BioData_\\d{4}-\\d{4}_WithResults_\\d{4}-\\d{2}-\\d{2}\\.xlsx$",
+                                                                     full.names=F)),
+                               sheet = "Esc biodata w RESULTS") %>%
+  mutate(Sex = case_match(Sex, 
+                          "M" ~ "Male",
+                          "F" ~ "Female",
+                          "J" ~ "Jack"))
 
 
 

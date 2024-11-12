@@ -80,10 +80,10 @@ sexAgeCorrection <- full_join(
       rename(TermRun_AGES_year = `(R) SAMPLE YEAR`),
     full_age_range) %>% 
     complete(Sex, `(R) RESOLVED TOTAL AGE`, fill=list(`(R) RESOLVED TOTAL AGE`=0), explicit=F) %>%
-    filter(!is.na(Sex)) %>%
-    fill(TermRun_AGES_year, .direction="updown") %>%
-    group_by(Sex) %>% 
-    fill(c(n_sample, n_sample_jackCORR), .direction="updown") %>%
+    filter(!is.na(Sex)) %>%  ##add to termNIit
+    fill(TermRun_AGES_year, .direction="updown") %>%  ##add to termNIit
+    group_by(Sex) %>%   ##add to termNIit
+    fill(c(n_sample, n_sample_jackCORR), .direction="updown") %>%  ##add to termNIit
     mutate(across(c(n_age, propn_age_sample, n_age_jackCORR, propn_age_sample_jackCORR), ~case_when(is.na(.)~0, TRUE~.))) %>%
     group_by(Sex) %>%
     fill(c(TermRun_AGES_year, n_sample), .direction="updown") %>% 

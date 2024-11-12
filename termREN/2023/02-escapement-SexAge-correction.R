@@ -11,7 +11,7 @@ library(tidyverse)
 full_age_range <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6))
 fecundity_at_age <- tibble(`(R) RESOLVED TOTAL AGE` = c(2:6),
                            fecundity = c(0,3000,3500,4000,4000),
-                           Maturity.Class = "Female")
+                           Sex = "Female")
 "%notin%" <- Negate("%in%")
 options(scipen=9999)
 analysis_year <- 2023
@@ -175,7 +175,7 @@ writexl::write_xlsx(sexAgeCorrection,
                     path=paste0(here::here("termREN", analysis_year, "supplementary"), 
                                 "/R_OUT - Renfrew sex correction ",
                                 max(sexAgeCorrection$TermRun_AGES_year),
-                                ".xlsx"))
+                                "-output_from_02.xlsx"))
 
 
 

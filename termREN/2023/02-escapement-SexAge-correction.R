@@ -81,12 +81,10 @@ sexAgeCorrection <- full_join(
     full_age_range) %>% 
     complete(Sex, `(R) RESOLVED TOTAL AGE`, fill=list(`(R) RESOLVED TOTAL AGE`=0), explicit=F) %>%
     filter(!is.na(Sex)) %>%  ##add to termNIit
-    fill(TermRun_AGES_year, .direction="updown") %>%  ##add to termNIit
     group_by(Sex) %>%   ##add to termNIit
-    fill(c(n_sample, n_sample_jackCORR), .direction="updown") %>%  ##add to termNIit
     mutate(across(c(n_age, propn_age_sample, n_age_jackCORR, propn_age_sample_jackCORR), ~case_when(is.na(.)~0, TRUE~.))) %>%
     group_by(Sex) %>%
-    fill(c(TermRun_AGES_year, n_sample), .direction="updown") %>% 
+    fill(c(TermRun_AGES_year, n_sample, n_sample_jackCORR), .direction="updown") %>% 
     # (Import escapement estimate and observed sex ratio from mapping file to do the rest of the math): 
     mutate(escapement_estimate = RENmap01[RENmap01$TermRun_sector01=="Escapement - mainstem" & RENmap01$TermRun_sex_strata=="Total (incl Jacks)",]$Enumeration,
            true_sex_ratio = case_when(Sex=="Male" ~ RENmap01[RENmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 

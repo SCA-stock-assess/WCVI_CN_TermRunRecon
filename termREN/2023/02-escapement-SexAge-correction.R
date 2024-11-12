@@ -21,19 +21,22 @@ analysis_year <- 2023
 # ============================= LOAD DATA =============================
 
 # Read mapping file -------------------------------
-NITmap01 <- readxl::read_excel(path=here::here("termNIT", "2023", list.files(path=here::here("termNIT", "2023"),
-                                                                             pattern="^R_OUT - TERMNIT_mapping_[0-9]{4}-output_from_01\\.xlsx$",
+RENmap01 <- readxl::read_excel(path=here::here("termREN", "2023", list.files(path=here::here("termREN", "2023"),
+                                                                             pattern="^R_OUT - TERMREN_mapping_[0-9]{4}-output_from_01\\.xlsx$",
                                                                              full.names = F)),
                                sheet="Sheet1")
 
 
 
-# Read EPRO data -------------------------------
-NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R/", 
-                                          list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
-                                                     pattern="^R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS*")),
-                              sheet="AllFacilities w RESULTS")
-
+# Read Hatchery data joined to results -------------------------------
+RENhatch <- readxl::read_excel(path=here::here("outputs", list.files(pat=here::here("outputs"),
+                                                                     pattern="^R_OUT - WCVI_Escapement-FSC_BioData_\\d{4}-\\d{4}_WithResults_\\d{4}-\\d{2}-\\d{2}\\.xlsx$",
+                                                                     full.names=F)),
+                               sheet = "Esc biodata w RESULTS") %>%
+  mutate(Sex = case_match(Sex, 
+                          "M" ~ "Male",
+                          "F" ~ "Female",
+                          "J" ~ "Jack"))
 
 
 ############################################################################################################################################################
@@ -49,68 +52,73 @@ NITepro <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Sta
 sexAgeCorrection <- full_join(
   # ---- Age proportions from SAMPLE (close to 50:50): 
   sexAgeCorrection_brokenOut <- full_join(
-    NITepro %>% 
-      filter(`(R) RETURN YEAR` %in% NITmap01$TermRun_Year &     ## change this line if you want to do a multi-year average (would need to add extra code for this)
-               grepl("Nitinat R Fall Chinook", Spawning.Stock) & 
+    RENhatch %>% 
+      filter(`(R) SAMPLE YEAR` %in% RENmap01$TermRun_Year &     ## change this line if you want to do a multi-year average (would need to add extra code for this)
+               grepl("San Juan", `Fishery / River`) & 
                `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
-      group_by(`(R) RETURN YEAR`, Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
+      group_by(`(R) SAMPLE YEAR`, Sex, `(R) RESOLVED TOTAL AGE`) %>% 
       summarize(n_age=n()) %>% 
-      group_by(Maturity.Class) %>% 
+      group_by(Sex) %>% 
       mutate(n_sample=sum(n_age),
              propn_age_sample = n_age/n_sample) %>% 
       ungroup() %>% 
       group_by(`(R) RESOLVED TOTAL AGE`) %>% 
       ## (new) JACK CORRECTION NUMERICAL: 
-      mutate(n_age_jackCORR = case_when(Maturity.Class=="Female" ~ n_age,
-                                        Maturity.Class=="Jack" & `(R) RESOLVED TOTAL AGE`!=2 ~ n_age-n_age,
-                                        Maturity.Class=="Male" & `(R) RESOLVED TOTAL AGE`==2 ~ n_age-n_age)) %>% 
-      group_by(`(R) RESOLVED TOTAL AGE`, Maturity.Class%in%c("Male", "Jack")) %>% 
+      mutate(n_age_jackCORR = case_when(Sex=="Female" ~ n_age,
+                                        Sex=="Jack" & `(R) RESOLVED TOTAL AGE`!=2 ~ n_age-n_age,
+                                        Sex=="Male" & `(R) RESOLVED TOTAL AGE`==2 ~ n_age-n_age)) %>% 
+      group_by(`(R) RESOLVED TOTAL AGE`, Sex%in%c("Male", "Jack")) %>% 
       mutate(n_age_jackCORR = case_when(is.na(n_age_jackCORR) ~ sum(n_age),
                                         TRUE~n_age_jackCORR)) %>%
       ungroup() %>%
-      select(-c(`Maturity.Class %in% c("Male", "Jack")`)) %>% 
-      group_by(Maturity.Class) %>% 
+      select(-c(`Sex %in% c("Male", "Jack")`)) %>% 
+      group_by(Sex) %>% 
       # ---- CORRECTED age proportions (for jack ID issues): 
       mutate(n_sample_jackCORR = sum(n_age_jackCORR),
              propn_age_sample_jackCORR = n_age_jackCORR/unique(n_sample_jackCORR)) %>% 
       ungroup() %>%
-      rename(TermRun_AGES_year = `(R) RETURN YEAR`),
+      rename(TermRun_AGES_year = `(R) SAMPLE YEAR`),
     full_age_range) %>% 
-  complete(Maturity.Class, `(R) RESOLVED TOTAL AGE`, fill=list(`(R) RESOLVED TOTAL AGE`=0), explicit=F) %>%
-  mutate(across(c(n_age, propn_age_sample, n_age_jackCORR, propn_age_sample_jackCORR), ~case_when(is.na(.)~0, TRUE~.))) %>%
-  group_by(Maturity.Class) %>%
-  fill(c(TermRun_AGES_year, n_sample), .direction="updown") %>% 
-  # (Import escapement estimate and observed sex ratio from mapping file to do the rest of the math): 
-  mutate(escapement_estimate = NITmap01[NITmap01$TermRun_sector01=="Escapement - mainstem" & NITmap01$TermRun_sex_strata=="Total (incl Jacks)",]$Enumeration,
-         true_sex_ratio = case_when(Maturity.Class=="Male" ~ NITmap01[NITmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
-                                                                      NITmap01$TermRun_sex_strata=="Male",]$Enumeration,
-                                    Maturity.Class=="Female" ~ NITmap01[NITmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
-                                                                        NITmap01$TermRun_sex_strata=="Female",]$Enumeration,
-                                    Maturity.Class=="Jack" ~ NITmap01[NITmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
-                                                                      NITmap01$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
-  # ---- Number by age and sex (CORRECTED): 
-  mutate(n_sex_CORR = as.numeric(escapement_estimate)*as.numeric(true_sex_ratio),
-         n_sexAge_CORR = n_sex_CORR*propn_age_sample_jackCORR) %>%  
-  group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
-  # ---- (new) Proportion by age and sex (CORRECTED):
-  mutate(propn_sexAge_CORR = n_sexAge_CORR/unique(as.numeric(escapement_estimate))) %>%
-  full_join(.,
-            NITepro %>%
-              filter(`(R) RETURN YEAR` %in% NITmap01$TermRun_Year & grepl("Nitinat R Fall Chinook", Spawning.Stock) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
-              group_by(`(R) RETURN YEAR`, `(R) RESOLVED TOTAL AGE`) %>%
-              summarize(n_age = n()) %>%
-              mutate(propn_age_sample = n_age/sum(n_age),
-                     Maturity.Class="Total",
-                     n_sample=sum(n_age)) %>%
-              rename(TermRun_AGES_year = `(R) RETURN YEAR`)) %>%
-  select(-c(n_age)) %>%
-  group_by(`(R) RESOLVED TOTAL AGE`) %>% 
-  mutate(propn_sexAge_CORR = case_when(Maturity.Class=="Total" ~ sum(propn_sexAge_CORR,na.rm=T)/1,
-                                                TRUE ~ propn_sexAge_CORR),
-         TermRun_AGEStemp = "Broodstock corrected",
-         TermRun_AGESspat = "Broodstock corrected",
-         TermRun_AGESsex = paste0("Broodstock corrected - ", Maturity.Class)) %>%
-  fill(escapement_estimate, .direction="down") 
+    complete(Sex, `(R) RESOLVED TOTAL AGE`, fill=list(`(R) RESOLVED TOTAL AGE`=0), explicit=F) %>%
+    filter(!is.na(Sex)) %>%
+    fill(TermRun_AGES_year, .direction="updown") %>%
+    group_by(Sex) %>% 
+    fill(c(n_sample, n_sample_jackCORR), .direction="updown") %>%
+    mutate(across(c(n_age, propn_age_sample, n_age_jackCORR, propn_age_sample_jackCORR), ~case_when(is.na(.)~0, TRUE~.))) %>%
+    group_by(Sex) %>%
+    fill(c(TermRun_AGES_year, n_sample), .direction="updown") %>% 
+    # (Import escapement estimate and observed sex ratio from mapping file to do the rest of the math): 
+    mutate(escapement_estimate = RENmap01[RENmap01$TermRun_sector01=="Escapement - mainstem" & RENmap01$TermRun_sex_strata=="Total (incl Jacks)",]$Enumeration,
+           true_sex_ratio = case_when(Sex=="Male" ~ RENmap01[RENmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                               RENmap01$TermRun_sex_strata=="Male",]$Enumeration,
+                                      Sex=="Female" ~ RENmap01[RENmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                                 RENmap01$TermRun_sex_strata=="Female",]$Enumeration,
+                                      Sex=="Jack" ~ RENmap01[RENmap01$TermRun_sector02=="Actual sex ratio (from hatchery staff)" & 
+                                                               RENmap01$TermRun_sex_strata=="Jack",]$Enumeration)) %>%
+    # ---- Number by age and sex (CORRECTED): 
+    mutate(n_sex_CORR = as.numeric(escapement_estimate)*as.numeric(true_sex_ratio),
+           n_sexAge_CORR = n_sex_CORR*propn_age_sample_jackCORR) %>%  
+    group_by(Sex, `(R) RESOLVED TOTAL AGE`) %>% 
+    # ---- (new) Proportion by age and sex (CORRECTED):
+    mutate(propn_sexAge_CORR = n_sexAge_CORR/unique(as.numeric(escapement_estimate))) %>%
+    full_join(.,
+              RENhatch %>%
+                filter(`(R) SAMPLE YEAR` %in% RENmap01$TermRun_Year & grepl("San Juan", `Fishery / River`) & `(R) RESOLVED TOTAL AGE`%in%c(2:6)) %>%
+                group_by(`(R) SAMPLE YEAR`, `(R) RESOLVED TOTAL AGE`) %>%
+                summarize(n_age = n()) %>%
+                mutate(propn_age_sample = n_age/sum(n_age),
+                       Sex="Total",
+                       n_sample=sum(n_age)) %>%
+                rename(TermRun_AGES_year = `(R) SAMPLE YEAR`)) %>%
+    select(-c(n_age)) %>%
+    group_by(`(R) RESOLVED TOTAL AGE`) %>% 
+    mutate(propn_sexAge_CORR = case_when(Sex=="Total" ~ sum(propn_sexAge_CORR,na.rm=T)/1,
+                                         TRUE ~ propn_sexAge_CORR),
+           TermRun_AGEStemp = "Broodstock corrected",
+           TermRun_AGESspat = "Broodstock corrected",
+           TermRun_AGESsex = paste0("Broodstock corrected - ", Sex)) %>%
+    fill(escapement_estimate, .direction="down") %>%
+    filter(!is.na(Sex))
   
   ,
 

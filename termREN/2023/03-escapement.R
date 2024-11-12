@@ -62,13 +62,14 @@ REN_broodstock_ages <- full_join(RENhatch %>%
   group_by(Sex) %>%
   mutate(propn = case_when(Sex %in% c("Male", "Female", "Jack") ~ n/sum(n,na.rm=T),
                            Sex%in%c("Unknown", "U") ~ 9999999999999999)) %>%
+  ungroup() %>%
   mutate(TermRun_AGEStemp = "Broodstock, morts, other",
          TermRun_AGESspat = "Broodstock, morts, other",
          TermRun_AGESsex = case_when(Sex %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Sex),
                                      Sex%in%c("Unknown", "U") ~ "Broodstock, morts, other - Total",
                                      ## ^^ If there were any "unknown" broodstock, this should be where they are accounted for (as "...Total") ^^
                                      TRUE ~ "FLAG"),
-         TermRun_AGES_year = max(RENhatch$`(R) SAMPLE YEAR`)) %>%
+         TermRun_AGES_year = unique(RENmap02$TermRun_Year)) %>%
   pivot_wider(names_from=`(R) RESOLVED TOTAL AGE`, values_from=c(n, propn), names_prefix="age_") %>%
   print()
   
@@ -81,11 +82,16 @@ REN_broodstock_ages <- full_join(RENhatch %>%
 
 # ============================== JOIN Broodstock ages to NITmapping file ==============================
 
-NITmap03 <- left_join(NITmap02,
-                      NIT_broodstock_ages,
+RENmap03 <- left_join(RENmap02,
+                      REN_broodstock_ages,
                       by=c("TermRun_AGEStemp", "TermRun_AGESspat", "TermRun_AGESsex", "TermRun_AGES_year")) %>%
   mutate(across(everything(), as.character)) %>%
-  mutate(Maturity.Class = coalesce(Maturity.Class.x, Maturity.Class.y),
+  mutate(Sex = coalesce(Sex.x, Sex.y),
+         n_age_2 = coalesce(n_age_2.x, n_age_2.y),
+         n_age_3 = coalesce(n_age_3.x, n_age_3.y),
+         n_age_4 = coalesce(n_age_4.x, n_age_4.y),
+         n_age_5 = coalesce(n_age_5.x, n_age_5.y),
+         n_age_6 = coalesce(n_age_6.x, n_age_6.y),
          propn_age_2 = coalesce(propn_age_2.x, propn_age_2.y),
          propn_age_3 = coalesce(propn_age_3.x, propn_age_3.y),
          propn_age_4 = coalesce(propn_age_4.x, propn_age_4.y),

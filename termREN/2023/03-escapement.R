@@ -69,7 +69,7 @@ REN_broodstock_ages <- full_join(RENhatch %>%
                                      Sex%in%c("Unknown", "U") ~ "Broodstock, morts, other - Total",
                                      ## ^^ If there were any "unknown" broodstock, this should be where they are accounted for (as "...Total") ^^
                                      TRUE ~ "FLAG"),
-         TermRun_AGES_year = unique(RENmap02$TermRun_Year)) %>%
+         TermRun_AGES_year = unique(RENmap02$TermRun_Year)) %>%   #add to nitinat?
   pivot_wider(names_from=`(R) RESOLVED TOTAL AGE`, values_from=c(n, propn), names_prefix="age_") %>%
   print()
   
@@ -102,9 +102,9 @@ RENmap03 <- left_join(RENmap02,
 
 # ============================== EXPORT ==============================
 # To github repo ---------------------------
-writexl::write_xlsx(NITmap03, 
-                    path=paste0(here::here("termNIT"), "/", analysis_year, 
-                                "/R_OUT - TERMNIT_mapping_",
+writexl::write_xlsx(RENmap03, 
+                    path=paste0(here::here("termREN"), "/", analysis_year, 
+                                "/R_OUT - TERMREN_mapping_",
                                 analysis_year,
                                 "-output_from_03",
                                 ".xlsx"))

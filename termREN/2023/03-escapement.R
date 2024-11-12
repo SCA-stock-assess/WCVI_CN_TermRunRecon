@@ -40,8 +40,6 @@ RENhatch <- readxl::read_excel(path=here::here("outputs", list.files(pat=here::h
                           "J" ~ "Jack"))
 
 
-
-
 ############################################################################################################################################################
 
 #                                                              CALCULATE BROODSTOCK AGES 
@@ -50,25 +48,27 @@ RENhatch <- readxl::read_excel(path=here::here("outputs", list.files(pat=here::h
 # 1. Broodstock age summary for return year of interest 
     # Return year of interest is assumed to be the year indicated in the termNIT mapping file
 
-NIT_broodstock_ages <- full_join(NITepro %>% 
-                              filter(`(R) RETURN YEAR` %in% NITmap02$TermRun_Year & 
-                                       grepl("Nitinat R Fall Chinook", Spawning.Stock) & 
+REN_broodstock_ages <- full_join(RENhatch %>% 
+                              filter(`(R) SAMPLE YEAR` %in% RENmap02$TermRun_Year & 
+                                       grepl("San Juan", `Fishery / River`) & 
                                        `(R) RESOLVED TOTAL AGE`%in%c(1:6)) %>% 
-                              group_by(Maturity.Class, `(R) RESOLVED TOTAL AGE`) %>% 
+                              group_by(Sex, `(R) RESOLVED TOTAL AGE`) %>% 
                               summarize(n=n()) %>%
                               ungroup(),
                             full_age_range) %>%
-  complete(Maturity.Class, `(R) RESOLVED TOTAL AGE`, fill=list(`(R) RESOLVED TOTAL AGE`=0), explicit=F) %>%
-  group_by(Maturity.Class) %>%
-  mutate(propn = case_when(Maturity.Class %in% c("Male", "Female", "Jack") ~ n/sum(n,na.rm=T),
-                           Maturity.Class=="Unsexed Adult" ~ 9999999999999999)) %>%
+  complete(Sex, `(R) RESOLVED TOTAL AGE`, fill=list(`(R) RESOLVED TOTAL AGE`=0), explicit=F) %>%
+  filter(!is.na(Sex)) %>%   #add to nitinat
+  mutate(across(n, ~case_when(is.na(.)~0, TRUE~.))) %>%
+  group_by(Sex) %>%
+  mutate(propn = case_when(Sex %in% c("Male", "Female", "Jack") ~ n/sum(n,na.rm=T),
+                           Sex%in%c("Unknown", "U") ~ 9999999999999999)) %>%
   mutate(TermRun_AGEStemp = "Broodstock, morts, other",
          TermRun_AGESspat = "Broodstock, morts, other",
-         TermRun_AGESsex = case_when(Maturity.Class %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Maturity.Class),
-                                     Maturity.Class=="Unsexed Adult" ~ "Broodstock, morts, other - Total",
+         TermRun_AGESsex = case_when(Sex %in% c("Male", "Female", "Jack") ~ paste0("Broodstock, morts, other - ", Sex),
+                                     Sex%in%c("Unknown", "U") ~ "Broodstock, morts, other - Total",
                                      ## ^^ If there were any "unknown" broodstock, this should be where they are accounted for (as "...Total") ^^
                                      TRUE ~ "FLAG"),
-         TermRun_AGES_year = max(NITepro$`(R) RETURN YEAR`)) %>%
+         TermRun_AGES_year = max(RENhatch$`(R) SAMPLE YEAR`)) %>%
   pivot_wider(names_from=`(R) RESOLVED TOTAL AGE`, values_from=c(n, propn), names_prefix="age_") %>%
   print()
   

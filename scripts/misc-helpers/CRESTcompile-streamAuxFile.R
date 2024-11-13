@@ -4,7 +4,7 @@
 
 
 # Load libraries ---------------------------
-library(saaWeb)   
+#library(saaWeb)   
 library(tidyverse)
 
 
@@ -19,7 +19,7 @@ library(tidyverse)
 # This is for applying the "area.origin" field so that we can group fish as being from "Other Area 23", "Other Area 25", etc.
 streamAreas <- #left_join(
   # Load stream by area from NuSEDS query - a little slow.
-  #pullNusedsData(here("scripts","json","nuseds_Chinook_stream-area.json"), password=NULL) %>%      # saaWeb bugged, manual load for now
+  #saaWeb::pullNusedsData(here("scripts","json","nuseds_Chinook_stream-area.json"), password=NULL) %>%      # saaWeb bugged, manual load for now
   readxl::read_excel(path=here::here("data", "NuSEDS_streamAuxFile.xlsx"),
             sheet="Data") %>%
   group_by(`Waterbody Name`) %>% 

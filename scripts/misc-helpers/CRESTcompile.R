@@ -327,7 +327,7 @@ R_OUT_CREST.CODED <- openxlsx::createWorkbook()
 
 # Add tabs to Workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "readme")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "WCVI CN CREST Biodata CODED")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "Biological_Data_With_GROUPED")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC Report")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto sample no result")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale sample no result")
@@ -345,7 +345,7 @@ openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Non-standard sex ID")
 
 # Add data to tabs ---------------------------
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=crestBio_grouped)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="Biological_Data_With_GROUPED", x=crestBio_grouped)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC Report", x=qc_summary)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto sample no result", x=qc_otoNoSample)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale sample no result", x=qc_scaleNoAge)

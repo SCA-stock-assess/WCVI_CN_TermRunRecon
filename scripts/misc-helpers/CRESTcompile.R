@@ -154,9 +154,12 @@ left_join(crestBio,
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
   
   # PROPOSED NEW GROUPINGS: Ignore all the rollups and just print the stock ID for level1, and roll up to watershed for level2 (not "NON-WCVI")
-  mutate(`(R) TERM GROUP01` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 < 0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (DNA did not resolve)"),
-                                    TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
+  mutate(`(R) TERM GROUP01` = case_when(is.na(RESOLVED_STOCK_ORIGIN) ~ paste0(`(R) Origin`, " Unknown"),
+                                        !is.na(RESOLVED_STOCK_ORIGIN) & RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 < 0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (DNA did not resolve)"),
+                                        TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
          `(R) TERM GROUP02` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ `(R) TERM GROUP01`,
+                                        RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & !is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
+                                        RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
                                         grepl("ECVI", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "ECVI",
                                         grepl("Bolshaya", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "Russian (uncertain)",
                                         grepl("Alaska", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "Alaska",
@@ -167,7 +170,9 @@ left_join(crestBio,
                                         is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Oregon", RESOLVED_STOCK_ORIGIN) ~ "Coastal Oregon",
                                         is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Puget|Hood", RESOLVED_STOCK_ORIGIN) ~ "Puget Sound",
                                         is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Western Vancouver Island", RESOLVED_STOCK_ORIGIN) ~ "SWVI",
-                                        TRUE ~ "FLAG")) %>%
+                                        TRUE ~ "FLAG"),
+         `(R) TERM GROUP03` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " WCVI"),
+                                        TRUE ~ paste0(`(R) Origin`, " NON-WCVI"))) %>%
   print()
 
 

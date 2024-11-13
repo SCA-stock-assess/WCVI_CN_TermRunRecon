@@ -30,15 +30,17 @@ library(saaWeb)    # for pullNusedsData in source() script to make stream aux fi
 
 # Read CREST files as large list ---------------------------
 # Load base files to compile
-crestBio.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="*WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS*.*xlsx", full.names=T), 
+crestBio.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
+                                 pattern="^\\d{4}_WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_.*\\.xlsx$", 
+                                 full.names=T), 
                       function(x) {
                         readxl::read_excel(x, sheet="WCVI_Chinook_Run_Rec", guess_max=20000)
                       })
 
 # Change filenames in the List:
-names(crestBio.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="*WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS*.*xlsx", full.names=F)
+names(crestBio.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
+                                 pattern="^\\d{4}_WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_.*\\.xlsx$", 
+                                 full.names=F)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
@@ -48,7 +50,7 @@ crestBio <- do.call("rbind", crestBio.LL) %>%
 
 
 # Clean up ---------------------------
-remove(crestBio.LL)
+#remove(crestBio.LL)
 
 
 
@@ -59,7 +61,8 @@ remove(crestBio.LL)
 # This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
 
 # Should load pullNusedsData function and streamAreas dataframe: 
-source(here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))
+source(here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
+# saves as streamAreas
 
 
 
@@ -106,7 +109,7 @@ left_join(crestBio,
       #2.2 If it is NOT from NWVI or SWVI, it gets "NON-WCVI"
       RESOLVED_STOCK_ROLLUP%notin%c("NWVI", "SWVI") ~ "NON-WCVI",
       #2.4 Special case: Change "Tofino Hatchery" to "Bedwell"
-      RESOLVED_STOCK_ORIGIN=="Tofino Hatchery" ~ "BEDWELL",
+      RESOLVED_STOCK_ORIGIN=="Tofino Hatchery" ~ "BEDWELL",   # hatchery bedwell? 
       #2.3 If it IS from NWVI or SWVI, this bit takes the stock ID from RESOLVED_STOCK_ORIGIN and removes 'creek' or 'river' so it just becomes uppercase BURMAN, CONUMA, etc.
       RESOLVED_STOCK_ROLLUP%in%c("NWVI", "SWVI") ~ toupper(gsub(paste0("\\b(",paste(stopwords, collapse="|"),")\\b"), "", RESOLVED_STOCK_ORIGIN))),
     
@@ -158,6 +161,9 @@ left_join(crestBio,
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
       #6.5 same as 4.5
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
+  
+  # PROPOSED NEW SIMPLICITY: Ignore all the rollups and just print the stock ID 
+  mutate(`(R) TERM NEW` = paste0(`(R) Origin`, RESOLVED_STOCK_ORIGIN, sep=" ")) %>%
   print()
 
 

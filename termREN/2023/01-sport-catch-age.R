@@ -59,7 +59,8 @@ RENrecCatchbyAge <- full_join(SCrecCatch %>%
                                 filter(SPECIES=="CHINOOK SALMON") %>%
                                 select(-c(SPECIES)),
                               SCrecBio %>% 
-                                filter(SPECIES=="124", DISPOSITION=="Kept", SUBAREA%in%c("20A", "20B", "20E"), SAMPLE_TYPE=="Sport", !is.na(RESOLVED_AGE)) %>% 
+                                filter(SPECIES=="124", SUBAREA%in%c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), SAMPLE_TYPE=="Sport", 
+                                       !is.na(RESOLVED_AGE), DISPOSITION=="Kept") %>% 
                                 arrange(SUBAREA) %>% 
                                 mutate(subareas_sample = paste0(unique(SUBAREA), collapse=", ")) %>%
                                 group_by(YEAR, MONTH, RESOLVED_AGE) %>% 

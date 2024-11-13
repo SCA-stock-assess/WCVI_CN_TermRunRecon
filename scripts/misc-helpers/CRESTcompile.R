@@ -61,7 +61,7 @@ crestBio <- do.call("rbind", crestBio.LL) %>%
 # This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
 
 # Should load pullNusedsData function and streamAreas dataframe: 
-source(here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
+source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
 # saves as streamAreas
 
 
@@ -70,7 +70,6 @@ source(here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))
 #############################################################################################################################################################
 
 # ==================== 3. CODE TERM RUN GROUPS ==================== 
-
 
 # Define helper variables ---------------------------
 
@@ -163,7 +162,8 @@ left_join(crestBio,
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
   
   # PROPOSED NEW SIMPLICITY: Ignore all the rollups and just print the stock ID 
-  mutate(`(R) TERM NEW` = paste0(`(R) Origin`, RESOLVED_STOCK_ORIGIN, sep=" ")) %>%
+  mutate(`(R) TERM NEW` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 < 0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (DNA did not resolve)"),
+                                    TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN))) %>%
   print()
 
 
@@ -358,7 +358,7 @@ openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_non
 
 # To github ---------------------------
 openxlsx::saveWorkbook(R_OUT_CREST.CODED,
-                      file=paste0(here("outputs"),
+                      file=paste0(here::here("outputs"),
                                   "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
                                   min(crestBio_grouped$YEAR),
                                   "-",
@@ -380,7 +380,16 @@ openxlsx::saveWorkbook(R_OUT_CREST.CODED,
                        returnValue=T)
 
 
-
+# To Desktop: 
+openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
+                       file=paste0("C:/Users/DAVIDSONKA/Desktop", 
+                                   "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
+                                   min(crestBio_grouped$YEAR),
+                                   "-",
+                                   max(crestBio_grouped$YEAR),
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
 
 # /END!

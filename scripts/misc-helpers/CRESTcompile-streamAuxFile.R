@@ -10,8 +10,8 @@ library(saaWeb)
 
 
 # Load NuSEDS query function ---------------------------
-source(here("scripts","functions","pullChinookNusedsData.R"))
-
+#source(here("scripts","functions","pullChinookNusedsData.R"))
+  # not working
 
 
 
@@ -19,7 +19,9 @@ source(here("scripts","functions","pullChinookNusedsData.R"))
 # This is for applying the "area.origin" field so that we can group fish as being from "Other Area 23", "Other Area 25", etc.
 streamAreas <- #left_join(
   # Load stream by area from NuSEDS query - a little slow.
-  pullNusedsData(here("scripts","json","nuseds_Chinook_stream-area.json"), password=NULL) %>% 
+  #pullNusedsData(here("scripts","json","nuseds_Chinook_stream-area.json"), password=NULL) %>%      # saaWeb bugged, manual load for now
+  readxl::read_excel(path=here::here("data", "NuSEDS_streamAuxFile.xlsx"),
+            sheet="Data") %>%
   group_by(`Waterbody Name`) %>% 
   summarize(Area=unique(Area)) %>% 
   mutate(Area = as.numeric(gsub('[A-z]+', '', Area)),                                                              # Remove the sub-area letter from Area name

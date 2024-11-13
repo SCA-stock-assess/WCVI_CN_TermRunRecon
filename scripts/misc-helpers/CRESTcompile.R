@@ -5,61 +5,50 @@
 
 
 
+## A note about this: as of NOv 2024 it has become apparent the WCVI CREST query is not appropriate anymore. Too many bugs not being maintained. From now on,
+##  use BDWR query.  b
 
 
-# Load packages ---------------------------
-library(here)
+# ============================= SET UP ============================= 
+# Load high-use packages ---------------------------
 library(tidyverse)
-library(readxl)
-library(writexl)
-library(saaWeb)    # for pullNusedsData in source() script to make stream aux file 
-
-
+#library(saaWeb)     
 
 # Helpers ---------------------------
 "%notin%" <- Negate("%in%")
+options(scipen=9999)
 
 
 
-
-#############################################################################################################################################################
-
-
-# ==================== 1. LOAD CREST CHINOOK BIODATA BASE FILES (2021-present data) ==================== 
-
+# ============================= LOAD DATA =============================
 
 # Read CREST files as large list ---------------------------
 # Load base files to compile
 crestBio.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
-                                 pattern="^\\d{4}_WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_.*\\.xlsx$", 
+                                 pattern="^\\d{4}_Biological_Data_With_Results_.*\\.xlsx$", 
                                  full.names=T), 
                       function(x) {
-                        readxl::read_excel(x, sheet="WCVI_Chinook_Run_Rec", guess_max=20000)
+                        readxl::read_excel(x, sheet="Biological_Data_With", guess_max=20000)
                       })
 
 # Change filenames in the List:
 names(crestBio.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
-                                 pattern="^\\d{4}_WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_.*\\.xlsx$", 
+                                 pattern="^\\d{4}_Biological_Data_With_Results_.*\\.xlsx$", 
                                  full.names=F)
 
 
-# Convert the Large List into a useable R dataframe ---------------------------
+# Convert the Large List into a useable R dataframe:
 crestBio <- do.call("rbind", crestBio.LL) %>%
   tibble::rownames_to_column(var="file_source") %>%
   print()
 
 
-# Clean up ---------------------------
+# Clean up:
 #remove(crestBio.LL)
 
 
-
-
-#############################################################################################################################################################
-
-# ==================== 2. LOAD STREAM AUX FILE ==================== 
+# Load Stream aux foile ---------------------------
 # This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
-
 # Should load pullNusedsData function and streamAreas dataframe: 
 source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
 # saves as streamAreas
@@ -69,22 +58,22 @@ source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))
 
 #############################################################################################################################################################
 
-# ==================== 3. CODE TERM RUN GROUPS ==================== 
+#                                                                     CODE TERM RUN GROUPS
 
-# Define helper variables ---------------------------
+# ============================= DEFINE HELPERS ============================= 
 
-# Focal streams in each area to highlight
+# Focal streams in each area to highlight ---------------------------
 focal_a22 <- c("CONUMA", "NITINAT", "ROBERTSON", "SAN JUAN")
 focal_a23 <- c("CONUMA", "NITIANT", "ROBERTSON")
 focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")
 
-# Used to remove the river/creek suffix later
+# Used to remove the river/creek suffix later ---------------------------
 stopwords <- c(" River", " Creek")
 
 
 
 
-# CODE TERM RUN GROUPS ---------------------------
+# ============================= CODE TERM RUN GROUPS =============================
 
 crestBio_grouped <- 
   # Join CREST biodata and streamAreas aux file ----
@@ -96,8 +85,11 @@ left_join(crestBio,
     `(R) Origin` = case_when(
       #1.1 If HATCHERY ORIGIN is a "Y", make it "Hatchery"
       HATCHERY_ORIGIN=="Y" ~ "Hatchery",
+      # If PBT_BROOD_YEAR is not 0 or blank, make it "Hatchery"
+      PBT_BROOD_YEAR!=0 & !is.na(PBT_BROOD_YEAR) ~ "Hatchery",
       #1.2 If it's not clipped and the thermal mark indicates "Not Marked", make it "Natural"
       ADIPOSE_FIN_CLIPPED=="N" & THERMALMARK=="Not Marked" ~ "Natural",
+      # ************* need to add factor for if it's within the PBT baseline and it's NOT a PBT hit == natural***************
       #1.3 If it's neither of these scenarios, make it "Unknown"
       TRUE ~ "Unknown"),
     
@@ -161,9 +153,21 @@ left_join(crestBio,
       #6.5 same as 4.5
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
   
-  # PROPOSED NEW SIMPLICITY: Ignore all the rollups and just print the stock ID 
-  mutate(`(R) TERM NEW` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 < 0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (DNA did not resolve)"),
-                                    TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN))) %>%
+  # PROPOSED NEW GROUPINGS: Ignore all the rollups and just print the stock ID for level1, and roll up to watershed for level2 (not "NON-WCVI")
+  mutate(`(R) TERM GROUP01` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 < 0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (DNA did not resolve)"),
+                                    TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
+         `(R) TERM GROUP02` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ `(R) TERM GROUP01`,
+                                        grepl("ECVI", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "ECVI",
+                                        grepl("Bolshaya", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "Russian (uncertain)",
+                                        grepl("Alaska", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "Alaska",
+                                        grepl("Homathko|Mainland Inlets", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "Mainland Inlets",
+                                        grepl("SALMON_RIVER_JNST", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "NEVI",
+                                        grepl("SERPENTINE", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ "S Mainland",
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Grays", RESOLVED_STOCK_ORIGIN) ~ "Coastal Washington",
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Oregon", RESOLVED_STOCK_ORIGIN) ~ "Coastal Oregon",
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Puget|Hood", RESOLVED_STOCK_ORIGIN) ~ "Puget Sound",
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Western Vancouver Island", RESOLVED_STOCK_ORIGIN) ~ "SWVI",
+                                        TRUE ~ "FLAG")) %>%
   print()
 
 

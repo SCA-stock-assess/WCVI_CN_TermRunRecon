@@ -95,10 +95,17 @@ a20recCompCS <- full_join(
 
 
 
-#  ========================= VISUALIZE: SAN JUAN =========================
+#  ========================= PLOTS: Area 20 =========================
 # To potentially pool multiple years together
 
 # Visualize stock comp - does it change BY YEAR? -------------------------------
+pdf(file = here::here("termREN", "2023", "figures", 
+                      paste0("Recreational fishery age and stock composition - within years ", 
+                             min(a20recCompCS$YEAR,na.rm=T), "-", max(a20recCompCS$YEAR,na.rm=T), 
+                             " (Terminal Renfrew areas).pdf")),   
+    width = 11, # The width of the plot in inches
+    height = 8.5) # The height of the plot in inches
+
 ggplot(data=full_join(
   SCrecBio %>%
     filter(AREA=="20", SAMPLE_TYPE=="Sport", SUBAREA %in% c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), !is.na(RESOLVED_AGE),
@@ -132,9 +139,17 @@ ggplot(data=full_join(
         legend.title = element_text(face="bold")) +
   facet_wrap(~YEAR) 
 
+dev.off()
 
 
 # Visualize stock comp - does it change BY AGE? -------------------------------
+pdf(file = here::here("termREN", "2023", "figures", 
+                      paste0("Recreational fishery age and stock composition - within age classes ", 
+                             min(a20recCompCS$YEAR,na.rm=T), "-", max(a20recCompCS$YEAR,na.rm=T), 
+                             " (Terminal Renfrew areas).pdf")),   
+    width = 11, # The width of the plot in inches
+    height = 8.5) # The height of the plot in inches
+
 ggplot(data=full_join(
   SCrecBio %>%
     filter(AREA=="20", SAMPLE_TYPE=="Sport", SUBAREA %in% c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), !is.na(RESOLVED_AGE),
@@ -167,6 +182,95 @@ ggplot(data=full_join(
         axis.title = element_text(face="bold"),
         legend.title = element_text(face="bold")) +
   facet_wrap(~RESOLVED_AGE) 
+
+dev.off()
+
+
+# Heatmap including month -------------------------------
+pdf(file = here::here("termREN", "2023", "figures", 
+                      paste0("Recreational fishery age and stock composition - within age classes ", 
+                             min(a20recCompCS$YEAR,na.rm=T), "-", max(a20recCompCS$YEAR,na.rm=T), 
+                             " (Terminal Renfrew areas).pdf")),   
+    width = 11, # The width of the plot in inches
+    height = 8.5) # The height of the plot in inches
+
+ggarrange(
+  ggplot(data=full_join(
+  SCrecBio %>%
+    filter(AREA=="20", SAMPLE_TYPE=="Sport", SUBAREA %in% c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), !is.na(RESOLVED_AGE),
+           DISPOSITION=="Kept", MONTH%in%c("June", "July", "August", "September")) %>%
+    group_by(YEAR, MONTH, RESOLVED_AGE, `(R) TERM GROUP03`) %>%
+    summarize(n=n()),
+  full_age_range) %>%
+    filter(!grepl("Unknown", `(R) TERM GROUP03`)) %>%
+    group_by(YEAR, MONTH, RESOLVED_AGE) %>%
+    mutate(monthAge_sample_size = sum(n),
+           propn_month = n/monthAge_sample_size) %>%
+    group_by(YEAR) %>% 
+    mutate(annual_sample_size = sum(n)) %>%
+    arrange(RESOLVED_AGE) %>%
+    filter(grepl("Natural San Juan", `(R) TERM GROUP03`, ignore.case=T))
+    #filter(!is.na(`(R) TERM GROUP03`))
+    ) +
+  geom_tile(aes(y=factor(MONTH, levels=month.name), x=RESOLVED_AGE, fill=propn_month, shape=`(R) TERM GROUP03`)) +
+  scale_y_discrete(limits=rev) +
+  # geom_text(aes(x=YEAR, y=1.05, label=paste0("n (year) = ", annual_sample_size)), size=4) +
+  scale_fill_viridis_c(option = "viridis") +
+  scale_colour_viridis_c(option = "viridis") +
+  scale_shape_manual(values=c(21,22,24,21,22,24)) +
+  # labs(x="", y="Proportion of Area 20 terminal sport samples", fill="Run reconstruction group\n(Level 3)", 
+  #      colour="Run reconstruction group\n(Level 3)") +
+  theme_bw() +
+  theme(axis.text = element_text(colour="black"),
+        axis.title = element_text(face="bold"),
+        legend.title = element_text(face="bold")) +
+  facet_wrap(~YEAR),
+  
+  ggplot(data=full_join(
+    SCrecBio %>%
+      filter(AREA=="20", SAMPLE_TYPE=="Sport", SUBAREA %in% c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), !is.na(RESOLVED_AGE),
+             DISPOSITION=="Kept", MONTH%in%c("June", "July", "August", "September")) %>%
+      group_by(YEAR, MONTH, RESOLVED_AGE, `(R) TERM GROUP03`) %>%
+      summarize(n=n()),
+    full_age_range) %>%
+      filter(!grepl("Unknown", `(R) TERM GROUP03`)) %>%
+      group_by(YEAR, MONTH, RESOLVED_AGE) %>%
+      mutate(monthAge_sample_size = sum(n),
+             propn_month = n/monthAge_sample_size) %>%
+      group_by(YEAR) %>% 
+      mutate(annual_sample_size = sum(n)) %>%
+      arrange(RESOLVED_AGE) %>%
+      filter(grepl("Hatchery San Juan", `(R) TERM GROUP03`, ignore.case=T))
+    #filter(!is.na(`(R) TERM GROUP03`))
+  ) +
+    geom_tile(aes(y=factor(MONTH, levels=month.name), x=RESOLVED_AGE, fill=propn_month, shape=`(R) TERM GROUP03`)) +
+    scale_y_discrete(limits=rev) +
+    # geom_text(aes(x=YEAR, y=1.05, label=paste0("n (year) = ", annual_sample_size)), size=4) +
+    scale_fill_viridis_c(option = "viridis") +
+    scale_colour_viridis_c(option = "viridis") +
+    scale_shape_manual(values=c(21,22,24,21,22,24)) +
+    # labs(x="", y="Proportion of Area 20 terminal sport samples", fill="Run reconstruction group\n(Level 3)", 
+    #      colour="Run reconstruction group\n(Level 3)") +
+    theme_bw() +
+    theme(axis.text = element_text(colour="black"),
+          axis.title = element_text(face="bold"),
+          legend.title = element_text(face="bold")) +
+    facet_wrap(~YEAR)
+)
+ 
+
+dev.off()
+
+
+
+
+
+
+
+
+
+
+
 
 
 

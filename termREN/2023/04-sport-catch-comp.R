@@ -27,7 +27,7 @@ RENmap03 <- readxl::read_excel(path=paste0(here::here("termREN"), "/", analysis_
 
 
 # WCVI rec catch biodata (output from CRESTcompile.R) -------------------------------
-# If you get std:bad_alloc, you have too many windows open. Your system memory usage needs to be at about 60-70% or less. 
+# If you get std:bad_alloc, you have too many windows open. Your system memory usage needs to be at about 70% or less. Open task manager.
 # SCrecBio <- readxl::read_excel(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R/",
 #                                            list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R/",
 #                                                       "^R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS [0-9]{4}-[0-9]{4}.xlsx$")),
@@ -94,16 +94,79 @@ a20recCompCS <- full_join(
   arrange(RESOLVED_AGE) 
 
 
-# Visualize stock comp - does it change? -------------------------------
+
+#  ========================= VISUALIZE: SAN JUAN =========================
 # To potentially pool multiple years together
 
-ggplot(a20recCompCS ) +
-  geom_bar(aes(y=`(R) TERM GROUP02`, x=propn, fill=`(R) TERM GROUP02`, colour=`(R) TERM GROUP02`), stat="identity") +
+# Visualize stock comp - does it change BY YEAR? -------------------------------
+ggplot(data=full_join(
+  SCrecBio %>%
+    filter(AREA=="20", SAMPLE_TYPE=="Sport", SUBAREA %in% c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), !is.na(RESOLVED_AGE),
+           DISPOSITION=="Kept", MONTH%in%c("June", "July", "August", "September")) %>%
+    group_by(YEAR, RESOLVED_AGE, `(R) TERM GROUP03`) %>%
+    summarize(n=n()),
+  full_age_range) %>%
+    filter(!grepl("Unknown", `(R) TERM GROUP03`)) %>%
+    group_by(YEAR, RESOLVED_AGE) %>%
+    mutate(sample_size = sum(n),
+           propn = n/sample_size) %>%
+    group_by(YEAR) %>% 
+    mutate(annual_sample_size = sum(n)) %>%
+    arrange(RESOLVED_AGE) %>%
+    filter(!is.na(`(R) TERM GROUP03`)) %>%
+    mutate(outline_group = case_when(grepl("Natural", `(R) TERM GROUP03`, ignore.case=T) ~ "natural",
+                                     TRUE ~ "not"))) +
+  geom_bar(aes(y=propn, x=RESOLVED_AGE, fill=`(R) TERM GROUP03`, colour=`(R) TERM GROUP03`, linetype=outline_group), 
+           stat="identity", position="stack", alpha=0.9, linewidth=1) +
+  geom_text(aes(x=RESOLVED_AGE, y=1.05, label=paste0("n (age) = ", sample_size)), size=3.5) +
+  scale_x_continuous(breaks=seq(0,3000,by=1)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values=c("gray80", "#99c7fd", "#fdd067", "gray60", "#56A3FD", "#FCB203")) +
+  scale_color_manual(values=c("gray80", "#99c7fd", "#fdd067", "black", "black", "black")) +
+  scale_linetype_manual(values=c("solid", "blank"), guide="none") +
+  labs(x="Total age", y="Proportion of Area 20 terminal sport samples", fill="Run reconstruction group\n(Level 3)", 
+       colour="Run reconstruction group\n(Level 3)") +
   theme_bw() +
-  facet_wrap(~YEAR+RESOLVED_AGE)
+  theme(axis.text = element_text(colour="black"),
+        axis.title = element_text(face="bold"),
+        legend.title = element_text(face="bold")) +
+  facet_wrap(~YEAR) 
 
 
 
+# Visualize stock comp - does it change BY AGE? -------------------------------
+ggplot(data=full_join(
+  SCrecBio %>%
+    filter(AREA=="20", SAMPLE_TYPE=="Sport", SUBAREA %in% c("20A", "20B", "20E", "20-1", "20-3", "Area 20 (West)"), !is.na(RESOLVED_AGE),
+           DISPOSITION=="Kept", MONTH%in%c("June", "July", "August", "September")) %>%
+    group_by(YEAR, RESOLVED_AGE, `(R) TERM GROUP03`) %>%
+    summarize(n=n()),
+  full_age_range) %>%
+    filter(!grepl("Unknown", `(R) TERM GROUP03`)) %>%
+    group_by(YEAR, RESOLVED_AGE) %>%
+    mutate(sample_size = sum(n),
+           propn = n/sample_size) %>%
+    group_by(YEAR) %>% 
+    mutate(annual_sample_size = sum(n)) %>%
+    arrange(RESOLVED_AGE) %>%
+    filter(!is.na(`(R) TERM GROUP03`)) %>%
+    mutate(outline_group = case_when(grepl("Natural", `(R) TERM GROUP03`, ignore.case=T) ~ "natural",
+                                     TRUE ~ "not"))) +
+  geom_bar(aes(y=propn, x=YEAR, fill=`(R) TERM GROUP03`, colour=`(R) TERM GROUP03`, linetype=outline_group), 
+           stat="identity", position="stack", alpha=0.9, size=1) +
+  geom_text(aes(x=YEAR, y=1.05, label=paste0("n (year) = ", annual_sample_size)), size=4) +
+  scale_x_continuous(breaks=seq(0,3000,by=1)) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(values=c("gray80", "#99c7fd", "#fdd067", "gray60", "#56A3FD", "#FCB203")) +
+  scale_color_manual(values=c("gray80", "#99c7fd", "#fdd067", "black", "black", "black")) +
+  scale_linetype_manual(values=c("solid", "blank"), guide=F) +
+  labs(x="", y="Proportion of Area 20 terminal sport samples", fill="Run reconstruction group\n(Level 3)", 
+       colour="Run reconstruction group\n(Level 3)") +
+  theme_bw() +
+  theme(axis.text = element_text(colour="black"),
+        axis.title = element_text(face="bold"),
+        legend.title = element_text(face="bold")) +
+  facet_wrap(~RESOLVED_AGE) 
 
 
 

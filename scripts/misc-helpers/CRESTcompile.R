@@ -171,8 +171,17 @@ left_join(crestBio,
                                         RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & !is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
                                         RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
                                         TRUE ~ "FLAG"),
-         `(R) TERM GROUP03` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " WCVI"),
-                                        TRUE ~ paste0(`(R) Origin`, " NON-WCVI"))) %>%
+         `(R) TERM GROUP03` = case_when(grepl("(San Juan)|(Renfrew)|(Fairy Lake)", RESOLVED_STOCK_ORIGIN, ignore.case=T) ~ 
+                                          paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN),
+                                        RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") & !grepl("San Juan|Fairy Lake|Renfrew", RESOLVED_STOCK_ORIGIN, ignore.case=T) ~ 
+                                          paste0(`(R) Origin`, " Other WCVI"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
+                                        !is.na(RESOLVED_STOCK_ROLLUP) & RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " NON-WCVI"),
+                                        TRUE ~ "FLAG"),
+         `(R) TERM GROUP04` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " WCVI"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
+                                        !is.na(RESOLVED_STOCK_ROLLUP) & RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " NON-WCVI"),
+                                        TRUE ~ "FLAG")) %>%
   print()
 
 

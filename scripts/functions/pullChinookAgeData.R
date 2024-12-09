@@ -131,7 +131,7 @@ SC_allAgesMaster <- full_join(SC_scaleAgesMeta.MRP %>%
 
 # 4.1. Export to StA drive, WCVI Term Run folder ------------------------
 writexl::write_xlsx(SC_allAgesMaster, 
-                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx"))
+                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx"))
 
 
 

@@ -83,7 +83,7 @@ writexl::write_xlsx(wcvi.cn.ages.SUMMARY,
 
 # To DFO Network drive -----------------------
 writexl::write_xlsx(wcvi.cn.ages.SUMMARY, 
-                    path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+                    path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
                                   analysis_year,
                                   "/(temp) R_OUT - age summary if EPRO has not updated yet ",
                                   analysis_year,

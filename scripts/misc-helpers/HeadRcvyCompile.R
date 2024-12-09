@@ -20,14 +20,14 @@
 
 # Read CWT recovery files as large list ---------------------------
 # Load base files to compile
-mrpHeadRcvy.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
+mrpHeadRcvy.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
                                     pattern=".csv", full.names=T), 
                          function(x) {
                            read.csv(x)
                          })
 
 # Change filenames in the List:
-names(mrpHeadRcvy.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
+names(mrpHeadRcvy.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
                                  pattern=".csv", full.names=T)
 
 
@@ -54,7 +54,7 @@ remove(mrpHeadRcvy.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(mrpHeadRcvy, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
+                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
                                 "/R_OUT - MRPHeadRecoveries_CHINOOK_",
                                 min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
                                 "-",

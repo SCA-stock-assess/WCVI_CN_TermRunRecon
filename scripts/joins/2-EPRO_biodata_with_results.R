@@ -5,7 +5,7 @@
 # 1.1. Download all facility files 'All Adult Biosampling' reports from EPRO: https://epro-stage.azure.cloud.dfo-mpo.gc.ca/EProWeb/#home
 #       1.2. Store EPRO files on Network drive location
 # 2.   Load EPRO files into R from Network drive (Step I) 
-# 3.   Load NPAFC mark master file from SCD_Stad network drive (Step II): dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks....xlsx
+# 3.   Load NPAFC mark master file from SCD_Stad network drive (Step II): dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks....xlsx
 # 4.   Join EPRO to NPAFC mark master file (Step III)
 # 5.   Load CWT release tag codes from last 10 years (Step IV)
 # 6.   Join EPRO+NPAFC file to CWT tag codes (Step V)
@@ -126,7 +126,7 @@ library(saaWeb)
       # 
       # # Export to DFO Network:
       # writexl::write_xlsx(wcviCNepro, 
-      #                     path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+      #                     path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
       #                                   analysis_year, "/",
       #                                   "R_OUT - All EPRO facilities master ",
       #                                   analysis_year,
@@ -145,7 +145,7 @@ source(here("scripts", "misc-helpers", "EPROcompile.R"))
 #                                                                           II. NPAFC LOAD
 
 
-NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
+NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
                                             full.names = TRUE), 
                             sheet="AC087805 (1)") %>% 
@@ -216,7 +216,7 @@ wcviCNepro_w_NPAFC <- left_join(wcviCNepro ,
 
 
 # Option 2: Load CWT data export from source() above directly --------------------------- (much quicker)
-cn_relTagCodes <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+cn_relTagCodes <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
                                                      pattern = "^R_OUT - Chinook CWT release tagcodes",   #ignore temp files, eg "~R_OUT - Chinook CWT..."
                                                      full.names = TRUE), 
                                      sheet="Sheet1") %>% 
@@ -251,7 +251,7 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 #                                                                           VI. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,
@@ -612,7 +612,7 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
 
 # To DFO Network drive ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
                                    "/R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS ",
                                    min(wcviCNepro_w_Results$`(R) RETURN YEAR`),
                                    "-",

@@ -22,14 +22,14 @@
 
 # Read OtoManager files as large list ---------------------------
 # Load base files to compile
-wcviOtos.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/1-Import-to-R", 
+wcviOtos.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/1-Import-to-R", 
                                  pattern=".xlsx", full.names=T), 
                       function(x) {
                         readxl::read_excel(x, sheet="RcvySpecAge", skip=1, guess_max=20000)
                       })
 
 # Change filenames in the List:
-names(wcviOtos.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/1-Import-to-R", 
+names(wcviOtos.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/1-Import-to-R", 
                                  pattern=".xlsx", full.names=T)
 
 
@@ -69,7 +69,7 @@ remove(wcviOtos.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(wcviOtos, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/2-Export-from-R",
+                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/2-Export-from-R",
                                 "/R_OUT - OtoManager_AllSpecies_Area20-27andOffshore",
                                 "_",
                                 min(wcviOtos$`(R) SAMPLE YEAR`),
@@ -110,14 +110,14 @@ writexl::write_xlsx(wcviOtos,
 
 # Read OtoManager files as large list ---------------------------
 # Load base files to compile
-OtosRef.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/1-Import-to-R", 
+OtosRef.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/1-Import-to-R", 
                                 pattern=".xlsx", full.names=T), 
                      function(x) {
                        readxl::read_excel(x, sheet="ReferenceSpecimens", skip=1, guess_max=20000)
                      })
 
 # Change filenames in the List:
-names(OtosRef.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/1-Import-to-R", 
+names(OtosRef.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/1-Import-to-R", 
                                 pattern=".xlsx", full.names=T)
 
 
@@ -140,7 +140,7 @@ remove(OtosRef.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(OtosRef, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/2-Export-from-R",
+                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/ReferenceSpecimens/2-Export-from-R",
                                 "/R_OUT - OtoManager_CN_REFERENCEspecimens_BY_",
                                 min(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
                                 "-",

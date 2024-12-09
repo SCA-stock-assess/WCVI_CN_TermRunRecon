@@ -44,19 +44,19 @@ options(scipen = 9999)
 
 
 # 1. Examine escapement biodata files available ----------------  **delete soon if updated file call below works 
-# list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/"), 
+# list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/"), 
 #            recursive=F, pattern="^[^~]*.xlsx") 
 
 # 2. Select the most recent one. This is manual because the naming convention sucks ----------------  **delete soon if updated file call below works 
-# esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement"),
+# esc_biodata_recent_filename <- list.files(path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement"),
 #                                           recursive=F, pattern="^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx")   # <<<< add a file index value if needed e.g., [1]
 
 #3. Read in the file and reformat (slow) ----------------
-wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",
+wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                                       pattern = "^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx",    
                                                       full.names = TRUE), 
                                       sheet=grep("Biodata 2015-", 
-                                                 readxl::excel_sheets(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",
+                                                 readxl::excel_sheets(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                                                                       pattern = "^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx",    
                                                                                       full.names = TRUE)),
                                                  ignore.case=T, value=T),
@@ -360,7 +360,7 @@ prob_orders <- factor(c("V LOW", "LOW", "MED", "HIGH"), levels=c("V LOW", "LOW",
 
 # Load NPAFC CN mark master file ---------------------------
 
-NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
+NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
                                             full.names = TRUE), 
                             sheet="AC087805 (1)") %>% 
@@ -523,7 +523,7 @@ esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
 #                                                                           XIII. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-PBT_results <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+PBT_results <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,
@@ -541,7 +541,7 @@ PBT_results <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/S
 # Load tag rate file -------------------------   
 
 #*** Don't use network version for now. Slowww, had to make 1 manual update to SJ for BY 2018
- #SC_PBT_tagrate <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.xlsx",
+ #SC_PBT_tagrate <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/bch_v4.2b_2013-2022_brood-counts_tagging_rates_2024-06-05.xlsx",
   #                                      sheet="ch_supplementary_file_to-check", guess_max=10000) 
 
 # Load from github csv for now -------------------------
@@ -579,7 +579,7 @@ PBT_tagrate <- read.csv(here::here("data", "bch_v4.2b_2013-2022_brood-counts_tag
 
 # # Export -------------------------:
 writexl::write_xlsx(PBT_tagrate,
-                    "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Reliable PBT (over 0.7) BYs by stock - draft working.xlsx")
+                    "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Reliable PBT (over 0.7) BYs by stock - draft working.xlsx")
 
 
 
@@ -926,10 +926,10 @@ readme <- data.frame(`1` = c("date rendered:",
 ),
 `2` = c(as.character(Sys.Date()), 
         "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/joins/1-esc_biodata_with_results.R", 
-        "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/2015-2023_WCVI_Escapement-FSC_BioData.xlsx",
+        "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/2015-2023_WCVI_Escapement-FSC_BioData.xlsx",
         "via direct R query to http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/AgeBatchList",
         "For 2022, query from OtoManager online stored in: https://086gc.sharepoint.com/:x:/r/sites/PAC-SCAStockAssessmentSTAD/Shared%20Documents/WCVI%20STAD/Terminal%20CN%20Run%20Recon/2022/Communal%20data/BiodataResults/OtoManager_RecoverySpecimens_Area20-27_121-127_CN_2022_28Aug2023.xlsx?d=w398c15dd3c9b4ceb84d3083a215e9c6a&csf=1&web=1&e=NAxyjd",
-        "//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
+        "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to May 1, 2023.xlsx",
         "!NOT IN YET!: http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice",  
         "",
         "sheet description:",
@@ -1022,7 +1022,7 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 # To DFO Network drive --------------------
 # For run reconstruction: 
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",  
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",  
                                    "R_OUT - WCVI_Escapement-FSC_BioData_",
                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
                                    "-",
@@ -1036,7 +1036,7 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 
 # To biodata folder:
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/SC_BioData_Management/2-Escapement/",  
+                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",  
                                    "R_OUT - WCVI_Escapement-FSC_BioData_",
                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
                                    "-",

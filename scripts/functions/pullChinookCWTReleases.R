@@ -36,7 +36,7 @@ cn_relTagCodes <- saaWeb:::runCwtExtractorQuery(here("scripts", "json", "CWT_Rel
 
 # 2.1. Export to StA drive, WCVI Term Run folder ------------------------
 writexl::write_xlsx(cn_relTagCodes, 
-                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - Chinook CWT release tagcodes BY ", 
+                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - Chinook CWT release tagcodes BY ", 
                            min(cn_relTagCodes$`MRP_Brood Year`), 
                            "-", 
                            max(cn_relTagCodes$`MRP_Brood Year`), 

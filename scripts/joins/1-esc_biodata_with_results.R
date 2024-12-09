@@ -53,11 +53,11 @@ options(scipen = 9999)
 
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
-                                                      pattern = "^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx",    
+                                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
                                                       full.names = TRUE), 
                                       sheet=grep("Biodata 2015-", 
                                                  readxl::excel_sheets(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
-                                                                                      pattern = "^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx",    
+                                                                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
                                                                                       full.names = TRUE)),
                                                  ignore.case=T, value=T),
                                       guess_max=10000) %>% 

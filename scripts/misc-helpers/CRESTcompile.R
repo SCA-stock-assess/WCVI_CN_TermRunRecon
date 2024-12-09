@@ -5,84 +5,75 @@
 
 
 
+## A note about this: as of NOv 2024 it has become apparent the WCVI CREST query is not appropriate anymore. Too many bugs not being maintained. From now on,
+##  use BDWR query.  b
 
 
-# Load packages ---------------------------
-library(here)
+# ============================= SET UP ============================= 
+# Load high-use packages ---------------------------
 library(tidyverse)
-library(readxl)
-library(writexl)
-library(saaWeb)    # for pullNusedsData in source() script to make stream aux file 
-
-
+#library(saaWeb)     
 
 # Helpers ---------------------------
 "%notin%" <- Negate("%in%")
+options(scipen=9999)
 
 
 
-
-#############################################################################################################################################################
-
-
-# ==================== 1. LOAD CREST CHINOOK BIODATA BASE FILES (2021-present data) ==================== 
-
+# ============================= LOAD DATA =============================
 
 # Read CREST files as large list ---------------------------
 # Load base files to compile
-crestBio.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="*WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS*.*xlsx", full.names=T), 
+crestBio.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
+                                 pattern="^\\d{4}_Biological_Data_With_Results_.*\\.xlsx$", 
+                                 full.names=T), 
                       function(x) {
-                        readxl::read_excel(x, sheet="WCVI_Chinook_Run_Rec", guess_max=20000)
+                        readxl::read_excel(x, sheet="Biological_Data_With", guess_max=20000)
                       })
 
 # Change filenames in the List:
-names(crestBio.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="*WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS*.*xlsx", full.names=F)
+names(crestBio.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
+                                 pattern="^\\d{4}_Biological_Data_With_Results_.*\\.xlsx$", 
+                                 full.names=F)
 
 
-# Convert the Large List into a useable R dataframe ---------------------------
+# Convert the Large List into a useable R dataframe:
 crestBio <- do.call("rbind", crestBio.LL) %>%
   tibble::rownames_to_column(var="file_source") %>%
   print()
 
 
-# Clean up ---------------------------
-remove(crestBio.LL)
+# Clean up:
+#remove(crestBio.LL)
 
 
-
-
-#############################################################################################################################################################
-
-# ==================== 2. LOAD STREAM AUX FILE ==================== 
+# Load Stream aux foile ---------------------------
 # This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
-
 # Should load pullNusedsData function and streamAreas dataframe: 
-source(here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))
+source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
+# saves as streamAreas
 
 
 
 
 #############################################################################################################################################################
 
-# ==================== 3. CODE TERM RUN GROUPS ==================== 
+#                                                                     CODE TERM RUN GROUPS
 
+# ============================= DEFINE HELPERS ============================= 
 
-# Define helper variables ---------------------------
-
-# Focal streams in each area to highlight
+# Focal streams in each area to highlight ---------------------------
 focal_a22 <- c("CONUMA", "NITINAT", "ROBERTSON", "SAN JUAN")
 focal_a23 <- c("CONUMA", "NITIANT", "ROBERTSON")
 focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")
 
-# Used to remove the river/creek suffix later
+# Used to remove the river/creek suffix later ---------------------------
 stopwords <- c(" River", " Creek")
 
 
 
 
-# CODE TERM RUN GROUPS ---------------------------
+# ============================= CODE TERM RUN GROUPS =============================
 
 crestBio_grouped <- 
   # Join CREST biodata and streamAreas aux file ----
@@ -94,8 +85,11 @@ left_join(crestBio,
     `(R) Origin` = case_when(
       #1.1 If HATCHERY ORIGIN is a "Y", make it "Hatchery"
       HATCHERY_ORIGIN=="Y" ~ "Hatchery",
+      # If PBT_BROOD_YEAR is not 0 or blank, make it "Hatchery"
+      PBT_BROOD_YEAR!=0 & !is.na(PBT_BROOD_YEAR) ~ "Hatchery",
       #1.2 If it's not clipped and the thermal mark indicates "Not Marked", make it "Natural"
       ADIPOSE_FIN_CLIPPED=="N" & THERMALMARK=="Not Marked" ~ "Natural",
+      # ************* need to add factor for if it's within the PBT baseline and it's NOT a PBT hit == natural***************
       #1.3 If it's neither of these scenarios, make it "Unknown"
       TRUE ~ "Unknown"),
     
@@ -106,7 +100,7 @@ left_join(crestBio,
       #2.2 If it is NOT from NWVI or SWVI, it gets "NON-WCVI"
       RESOLVED_STOCK_ROLLUP%notin%c("NWVI", "SWVI") ~ "NON-WCVI",
       #2.4 Special case: Change "Tofino Hatchery" to "Bedwell"
-      RESOLVED_STOCK_ORIGIN=="Tofino Hatchery" ~ "BEDWELL",
+      RESOLVED_STOCK_ORIGIN=="Tofino Hatchery" ~ "BEDWELL",   # hatchery bedwell? 
       #2.3 If it IS from NWVI or SWVI, this bit takes the stock ID from RESOLVED_STOCK_ORIGIN and removes 'creek' or 'river' so it just becomes uppercase BURMAN, CONUMA, etc.
       RESOLVED_STOCK_ROLLUP%in%c("NWVI", "SWVI") ~ toupper(gsub(paste0("\\b(",paste(stopwords, collapse="|"),")\\b"), "", RESOLVED_STOCK_ORIGIN))),
     
@@ -158,6 +152,36 @@ left_join(crestBio,
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
       #6.5 same as 4.5
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
+  
+  # PROPOSED NEW GROUPINGS: Ignore all the rollups and just print the stock ID for level1, and roll up to watershed for level2 (not "NON-WCVI")
+  mutate(`(R) TERM GROUP01` = case_when(is.na(RESOLVED_STOCK_ORIGIN) ~ paste0(`(R) Origin`, " Unknown"),
+                                        !is.na(RESOLVED_STOCK_ORIGIN) & RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 < 0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (DNA did not resolve)"),
+                                        TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
+         `(R) TERM GROUP02` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste0(`(R) TERM GROUP01`, " (WCVI)"),
+                                        grepl("ECVI", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ paste0(`(R) Origin`, sep=" ", "ECVI"),
+                                        grepl("Bolshaya", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ paste0(`(R) Origin`, sep=" ", "Russian (uncertain)"),
+                                        grepl("Alaska", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ paste0(`(R) Origin`, sep=" ", "Alaska"),
+                                        grepl("Homathko|Mainland Inlets", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ paste0(`(R) Origin`, sep=" ", "Mainland Inlets"),
+                                        grepl("SALMON_RIVER_JNST|NAHWITTI_R", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ paste0(`(R) Origin`, sep=" ", "NEVI"),
+                                        grepl("SERPENTINE", RESOLVED_STOCK_ROLLUP, ignore.case=T) ~ paste0(`(R) Origin`, sep=" ", "S Mainland"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Grays", RESOLVED_STOCK_ORIGIN) ~ paste0(`(R) Origin`, sep=" ", "Coastal Washington"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Oregon", RESOLVED_STOCK_ORIGIN) ~ paste0(`(R) Origin`, sep=" ", "Coastal Oregon"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Puget|Hood", RESOLVED_STOCK_ORIGIN) ~ paste0(`(R) Origin`, sep=" ", "Puget Sound"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) & !is.na(RESOLVED_STOCK_ORIGIN) & grepl("Western Vancouver Island", RESOLVED_STOCK_ORIGIN) ~ paste0(`(R) Origin`, sep=" ", "SWVI"),
+                                        RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & !is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
+                                        RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
+                                        TRUE ~ "FLAG"),
+         `(R) TERM GROUP03` = case_when(grepl("(San Juan)|(Renfrew)|(Fairy Lake)", RESOLVED_STOCK_ORIGIN, ignore.case=T) ~ 
+                                          paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN),
+                                        RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") & !grepl("San Juan|Fairy Lake|Renfrew", RESOLVED_STOCK_ORIGIN, ignore.case=T) ~ 
+                                          paste0(`(R) Origin`, " Other WCVI"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
+                                        !is.na(RESOLVED_STOCK_ROLLUP) & RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " NON-WCVI"),
+                                        TRUE ~ "FLAG"),
+         `(R) TERM GROUP04` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " WCVI"),
+                                        is.na(RESOLVED_STOCK_ROLLUP) ~ paste0(`(R) Origin`, " Unknown"),
+                                        !is.na(RESOLVED_STOCK_ROLLUP) & RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " NON-WCVI"),
+                                        TRUE ~ "FLAG")) %>%
   print()
 
 
@@ -282,18 +306,18 @@ readme <- data.frame(`1` = c("date rendered:",
                              "",
                              "",
                              "Tab name:",
-                             "WCVI CN CREST Biodata CODED",
+                             "Biological_Data_With_GROUPED",
                              "QC summary",
                              "QC-..."),
                      `2` = c(as.character(Sys.Date()), 
                              "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/CRESTcompile.R", 
-                             "SCD_Stad/WCVI/CHINOOK?WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R",
-                             "SCD_Stad/WCVI/CHINOOK?WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R",
+                             "SCD_Stad/WCVI/CHINOOK?WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R",
+                             "SCD_Stad/WCVI/CHINOOK?WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R",
                              "Removed Salmon River from Fraser watershed in stream aux file because duplicate river on VI.",
                              "Changed the terminology and made some manual adjustments to Robertson, Toquart/Toquaht, Big Q, Tranquil and Omega Pacific in stream aux file.",
                              "",
                              "Tab description:",
-                             "CREST Biodata from 'WCVI Chinook biodata results with FOS' report, 2021-recent year for terminal run reconstruction. Joined years of files together and assigned TermRR roll-up groupings. Requires manual tump of area/year files from CREST.",
+                             "CREST Biodata from 'Biological Data with Results' report, 2017-recent year for terminal run reconstruction. Joined years of files together and assigned TermRR roll-up groupings. Requires manual tump of area/year files from CREST.",
                              "Summary of QC flag columns and # of entries belonging to that flag.",
                              "QC flag tabs. See QC summary for details."
                      ))
@@ -312,7 +336,7 @@ R_OUT_CREST.CODED <- openxlsx::createWorkbook()
 
 # Add tabs to Workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "readme")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "WCVI CN CREST Biodata CODED")
+openxlsx::addWorksheet(R_OUT_CREST.CODED, "Biological_Data_With_GROUPED")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC Report")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto sample no result")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale sample no result")
@@ -330,7 +354,7 @@ openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Non-standard sex ID")
 
 # Add data to tabs ---------------------------
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="WCVI CN CREST Biodata CODED", x=crestBio_grouped)
+openxlsx::writeData(R_OUT_CREST.CODED, sheet="Biological_Data_With_GROUPED", x=crestBio_grouped)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC Report", x=qc_summary)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto sample no result", x=qc_otoNoSample)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale sample no result", x=qc_scaleNoAge)
@@ -352,8 +376,8 @@ openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_non
 
 # To github ---------------------------
 openxlsx::saveWorkbook(R_OUT_CREST.CODED,
-                      file=paste0(here("outputs"),
-                                  "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
+                      file=paste0(here::here("outputs"),
+                                  "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
                                   min(crestBio_grouped$YEAR),
                                   "-",
                                   max(crestBio_grouped$YEAR),
@@ -365,7 +389,7 @@ openxlsx::saveWorkbook(R_OUT_CREST.CODED,
 # To Network: 
 openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
                        file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
-                                   "/R_OUT - WCVI_Chinook_Run_Reconstruction_Project_Biological_Data_with_FOS_AND TERM GROUPINGS ",
+                                   "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
                                    min(crestBio_grouped$YEAR),
                                    "-",
                                    max(crestBio_grouped$YEAR),
@@ -374,7 +398,16 @@ openxlsx::saveWorkbook(R_OUT_CREST.CODED,
                        returnValue=T)
 
 
-
+# To Desktop: 
+openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
+                       file=paste0("C:/Users/DAVIDSONKA/Desktop", 
+                                   "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
+                                   min(crestBio_grouped$YEAR),
+                                   "-",
+                                   max(crestBio_grouped$YEAR),
+                                   ".xlsx"),
+                       overwrite=T,
+                       returnValue=T)
 
 
 # /END!

@@ -88,6 +88,11 @@ focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROB
 # Used to remove the river/creek suffix later ---------------------------
 stopwords <- c(" River", " Creek")
 
+PBT_BYs <- crestBDWR %>% 
+  filter(PBT_BROOD_YEAR %notin% c("0", "Not Loaded") & !is.na(PBT_BROOD_YEAR) & !grepl("GSI", PBT_BROOD_YEAR)) %>% 
+  group_by(PBT_BROOD_YEAR) %>%
+  summarize() %>%
+  pull(PBT_BROOD_YEAR)
 
 
 
@@ -98,17 +103,24 @@ crestBDWR_CNgrouped <-
 left_join(crestBDWR, 
           streamAreas) %>% 
   filter(SPECIES==124) %>%
+  # --- Update existing CREST columns
   mutate(
-    # 1. Create 'Hat/Nat' column ---
+    # 1. Create updated RESOLVED AGE column to incorporate PBT
+    `(R) Resolved total age` = case_when((is.na(RESOLVED_AGE) | RESOLVED_AGE==0) & PBT_BROOD_YEAR %in% PBT_BYs ~ YEAR-as.numeric(PBT_BROOD_YEAR),
+                                         TRUE ~ RESOLVED_AGE),
+    
+    # 2. Create updated HATCHERY ORIGIN column to incorporate PBT ---
     `(R) Origin` = case_when(
-      #1.1 If HATCHERY ORIGIN is a "Y", make it "Hatchery"
+      # If HATCHERY ORIGIN is a "Y", make it "Hatchery"
       HATCHERY_ORIGIN=="Y" ~ "Hatchery",
-      # If PBT_BROOD_YEAR is not 0 or blank, make it "Hatchery"
-      PBT_BROOD_YEAR!=0 & !is.na(PBT_BROOD_YEAR) ~ "Hatchery",
-      #1.2 If it's not clipped and the thermal mark indicates "Not Marked", make it "Natural"
+      # If PBT_BROOD_YEAR is a real year in the data, make it "Hatchery"
+      PBT_BROOD_YEAR %in% PBT_BYs ~ "Hatchery",
+      HATCHERY_ORIGIN!="Y" & PBT_BROOD_YEAR %notin% PBT_BYs ~ "Unknown",
+      # PBT_BROOD_YEAR=="GSI 0000" & PBT_BROOD_YEAR=="Not Loaded" ~ "Unknown", 
+      # If it's not clipped and the thermal mark indicates "Not Marked", make it "Natural"
       ADIPOSE_FIN_CLIPPED=="N" & THERMALMARK=="Not Marked" ~ "Natural",
       # ************* need to add factor for if it's within the PBT baseline and it's NOT a PBT hit == natural***************
-      #1.3 If it's neither of these scenarios, make it "Unknown"
+      # If it's none of these scenarios, make it "Unknown"
       TRUE ~ "Unknown"))
 
 
@@ -118,7 +130,7 @@ left_join(crestBDWR,
 
 
 
-writexl::write_xlsx(crestBDWR_grouped, "C:/Users/DAVIDSONKA/Desktop/crestBDWR_grouped test.xlsx")
+writexl::write_xlsx(crestBDWR_CNgrouped, "C:/Users/DAVIDSONKA/Desktop/crestBDWR_CNgrouped test.xlsx")
 
 
 #############################################################################################################################################################

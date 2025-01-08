@@ -21,37 +21,48 @@ library(writexl)
 #############################################################################################################################################################
 
 
-# ==================== 1. LOAD CREST CHINOOK BIODATA BASE FILES (2021-present data) ==================== 
+# ==================== LOAD CREST BIODATA WITH RESULTS BASE FILES (2017-present data) ==================== 
 
 
 # Read CREST files as large list ---------------------------
 # Load base files to compile
-crestBio.LL <- lapply(list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="^[^~]*_Biological_Data_with_FOS*.*xlsx", full.names=T), 
+crestBDWR.LL <- lapply(list.files(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
+                                 pattern="^[0-9]{4}_Biological_Data_With_Results_.*\\.xlsx$", full.names=T), 
                       function(x) {
-                        readxl::read_excel(x, sheet="WCVI_Chinook_Run_Rec", guess_max=20000)
+                        readxl::read_excel(x, sheet="Biological_Data_With", guess_max=20000)
                       })
 
 # Change filenames in the List:
-names(crestBio.LL) <- list.files(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/1-Import-to-R", 
-                                 pattern="^[^~]*_Biological_Data_with_FOS*.*xlsx", full.names=F)
+names(crestBDWR.LL) <- list.files(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R", 
+                                  pattern="^[0-9]{4}_Biological_Data_With_Results_.*\\.xlsx$", full.names=F)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
-crestBio <- do.call("rbind", crestBio.LL) %>%
+crestBDWR <- do.call("rbind", crestBDWR.LL) %>%
   tibble::rownames_to_column(var="file_source") %>%
   print()
 
 
 # Clean up ---------------------------
-remove(crestBio.LL)
+remove(crestBDWR.LL)
+
+
+
+# ==================== LOAD STREAM AREA AUX FILE ==================== 
+# NuSEDS ---------------------------
+# This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
+# Should load pullNusedsData function and streamAreas dataframe: 
+source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
+# saves as streamAreas
+
+
 
 
 #############################################################################################################################################################
 
 #                                                                           ADD VARIABLES
 
-crestBiocompiled <- crestBio %>% 
+crestBDWRcompiled <- crestBDWR %>% 
   mutate(`(R) Origin` = case_when(HATCHERY_ORIGIN=="Y" ~ "Hatchery",
                                   THERMALMARK=="Not Marked" ~ "Natural (assumed)",
                                   TRUE ~ "Unknown"),
@@ -61,6 +72,53 @@ crestBiocompiled <- crestBio %>%
                                             TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP))) %>% 
   print()
 
+
+#############################################################################################################################################################
+
+
+#                                                                     CODE (OLD) CHINOOK TERM RUN GROUPS
+
+# ============================= DEFINE HELPERS ============================= 
+
+# Focal streams in each area to highlight ---------------------------
+focal_a22 <- c("CONUMA", "NITINAT", "ROBERTSON", "SAN JUAN")
+focal_a23 <- c("CONUMA", "NITIANT", "ROBERTSON")
+focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")
+
+# Used to remove the river/creek suffix later ---------------------------
+stopwords <- c(" River", " Creek")
+
+
+
+
+# ============================= CODE TERM RUN GROUPS =============================
+
+crestBDWR_CNgrouped <-
+  # Join CREST biodata and streamAreas aux file ----
+left_join(crestBDWR, 
+          streamAreas) %>% 
+  filter(SPECIES==124) %>%
+  mutate(
+    # 1. Create 'Hat/Nat' column ---
+    `(R) Origin` = case_when(
+      #1.1 If HATCHERY ORIGIN is a "Y", make it "Hatchery"
+      HATCHERY_ORIGIN=="Y" ~ "Hatchery",
+      # If PBT_BROOD_YEAR is not 0 or blank, make it "Hatchery"
+      PBT_BROOD_YEAR!=0 & !is.na(PBT_BROOD_YEAR) ~ "Hatchery",
+      #1.2 If it's not clipped and the thermal mark indicates "Not Marked", make it "Natural"
+      ADIPOSE_FIN_CLIPPED=="N" & THERMALMARK=="Not Marked" ~ "Natural",
+      # ************* need to add factor for if it's within the PBT baseline and it's NOT a PBT hit == natural***************
+      #1.3 If it's neither of these scenarios, make it "Unknown"
+      TRUE ~ "Unknown"))
+
+
+
+
+
+
+
+
+writexl::write_xlsx(crestBDWR_grouped, "C:/Users/DAVIDSONKA/Desktop/crestBDWR_grouped test.xlsx")
 
 
 #############################################################################################################################################################

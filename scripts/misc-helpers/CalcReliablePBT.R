@@ -10,7 +10,7 @@ library(tidyverse)
 
 # ======================== Load PBT inventory ========================  
 # Load data, calculate % of each BY genotyped -------------------------
-SC_PBT_inventory <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-08-24 Chinook PBT Inventory BYs 2013-2021_draft .xlsx",
+SC_PBT_inventory <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-08-24 Chinook PBT Inventory BYs 2013-2021_draft .xlsx",
                                        sheet="2013-2021 update", guess_max=10000) %>% 
   rename(`(R) SAMPLE YEAR`=...1,
          status=...2) %>% 
@@ -62,7 +62,7 @@ remove(findFirstFullPBTBY, SC_PBT_inventory)
 
 # To Network -------------------------
 writexl::write_xlsx(SC_PBTreliable, 
-                    "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/SC - Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
+                    "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/SC - Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
 
 
 

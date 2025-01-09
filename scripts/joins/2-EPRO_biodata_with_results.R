@@ -23,7 +23,7 @@ gc() #free up memory and report the memory usage.
 
 
 # Define analysis year:
-analysis_year <- 2023
+analysis_year <- 2024
 
 
 
@@ -135,7 +135,7 @@ library(saaWeb)
 
 # Load source() EPRO compile code ---------------------------
 # Saves as wcviCNepro
-source(here("scripts", "misc-helpers", "EPROcompile.R"))
+source(here::here("scripts", "misc-helpers", "EPROcompile.R"))
 
 
 
@@ -145,7 +145,7 @@ source(here("scripts", "misc-helpers", "EPROcompile.R"))
 #                                                                           II. NPAFC LOAD
 
 
-NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
+NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
                                             full.names = TRUE), 
                             sheet="AC087805 (1)") %>% 
@@ -196,9 +196,10 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.c
 
 
 # Join EPRO master file to NPAFC master mark file ---------------------------
-intersect(colnames(wcviCNepro), colnames(NPAFC))
+intersect(colnames(wcviEPRO), colnames(NPAFC))
 
-wcviCNepro_w_NPAFC <- left_join(wcviCNepro ,
+wcviCNepro_w_NPAFC <- left_join(wcviEPRO %>%
+                                  filter(Species=="Chinook"),
                                     NPAFC,
                                     by=c("(R) RESOLVED BROOD YEAR", "(R) HATCHCODE"),
                                     relationship="many-to-one")
@@ -216,7 +217,7 @@ wcviCNepro_w_NPAFC <- left_join(wcviCNepro ,
 
 
 # Option 2: Load CWT data export from source() above directly --------------------------- (much quicker)
-cn_relTagCodes <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+cn_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
                                                      pattern = "^R_OUT - Chinook CWT release tagcodes",   #ignore temp files, eg "~R_OUT - Chinook CWT..."
                                                      full.names = TRUE), 
                                      sheet="Sheet1") %>% 
@@ -251,7 +252,7 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 #                                                                           VI. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-SC_PBT_SEP <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+SC_PBT_SEP <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,
@@ -311,17 +312,17 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.PBT %>%
     
     
          # 1. Identify hatchery/natural origin
-         `(R) ORIGIN` = case_when((Hatch.Code %in% c("Destroyed", "No Sample") | is.na(Hatch.Code)) & (is.na(CWT.Tag.Code) | CWT.Tag.Code =="No tag") & (External.Marks=="Unclipped") ~ "Unknown",
+         `(R) ORIGIN` = case_when((Otolith.Hatch.Code %in% c("Destroyed", "No Sample") | is.na(Otolith.Hatch.Code)) & (is.na(Cwt.Tag.Code) | Cwt.Tag.Code =="No tag") & (External.Marks=="Unclipped") ~ "Unknown",
                                   External.Marks=="Clipped" ~ "Hatchery",
-                                  !is.na(CWT.Tag.Code) | CWT.Tag.Code != "No tag" ~ "Hatchery",
-                                  Hatch.Code %notin% c("Destroyed", "No Sample", "Not Marked") ~ "Hatchery", 
+                                  !is.na(Cwt.Tag.Code) | Cwt.Tag.Code != "No tag" ~ "Hatchery",
+                                  Otolith.Hatch.Code %notin% c("Destroyed", "No Sample", "Not Marked") ~ "Hatchery", 
                                   !is.na(MGL_Parental_Collection) ~ "Hatchery", 
-                                  Hatch.Code == "Not Marked" ~ "Natural",
+                                  Otolith.Hatch.Code == "Not Marked" ~ "Natural",
                                   # If the system name is present in the Reliable PBT records, and the return year is >= the first full PBT baseline year for that system, then call it natural
                                   # ******* THIS ISNT WORKING  -- FIX NEXT DAY! 
                                   str_sub(gsub(" Cr", "",
                                                        gsub(" R", "",
-                                                            gsub(" Fall Chinook", "", Spawning.Stock)
+                                                            gsub(" Fall Chinook", "", Spawning.Stock.Name)
                                                             )
                                                        ),
                                                   start=6, end=20) %in% SC_PBTreliable$MGL_Brood_Collection & 
@@ -427,7 +428,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.PBT %>%
                                         is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
                                         is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
                                         #is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
-                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock), 6, -1)), 
+                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
                                                                          " (assumed)"), 
                                         TRUE ~ "Unknown"),
     
@@ -479,7 +480,7 @@ qc_noOtoResults <- wcviCNepro_w_Results %>%
 
 # There is a useable CWT but no stock ID (e.g., R code errors)
 qc_noCWTID <- wcviCNepro_w_Results %>% 
-  filter(!is.na(CWT.Tag.Code) & CWT.Tag.Code%notin%c("No Tag","Lost Tag","No Head") & Sample.Status=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
+  filter(!is.na(Cwt.Tag.Code) & Cwt.Tag.Code%notin%c("No Tag","Lost Tag","No Head") & Sample.Status=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
   filter()
 
 # Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)
@@ -612,7 +613,7 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
 
 # To DFO Network drive ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
+                       file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
                                    "/R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS ",
                                    min(wcviCNepro_w_Results$`(R) RETURN YEAR`),
                                    "-",

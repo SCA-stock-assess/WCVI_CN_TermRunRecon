@@ -17,38 +17,40 @@ library(writexl)
 # ==================== 1. LOAD EPRO BASE FILES (2022-2023 data) ==================== 
 
 
-# Read OtoManager files as large list ---------------------------
-# Load base files to compile
-wcviCNepro.LL <- lapply(list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 
-                                 pattern=".csv", full.names=T), 
+# Read EPRO files as large list ---------------------------
+# !! before doing this you have to re-save the csvs as xlsx and change the tab name to match "All_Adult_Biosampling"
+wcviEPRO.LL <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 
+                                 pattern="^All_Adult_Biosampling_[a-zA-Z]*_AllStocks-AllSpecies_[0-9]{4}-[0-9]{4}_.*\\.xlsx$", full.names=T), 
                       function(x) {
-                        read.csv(x)
-                      })
+                        readxl::read_excel(x, sheet="All_Adult_Biosampling", guess_max=20000)
+                      })   
 
 # Change filenames in the List:
-names(wcviCNepro.LL) <- list.files("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 
-                                 pattern=".csv", full.names=F)
+names(wcviEPRO.LL) <- list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 
+                                 pattern="^All_Adult_Biosampling_[a-zA-Z]*_AllStocks-AllSpecies_[0-9]{4}-[0-9]{4}_.*\\.xlsx$", full.names=F)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
-wcviCNepro <- do.call("rbind", wcviCNepro.LL) %>%
+wcviEPRO <- do.call("rbind", wcviEPRO.LL) %>%
   tibble::rownames_to_column(var="file_source") %>%
-  filter(Spawning.Stock != "") %>%
+  select_all(~stringr::str_to_title(.)) %>%
+  select_all(~gsub("\\s+|\\.", ".", .)) %>%
+  filter(Spawning.Stock.Name != "") %>%
   mutate(
     #across(everything(), parse_guess), # Automatically determine column classes based on values
-    `(R) RETURN YEAR` = as.numeric(substr(Spawning.Stock, 1,4)),
-    `(R) OTOLITH BOX NUM` = Bag.No,
-    `(R) OTOLITH VIAL NUM` = Vial.No,
-    `(R) OTOLITH BOX-VIAL CONCAT` = case_when(!is.na(Bag.No) & !is.na(Vial.No) ~ paste0(Bag.No,sep="-",Vial.No)),
-    `(R) SCALE BOOK NUM` = Book.No,
+    `(R) RETURN YEAR` = as.numeric(substr(Spawning.Stock.Name, 1,4)),
+    `(R) OTOLITH BOX NUM` = Otolith.Bag.No,
+    `(R) OTOLITH VIAL NUM` = Otolith.Vial.No,
+    `(R) OTOLITH BOX-VIAL CONCAT` = case_when(!is.na(Otolith.Bag.No) & !is.na(Otolith.Vial.No) ~ paste0(Otolith.Bag.No,sep="-",Otolith.Vial.No)),
+    `(R) SCALE BOOK NUM` = Scale.Book.No,
     `(R) SCALE CELL NUM` = Scale.Sample.No,
-    `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(Book.No) & !is.na(Scale.Sample.No) ~ paste0(Book.No,sep="-",Scale.Sample.No)),
-    `(R) DNA NUM` = DNA.Sample.No,
-    `(R) TAGCODE` = CWT.Tag.Code,
-    `(R) HATCHCODE` = Hatch.Code,
-    `(R) TOTAL AGE: CWT` = case_when(!is.na(CWT.Age..yrs.) ~ as.numeric(CWT.Age..yrs.),
+    `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(Scale.Book.No) & !is.na(Scale.Sample.No) ~ paste0(Scale.Book.No,sep="-",Scale.Sample.No)),
+    `(R) DNA NUM` = Dna.Sample.No,
+    `(R) TAGCODE` = Cwt.Tag.Code,
+    `(R) HATCHCODE` = Otolith.Hatch.Code,
+    `(R) TOTAL AGE: CWT` = case_when(!is.na(Cwt.Age.Yrs) ~ as.numeric(Cwt.Age.Yrs),
                                                TRUE ~ NA),
-    `(R) TOTAL AGE: SCALE` = case_when(!is.na(Scale.Total.Age..yrs.) ~ as.numeric(Scale.Total.Age..yrs.), # Some entries for ttl age are "TRUE"(??)
+    `(R) TOTAL AGE: SCALE` = case_when(!is.na(Scale.Total.Age.Yrs) ~ as.numeric(Scale.Total.Age.Yrs), # Some entries for ttl age are "TRUE"(??)
                                                  Scale.Part.Age=="1M" ~ 2,
                                                  Scale.Part.Age=="2M" ~ 3,
                                                  Scale.Part.Age=="3M" ~ 4,
@@ -63,7 +65,7 @@ wcviCNepro <- do.call("rbind", wcviCNepro.LL) %>%
                                           TRUE ~ NA)
     #UEID = paste0(analysis_year, "-", seq(1:nrow(.)))
     ) %>%
-  filter(grepl("Chinook", Spawning.Stock)) %>%
+  filter(grepl("Chinook", Spawning.Stock.Name)) %>%
   print()
 
 # Clean up ---------------------------

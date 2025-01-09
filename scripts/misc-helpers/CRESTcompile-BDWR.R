@@ -5,10 +5,10 @@
 
 
 # Load packages ---------------------------
-library(here)
+#library(here)
 library(tidyverse)
-library(readxl)
-library(writexl)
+# library(readxl)
+# library(writexl)
 
 
 
@@ -56,21 +56,37 @@ source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))
 # saves as streamAreas
 
 
+# ============== EXPORT the full compiled BDWR file ============== 
+writexl::write_xlsx(crestBDWR, 
+                    path=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R/R_OUT - ",
+                    min(crestBDWR$YEAR), "-", max(crestBDWR$YEAR),
+                    "_Biological_Data_With_Results.xlsx"))
+
+## temporary because VPN not working? 
+writexl::write_xlsx(crestBDWR, 
+                    path=paste0("C:/Users/DAVIDSONKA/Desktop/R_OUT - ",
+                                min(crestBDWR$YEAR), "-", max(crestBDWR$YEAR),
+                                "_Biological_Data_With_Results.xlsx"))
+
 
 
 #############################################################################################################################################################
 
 #                                                                           ADD VARIABLES
+# 
+# crestBDWRcompiled <- crestBDWR %>% 
+#   mutate(`(R) Origin` = case_when(HATCHERY_ORIGIN=="Y" ~ "Hatchery",
+#                                   THERMALMARK=="Not Marked" ~ "Natural (assumed)",
+#                                   TRUE ~ "Unknown"),
+#          `(R) RESOLVED ORIGIN-STOCK ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
+#                                                     TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
+#          `(R) RESOLVED ORIGIN-REGION ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
+#                                             TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP))) %>% 
+#   print()
+# 
 
-crestBDWRcompiled <- crestBDWR %>% 
-  mutate(`(R) Origin` = case_when(HATCHERY_ORIGIN=="Y" ~ "Hatchery",
-                                  THERMALMARK=="Not Marked" ~ "Natural (assumed)",
-                                  TRUE ~ "Unknown"),
-         `(R) RESOLVED ORIGIN-STOCK ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
-                                                    TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
-         `(R) RESOLVED ORIGIN-REGION ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
-                                            TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP))) %>% 
-  print()
+
+
 
 
 #############################################################################################################################################################
@@ -93,6 +109,7 @@ PBT_BYs <- crestBDWR %>%
   group_by(PBT_BROOD_YEAR) %>%
   summarize() %>%
   pull(PBT_BROOD_YEAR)
+
 
 
 
@@ -121,16 +138,42 @@ left_join(crestBDWR,
       ADIPOSE_FIN_CLIPPED=="N" & THERMALMARK=="Not Marked" ~ "Natural",
       # ************* need to add factor for if it's within the PBT baseline and it's NOT a PBT hit == natural***************
       # If it's none of these scenarios, make it "Unknown"
-      TRUE ~ "Unknown"))
+      TRUE ~ "Unknown"),
+    
+    # 3. Fix Rollup to include missing IDs
+    `(R) Resolved Stock Rollup` = case_when(is.na(RESOLVED_STOCK_ROLLUP) & 
+                                              (!is.na(CWT_RESULT) & CWT_RESULT%notin%c("No Tag", "No Head", "Lost Tag") & !grepl("No Result", CWT_RESULT, ignore.case=T)) 
+                                            ~ stringr::str_to_title(gsub("_", " ", CWT_RESULT)),
+                                            TRUE ~ RESOLVED_STOCK_ROLLUP),
+    `(R) Resolved Stock Rollup` = case_when(is.na(RESOLVED_STOCK_ROLLUP) & is.na(`(R) Resolved Stock Rollup`) & !is.na(OTO_STOCK) 
+                                    ~ #sapply(OTO_STOCK, function(x) {
+                                       #                         gsub(paste(c("H-", "S-", " R", " Cr"), collapse = "|"), , x)
+                                        #                        }),
+                                      stringr::str_to_title(OTO_STOCK),
+                                    TRUE ~ `(R) Resolved Stock Rollup`),
+    
+    # 4. Assign WCVI/NON-WCVI (level 1) and identify "orphans"
+    `(R) Term Run Group 1` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste(`(R) Origin`, sep=" ", "WCVI"),
+                                       RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & !is.na(RESOLVED_STOCK_ROLLUP) ~ paste(`(R) Origin`, sep=" ", "Non-WCVI"),
+                                       is.na(RESOLVED_STOCK_ROLLUP) & !is.na(`(R) Resolved Stock Rollup`) ~ "Manual rollup required - use '(R) Resolved Stock Rollup' column ",
+                                       is.na(`(R) Resolved Stock Rollup`) ~ paste(`(R) Origin`, sep=" ", "Unknown"),
+                                       TRUE ~ "FLAG"),
+    `(R) Term Run Group 2` = case_when(grepl(" WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
+                                       grepl("Non-WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
+                                       TRUE ~ paste(`(R) Term Run Group 1`)),
+    `(R) Term Run Group 3` = case_when(!is.na(RESOLVED_STOCK_ORIGIN) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN),
+                                       is.na(RESOLVED_STOCK_ORIGIN) & !is.na(`(R) Resolved Stock Rollup`) ~ paste0(`(R) Origin`, sep=" ", `(R) Resolved Stock Rollup`),
+                                       is.na(RESOLVED_STOCK_ORIGIN) & is.na(`(R) Resolved Stock Rollup`) ~ paste(`(R) Origin`, sep=" ", "Unknown"), 
+                                       TRUE ~ "FLAG"),
+    `(R) Term Run Group 4` = case_when(grepl(" WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Term Run Group 3`, " (WCVI)"),
+                                       TRUE ~ `(R) Term Run Group 3`))
+    
+    
+
+# **** here next: how to group? do we have to stick to old groupings?? 
 
 
 
-
-
-
-
-
-writexl::write_xlsx(crestBDWR_CNgrouped, "C:/Users/DAVIDSONKA/Desktop/crestBDWR_CNgrouped test.xlsx")
 
 
 #############################################################################################################################################################
@@ -149,7 +192,7 @@ openxlsx::addWorksheet(R_OUT_CREST.Bio, "CREST Biodata Compiled")
 
 
 # Add data to tabs ---------------------------
-openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBiocompiled)
+openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBDWR_CNgrouped)
 
 
 
@@ -160,10 +203,10 @@ openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBioc
 # To github ---------------------------
 openxlsx::saveWorkbook(R_OUT_CREST.Bio,
                        file=paste0(here("outputs"),
-                                   "/R_OUT - Biological_Data_With_FOS ",
-                                   min(crestBiocompiled$YEAR),
+                                   "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
+                                   min(crestBDWR_CNgrouped$YEAR),
                                    "-",
-                                   max(crestBiocompiled$YEAR),
+                                   max(crestBDWR_CNgrouped$YEAR),
                                    ".xlsx"),
                        overwrite=T,
                        returnValue=T)
@@ -171,22 +214,22 @@ openxlsx::saveWorkbook(R_OUT_CREST.Bio,
 
 # To Network: 
 openxlsx::saveWorkbook(R_OUT_CREST.Bio, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
-                                   "/R_OUT - Biological_Data_With_FOS ",
-                                   min(crestBiocompiled$YEAR),
+                       file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R", 
+                                   "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
+                                   min(crestBDWR_CNgrouped$YEAR),
                                    "-",
-                                   max(crestBiocompiled$YEAR),
+                                   max(crestBDWR_CNgrouped$YEAR),
                                    ".xlsx"),
                        overwrite=T,
                        returnValue=T)
 
 
-write.csv(crestBiocompiled, 
-          file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
-                      "/R_OUT - Biological_Data_With_FOS ",
-                      min(crestBiocompiled$YEAR),
+write.csv(crestBDWR_CNgrouped, 
+          file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R", 
+                      "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
+                      min(crestBDWR_CNgrouped$YEAR),
                       "-",
-                      max(crestBiocompiled$YEAR),
+                      max(crestBDWR_CNgrouped$YEAR),
                       ".csv"), row.names=F)
 
 

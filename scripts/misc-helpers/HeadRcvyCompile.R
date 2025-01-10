@@ -54,7 +54,7 @@ remove(mrpHeadRcvy.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(mrpHeadRcvy, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
+                    path=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
                                 "/R_OUT - MRPHeadRecoveries_CHINOOK_",
                                 min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
                                 "-",

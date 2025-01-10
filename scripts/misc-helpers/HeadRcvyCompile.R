@@ -20,19 +20,19 @@
 
 # Read CWT recovery files as large list ---------------------------
 # Load base files to compile
-mrpHeadRcvy.LL <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
+CN_headRcvy.LL <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
                                     pattern=".csv", full.names=T), 
                          function(x) {
                            read.csv(x)
                          })
 
 # Change filenames in the List:
-names(mrpHeadRcvy.LL) <- list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
+names(CN_headRcvy.LL) <- list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
                                  pattern=".csv", full.names=T)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
-mrpHeadRcvy <- do.call("rbind", mrpHeadRcvy.LL) %>%
+CN_headRcvy <- do.call("rbind", CN_headRcvy.LL) %>%
   tibble::rownames_to_column(var="file_source") %>%
   setNames(paste0('MRP_', names(.))) %>% 
   rename(`(R) HEAD LABEL` = MRP_LabelId,
@@ -42,7 +42,7 @@ mrpHeadRcvy <- do.call("rbind", mrpHeadRcvy.LL) %>%
   print()
 
 # Clean up ---------------------------
-remove(mrpHeadRcvy.LL)
+remove(CN_headRcvy.LL)
 
 
 
@@ -53,45 +53,45 @@ remove(mrpHeadRcvy.LL)
 
 
 # Export to Network ---------------------------
-writexl::write_xlsx(mrpHeadRcvy, 
+writexl::write_xlsx(CN_headRcvy, 
                     path=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
                                 "/R_OUT - MRPHeadRecoveries_CHINOOK_",
-                                min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                min(CN_headRcvy$`(R) SAMPLE YEAR`),
                                 "-",
-                                max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                max(CN_headRcvy$`(R) SAMPLE YEAR`),
                                 "_LastUpdate_",
                                 Sys.Date(),
                                 ".xlsx"))
 
 
-write.csv(mrpHeadRcvy, 
+write.csv(CN_headRcvy, 
           file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
                       "/R_OUT - MRPHeadRecoveries_CHINOOK_",
-                      min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      min(CN_headRcvy$`(R) SAMPLE YEAR`),
                       "-",
-                      max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      max(CN_headRcvy$`(R) SAMPLE YEAR`),
                       "_LastUpdate_",
                       Sys.Date(),
                       ".csv"))
 
 
 # Export to github ---------------------------
-writexl::write_xlsx(mrpHeadRcvy, 
+writexl::write_xlsx(CN_headRcvy, 
                     path = paste0(here::here("outputs"),
                                   "/R_OUT - MRPHeadRecoveries_CHINOOK_",
-                                  min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                  min(CN_headRcvy$`(R) SAMPLE YEAR`),
                                   "-",
-                                  max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                                  max(CN_headRcvy$`(R) SAMPLE YEAR`),
                                   "_LastUpdate_",
                                   Sys.Date(),
                                   ".xlsx"))
 
-write.csv(mrpHeadRcvy, 
+write.csv(CN_headRcvy, 
           file=paste0(here::here("outputs"),
                       "/R_OUT - MRPHeadRecoveries_CHINOOK_",
-                      min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      min(CN_headRcvy$`(R) SAMPLE YEAR`),
                       "-",
-                      max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      max(CN_headRcvy$`(R) SAMPLE YEAR`),
                       "_LastUpdate_",
                       Sys.Date(),
                       ".xlsx"))

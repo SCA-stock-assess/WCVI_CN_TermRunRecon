@@ -60,11 +60,6 @@ CN_headRcvy <- read.csv(file=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/P
                                         full.names = TRUE)) 
                    
 
-# Load file as a tibble
-# head_rec <- list.files(here::here("outputs"), pattern = "(?i)headrecoveries", full.names = T) %>%
-#   str_subset("(?i)chinook") %>% # The Chinook data (as opposed to all species)
-#   read_excel
-
 
 
 
@@ -87,13 +82,6 @@ CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DF
 
 
 
-# # Load file as a tibble
-# cwt_rel <- list.files(here("outputs"), pattern = "(?i)release.*tagcodes", full.names = T) %>%
-#   str_subset("(?i)chinook") %>% # The Chinook data (as opposed to all species)
-#   read_excel |> 
-#   rename_with(~str_replace_all(.x, "MRP", "MRP_REL")) # Clarify which columns come from the release data
-
-
 
 #############################################################################################################################################################
 
@@ -106,8 +94,7 @@ CN_headRcvyResults <- left_join(CN_headRcvy,
                                by=c("MRP_TagCode" = "(R) TAGCODE"),
                                relationship="many-to-one") %>% 
   rename(`(R) SAMPLE YEAR`=X.R..SAMPLE.YEAR,
-         `(R) HEAD LABEL`=X.R..HEAD.LABEL)#|> 
-  #select(-`MRP_REL_Species Name`, -`MRP_REL_Recovery Years`) # Remove some columns from the releases that are redundant with the recovery information
+         `(R) HEAD LABEL`=X.R..HEAD.LABEL)
 
 
 
@@ -138,19 +125,6 @@ writexl::write_xlsx(CN_headRcvyResults,
                                 ".xlsx"))
 
 
-# # Export joined data file to .xslx --------------------------- 
-# 
-# write_xlsx(
-#   wcviCNheads_w_cwt,
-#   path = here(
-#     "outputs", 
-#     paste0(
-#       "R_OUT - MRPHeadRecoveries_CHINOOK_WITH RESULTS_2012-2023_LastUpdate_",
-#       Sys.Date(),
-#       ".xlsx"
-#     )
-#   )
-# )
 
 
 # /END!

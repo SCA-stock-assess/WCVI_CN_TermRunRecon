@@ -1,14 +1,16 @@
 
-# OtoCompile
-# KD Oct 2023
+# Head recovery compile and join to tagcode stock IDs
+# NB/KD Oct 2023
 
+# <<< For each new year: >>> 
+# 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
+# 2. Save to SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R
+# FOLLOW NAMING CONVENTION OR ELSE! >:(
 
 
 # Load packages ----------------
-#library(here)
-#library(tidyverse)
-#library(readxl)
-#library(writexl)
+library(tidyverse)
+
 
 
 

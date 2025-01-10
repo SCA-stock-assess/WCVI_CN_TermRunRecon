@@ -23,7 +23,7 @@ gc() #free up memory and report the memory usage.
 
 
 # Define analysis year:
-analysis_year <- 2024
+#analysis_year <- 2024
 
 
 
@@ -34,12 +34,8 @@ analysis_year <- 2024
 
 
 # Load packages ----------------
-library(here)
 library(tidyverse)
-library(readxl)
-library(writexl)
-library(openxlsx)
-library(saaWeb)
+
 
 
 # Helpers -------------
@@ -50,91 +46,10 @@ library(saaWeb)
 
 ################################################################################################################################################
 
-#                                                                           I. EPRO FILES LOAD 
-
-    # REPLACED BY source() below - delete soon! 
-      # # Load files from Sharepoint -------------
-      # 
-      # # Save directory name for where files are located (change if necessary)
-      # epro_dir <- paste("C:/Users", Sys.info()[6], "DFO-MPO/PAC-SCA Stock Assessment (STAD) - Terminal CN Run Recon",
-      #                   analysis_year,
-      #                   "Communal data/EPRO/",
-      #                   sep="/")
-      # 
-      # 
-      # # Load files as a list of tibbles
-      # epro.files <- list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = T) %>%
-      #   purrr::set_names(
-      #     list.files(epro_dir, pattern = "All_Adult_Biosampling_", full.names = F)) %>%
-      #   map(~readxl::read_excel(path = .x, trim_ws=T), id = "path" )
-      # # Should be a Large List of at least 8 elements: Burman, Conuma, Gold, Nahmint, Nitinat, Robertson, Sarita, San Juan, possible multiple files per stock depending on annual biosampling
-      # 
-      # 
-      # 
-      # # Convert the Large List into a useable R dataframe ---------------------------
-      # wcviCNepro <- epro.files %>%
-      #   map(~ mutate(.x, across(everything(), as.character))) %>% # Convert all columns to character for rbind compatibility
-      #   list_rbind(names_to = "file_source") %>% 
-      #   filter(`Spawning Stock` != "") %>%
-      #   mutate(
-      #     across(everything(), parse_guess), # Automatically determine column classes based on values
-      #     `(R) OTOLITH BOX NUM` = `Bag No`,
-      #     `(R) OTOLITH VIAL NUM` = `Vial No`,
-      #     `(R) OTOLITH BOX-VIAL CONCAT` = case_when(
-      #       !is.na(`Bag No`) & !is.na(`Vial No`) ~ paste0(`Bag No`,sep="-",`Vial No`)
-      #     ),
-      #     `(R) SCALE BOOK NUM` = `Book No`,
-      #     `(R) SCALE CELL NUM` = `Scale Sample No`,
-      #     `(R) SCALE BOOK-CELL CONCAT` = case_when(
-      #       !is.na(`Book No`) & !is.na(`Scale Sample No`) ~ paste0(`Book No`,sep="-",`Scale Sample No`)
-      #     ),
-      #     `(R) TAGCODE` = `CWT Tag Code`,
-      #     `(R) HATCHCODE` = `Hatch Code`,
-      #     `(R) RESOLVED TOTAL AGE` = case_when(!is.na(`CWT Age (yrs)`) ~ as.numeric(`CWT Age (yrs)`), # Prefer CWT ages where available
-      #                                          !is.na(`Scale Total Age (yrs)`) ~ as.numeric(`Scale Total Age (yrs)`), # Some entries for ttl age are "TRUE"(??)
-      #                                          `Scale Part Age`=="1M" ~ 2,
-      #                                          `Scale Part Age`=="2M" ~ 3,
-      #                                          `Scale Part Age`=="3M" ~ 4,
-      #                                          `Scale Part Age`=="4M" ~ 5,
-      #                                          `Scale Part Age`=="5M" ~ 6,
-      #                                          `Scale Part Age`=="6M" ~ 7,
-      #                                          T ~ NA_real_),
-      #     `(R) BROOD YEAR` = analysis_year - `(R) RESOLVED TOTAL AGE`,
-      #     UEID = paste0(analysis_year, "-", seq(1:nrow(.)))) 
-      # 
-      # # Remove the list object
-      # rm(epro.files)
-      # 
-      # 
-      # # Export to git and SP as a backup for future use ---------------------------
-      # # To git:
-      # writexl::write_xlsx(wcviCNepro, 
-      #                     path=paste0(here("outputs"), 
-      #                                 "/R_OUT - All EPRO facilities master ",
-      #                                 analysis_year,
-      #                                 ".xlsx"))
-      # 
-      # 
-      # # Export to SharePoint: 
-      # writexl::write_xlsx(wcviCNepro, 
-      #                     path = paste0(epro_dir, 
-      #                                   "R_OUT - All EPRO facilities master ",
-      #                                   analysis_year,
-      #                                   ".xlsx"))
-      # 
-      # 
-      # 
-      # # Export to DFO Network:
-      # writexl::write_xlsx(wcviCNepro, 
-      #                     path = paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
-      #                                   analysis_year, "/",
-      #                                   "R_OUT - All EPRO facilities master ",
-      #                                   analysis_year,
-      #                                   ".xlsx"))
+#                                                                           I. COMBINE EPRO FACILITY FILES 
 
 
 # Load source() EPRO compile code ---------------------------
-# Saves as wcviCNepro
 source(here::here("scripts", "misc-helpers", "EPROcompile.R"))
 
 
@@ -214,10 +129,11 @@ wcviCNepro_w_NPAFC <- left_join(wcviEPRO %>%
 # Option 1: Load function to query MRPIS CWT releases --------------------------- 
   # Run this if it hasn't been refreshed in a while (**VERY SLOW**)
 # source(here("scripts","functions","pullChinookCWTReleases.R"))
+# saves as CN_relTagCodes
 
 
 # Option 2: Load CWT data export from source() above directly --------------------------- (much quicker)
-cn_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
                                                      pattern = "^R_OUT - Chinook CWT release tagcodes",   #ignore temp files, eg "~R_OUT - Chinook CWT..."
                                                      full.names = TRUE), 
                                      sheet="Sheet1") %>% 

@@ -70,7 +70,7 @@ CN_headRcvy <- read.csv(file=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/P
 
 # Option 1:   Run saaWeb query to dump releases from MRP (annual or semi-annual, not required every time, *VERY SLOW*) ------------------
 # source(here::here("scripts", "functions", "pullChinookCWTReleases.R"))
-# saves as cn_relTagCodes
+# saves as CN_relTagCodes
 
 
 # Option 2:   Load already compiled file from above ------------------

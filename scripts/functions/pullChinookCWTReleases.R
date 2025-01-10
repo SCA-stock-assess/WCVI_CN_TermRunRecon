@@ -17,7 +17,7 @@ library(here)
 # ============================ 1. DUMP CWT TAGCODES ============================
 
 # Chinook release tagcodes ------------------------
-cn_relTagCodes <- saaWeb:::runCwtExtractorQuery(here::here("scripts", "json", "CWT_Releases_CN_2012-present.json"), config_file=here::here("saaWeb.config"), 
+CN_relTagCodes <- saaWeb:::runCwtExtractorQuery(here::here("scripts", "json", "CWT_Releases_CN_2012-present.json"), config_file=here::here("saaWeb.config"), 
                                                 user_name = NULL, password=NULL) %>%
   setNames(paste0('MRP_', names(.))) %>% 
   select(`MRP_Tagcode`, `MRP_Species Name`, `MRP_Release Agency Code`, `MRP_Project Name`, `MRP_Country Code`, `MRP_Brood Year`, `MRP_Release Year`, 
@@ -35,22 +35,22 @@ cn_relTagCodes <- saaWeb:::runCwtExtractorQuery(here::here("scripts", "json", "C
 # ============================ 2. EXPORT ============================
 
 # 2.1. Export to StA drive, WCVI Term Run folder ------------------------
-writexl::write_xlsx(cn_relTagCodes, 
+writexl::write_xlsx(CN_relTagCodes, 
                     paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - Chinook CWT release tagcodes BY ", 
-                           min(cn_relTagCodes$`MRP_Brood Year`), 
+                           min(CN_relTagCodes$`MRP_Brood Year`), 
                            "-", 
-                           max(cn_relTagCodes$`MRP_Brood Year`), 
+                           max(CN_relTagCodes$`MRP_Brood Year`), 
                            ".xlsx")
                     )
 
 
 
 # 2.2. Export to github repo ------------------------
-writexl::write_xlsx(cn_relTagCodes, here("outputs", 
+writexl::write_xlsx(CN_relTagCodes, here("outputs", 
                                            paste0("R_OUT - Chinook CWT release tagcodes BY ", 
-                                                  min(cn_relTagCodes$`MRP_Brood Year`), 
+                                                  min(CN_relTagCodes$`MRP_Brood Year`), 
                                                   "-", 
-                                                  max(cn_relTagCodes$`MRP_Brood Year`), 
+                                                  max(CN_relTagCodes$`MRP_Brood Year`), 
                                                   ".xlsx")
                                            )
                     )

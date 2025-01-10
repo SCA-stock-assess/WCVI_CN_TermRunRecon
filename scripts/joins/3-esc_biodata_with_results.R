@@ -23,13 +23,9 @@ rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects
 gc() #free up memory and report the memory usage.
 
 # Load packages ----------------
-#library(here)
 library(tidyverse)
-#library(readxl)
-#library(writexl)
-#library(openxlsx)
 #library(saaWeb)   # remotes::install_git("https://github.com/Pacific-salmon-assess/saaWeb") 
-#library(zoo)       # for rollapply()
+
 
 
 # Helpers ----------------
@@ -112,48 +108,42 @@ wcviCNescBiodat <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT
 
 #############################################################################################################################################################
 
-#                                                                           II. LOAD CWT HEAD RECOVERY RECORDS
+#                                                                           II. CWT HEAD RECOVERIES WITH RESULTS
 
-
-# <<< For each new year: >>> 
-# 1. Manually download newest year's CWT Recovery file from: http://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
-# 2. Save to SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/Import
-# FOLLOW NAMING CONVENTION OR ELSE! >:(
-# 3. Run source() line below (Option 1) - only  need to do this once/year. Otherwise run Option 2. 
 
 
 # ======================== Load head recovery data ========================  
 
-# Option 1: Run helper script to compile/load Otolith data (saves as 'mrpHeadRcvy') --------------------------- (*slow*)
-# Do this if you need to add a new year. Otherwise, do option 2. 
-#  source(here::here("scripts","misc-helpers","HeadRcvyCompile.R")) 
+# Option 1:     Run CWT compile/join scripts --------------------------- (*slow*)
+# Do this if you need to add a new year, otherwise move to Option2  
+#  source(here::here("scripts","joins","1-CWT_recoveries_with_results")) 
+  # saves as CN_headRcvyResults
 
 
-# Option 2: Load already saved exported head recovery master file --------------------------- (faster)
-# Do this if you are just loading already compiled head recoveries
-mrpHeadRcvy <- readxl::read_excel(path=list.files(path = here::here("outputs"),
-                                                  pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_2012*.*xlsx",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
-                                                  full.names = TRUE),
-                                  sheet="Sheet1",
-                                  trim_ws=T)
+# Option 2:    Load already saved/exported head recoveries with results --------------------------- (not quite as slow)
+# Do this if you are just loading already compiled head recoveries (i.e., you already ran "1-CWT_recoveries_with_results")
+CN_headRcvyResults <- readxl::read_excel(path=list.files(path = here::here("outputs"),
+                                                         pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_WITH RESULTS_",   
+                                                         full.names = T),
+                                         sheet="Sheet1",
+                                         trim_ws=T)
 
 
 # !! MAY GET:    Error: Std:: bad_alloc()  
 # It's a memory issue. Either try quitting R session and re-starting, or may have to close programs/restart computer. 
-# If really in a pickle, read in as CSV below: 
-# mrpHeadRcvy <- read.csv(here::here("outputs" "R_OUT - MPRHeadRecoveries_CHINOOK_2012-2023_LastUpdate_2024-02-02.csv"))
+# If really in a pickle, convert the xlsx to a csv usually works, but can ruin column names/formatting
 
 
 #############################################################################################################################################################
 
-#                                                                           III. JOIN BIODATA to CWT HEAD RECOVERY RECORDS
+#                                                                           III. JOIN BIODATA to CWT HEAD RECOVERIES WITH RESULTS 
 
 
 # ======================== JOIN ESCAPEMENT BIODATA+PADS+OTO+NPAFC to HEADS ========================  
-intersect(colnames(wcviCNescBiodat), colnames(mrpHeadRcvy))
+intersect(colnames(wcviCNescBiodat), colnames(CN_headRcvyResults))
 
-esc_biodata_heads <- left_join(wcviCNescBiodat,
-                               mrpHeadRcvy %>% 
+esc_biodata_headsCWT <- left_join(wcviCNescBiodat,
+                               CN_headRcvyResults %>% 
                                  mutate_at("(R) SAMPLE YEAR", as.character),
                                na_matches="never") %>% 
   mutate(`(R) TAGCODE` = MRP_TagCode) %>%
@@ -163,41 +153,45 @@ esc_biodata_heads <- left_join(wcviCNescBiodat,
 
 #############################################################################################################################################################
 
-#                                                                           IV. LOAD CWT TAGCODE IDs
+
+# << PROBABLY RETIRE THIS SECTION - HAS BEEN STREAMLINED INTO 1-CWT_recoveries_with_results >>
 
 
-
-# 0. RUN CWT RELEASE CODE DUMP ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
-# source(here::here("scripts", "functions", "pullChinookCWTReleases.R"))
-
-# 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
-cn_relTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
-                                                       pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
-                                                       full.names = TRUE), 
-                                       sheet="Sheet1")  
+# LOAD CWT TAGCODE IDs
 
 
-
-#############################################################################################################################################################
-
-#                                                                           V. JOIN BIODATA+HEADS to CWT TAGCODE ID
-
-
-# ======================== JOIN ESCAPEMENT BIODATA+HEADS to TAGCODE ID ========================  
-intersect(colnames(esc_biodata_heads), colnames(cn_relTagCodes))
-
-esc_biodata_headsCWT <- left_join(esc_biodata_heads,
-                                  cn_relTagCodes,
-                                  by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
-  mutate(`(R) BROOD YEAR: CWT` = `MRP_Brood Year`,
-         `(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`,
-         `(R) STOCK ID: CWT` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
-                                           gsub(" Cr", "", 
-                                                gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
-                                                ignore.case=F),
-                                         TRUE ~ NA)) %>%
-  print()
-
+# 
+# # 0. RUN CWT RELEASE CODE DUMP ONCE PER UPDATE (i.e., should only need to run line below a couple times a year)
+# # source(here::here("scripts", "functions", "pullChinookCWTReleases.R"))
+# 
+# # 1. Load pre-dumped tagcode releases (dumped in Step 0 above) - DO NOT NEED TO DO IF YOU DO STEP 0
+# cn_relTagCodes <- readxl::read_excel(path=list.files(path = here::here("outputs"),
+#                                                        pattern = "^R_OUT - Chinook CWT release tagcodes BY",   # use ^ to ignore temp files, eg "~R_OUT - ALL...,
+#                                                        full.names = TRUE), 
+#                                        sheet="Sheet1")  
+# 
+# 
+# 
+# #############################################################################################################################################################
+# 
+# #                                                                           V. JOIN BIODATA+HEADS to CWT TAGCODE ID
+# 
+# 
+# # ======================== JOIN ESCAPEMENT BIODATA+HEADS to TAGCODE ID ========================  
+# intersect(colnames(esc_biodata_heads), colnames(cn_relTagCodes))
+# 
+# esc_biodata_headsCWT <- left_join(esc_biodata_heads,
+#                                   cn_relTagCodes,
+#                                   by="(R) TAGCODE") %>%     #Needed or else links on comments field too 
+#   mutate(`(R) BROOD YEAR: CWT` = `MRP_Brood Year`,
+#          `(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `MRP_Brood Year`,
+#          `(R) STOCK ID: CWT` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+#                                            gsub(" Cr", "", 
+#                                                 gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+#                                                 ignore.case=F),
+#                                          TRUE ~ NA)) %>%
+#   print()
+# 
 
 
 #############################################################################################################################################################

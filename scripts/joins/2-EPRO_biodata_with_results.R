@@ -22,10 +22,6 @@ rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects
 gc() #free up memory and report the memory usage.
 
 
-# Define analysis year:
-#analysis_year <- 2024
-
-
 
 ################################################################################################################################################
 ################################################################################################################################################
@@ -37,9 +33,9 @@ gc() #free up memory and report the memory usage.
 library(tidyverse)
 
 
-
 # Helpers -------------
 "%notin%" <- Negate("%in%")
+analysis_year <- 2024
 
 
 
@@ -134,8 +130,8 @@ wcviCNepro_w_NPAFC <- left_join(wcviEPRO %>%
 
 # Option 2: Load CWT data export from source() above directly --------------------------- (much quicker)
 CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
-                                                     pattern = "^R_OUT - Chinook CWT release tagcodes",   #ignore temp files, eg "~R_OUT - Chinook CWT..."
-                                                     full.names = TRUE), 
+                                                     pattern = "^R_OUT - Chinook CWT release tagcodes",    
+                                                     full.names = T), 
                                      sheet="Sheet1") %>% 
   print()
 
@@ -155,10 +151,10 @@ CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DF
 
 
 # Join EPRO master file to NPAFC master mark file ---------------------------
-intersect(colnames(wcviCNepro_w_NPAFC), colnames(cn_relTagCodes))
+intersect(colnames(wcviCNepro_w_NPAFC), colnames(CN_relTagCodes))
 
 wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
-                                    cn_relTagCodes,
+                                    CN_relTagCodes,
                                     by="(R) TAGCODE",
                                     relationship="many-to-one")
 

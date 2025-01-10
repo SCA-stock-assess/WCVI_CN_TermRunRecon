@@ -3,10 +3,8 @@
 
 
 # Load libraries ------------------------
-library(saaWeb)
 library(tidyverse)
-library(writexl)
-library(here)
+
 
 # Helper ------------------------
 "%notin%" <- Negate("%in%")
@@ -19,14 +17,14 @@ library(here)
 
 # 1.1. Dump MRP age batch metadata ------------------------
   # This output has broad metadata like river etc., but no results
-SC_ageBatchMeta.MRP <- getAgeBatchList() %>% 
+SC_ageBatchMeta.MRP <- saaWeb::getAgeBatchList2021toCurrent() %>% 
   filter(Sector=="SC", Species=="Chinook") %>% 
   mutate_at("Id", as.character)
 
 
 # 1.2. Dump MRP age results ------------------------ (slow)
   # This output has the age results, but can't be traced back to specific river etc. without joining to dataframe above
-SC_scaleAges.MRP <- getAgeBatchScaleResults(c(SC_ageBatchMeta.MRP$Id)) %>% 
+SC_scaleAges.MRP <- saaWeb::getAgeBatchScaleResults(c(SC_ageBatchMeta.MRP$Id)) %>% 
   filter(Species=="Chinook") %>%
   rename(SampleYear=RecoveryYear) %>% 
   mutate_at("SampleYear", as.numeric) %>% 
@@ -80,7 +78,7 @@ runNuSEDSQuery <- function (query_doc, config_file = "saaWeb.config", user_name 
 
 
 # 3.3. Load historical NuSEDS data dump (slow) ------------------------
-SC_ages.NuSEDS <- read.csv(here("outputs", "R_OUT - NuSEDS Chinook Age results 2012-2021.csv")) %>%
+SC_ages.NuSEDS <- read.csv(here::here("outputs", "R_OUT - NuSEDS Chinook Age results 2012-2021.csv")) %>%
   select(Fiscal.Year, Project, Location, Species, Sample.Source, Gear.Code, Container.Label, Container.Address, Sample.Number, Sample.Start.Date,
          Sample.End.Date, Part.Age.Code, GR.Age, EU.Age) %>%
   setNames(paste0('PADS_', names(.))) %>%
@@ -131,13 +129,21 @@ SC_allAgesMaster <- full_join(SC_scaleAgesMeta.MRP %>%
 
 # 4.1. Export to StA drive, WCVI Term Run folder ------------------------
 writexl::write_xlsx(SC_allAgesMaster, 
-                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx"))
+                    paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/R_OUT - ALL South Coast Chinook Age results ", 
+                           min(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
+                           "-", 
+                           max(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
+                           ".xlsx"))
 
 
 
 # 4.2. Export to github repo ------------------------
 writexl::write_xlsx(SC_allAgesMaster, here::here("outputs", 
-                                           paste0("R_OUT - ALL South Coast Chinook Age results ", min(SC_allAgesMaster$`(R) SAMPLE YEAR`), "-", max(SC_allAgesMaster$`(R) SAMPLE YEAR`), ".xlsx")))
+                                           paste0("R_OUT - ALL South Coast Chinook Age results ", 
+                                                  min(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
+                                                  "-", 
+                                                  max(SC_allAgesMaster$`(R) SAMPLE YEAR`), 
+                                                  ".xlsx")))
 
 
 

@@ -57,11 +57,11 @@ library(tidyverse)
 
 
 # Option 2:   Load already compiled file from above ------------------
-mrpHeadRcvy <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
-                                 pattern="R_OUT - MRPHeadRecoveries_CHINOOK_.*\\.xlsx$", full.names=T), 
-                      function(x) {
-                        read.csv(x)
-                      })
+# there is an excel file available, but it often times out memory allocation, so recommend loading the csv version 
+mrpHeadRcvy <- read.csv(file=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
+                                        pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_.*\\.csv$",    
+                                        full.names = TRUE))
+                   
 
 # Load file as a tibble
 # head_rec <- list.files(here::here("outputs"), pattern = "(?i)headrecoveries", full.names = T) %>%

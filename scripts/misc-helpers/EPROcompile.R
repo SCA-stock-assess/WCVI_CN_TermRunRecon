@@ -69,7 +69,7 @@ wcviEPRO <- do.call("rbind", wcviEPRO.LL) %>%
   print()
 
 # Clean up ---------------------------
-remove(wcviCNepro.LL)
+remove(wcviEPRO.LL)
 
 
 

@@ -64,6 +64,17 @@ writexl::write_xlsx(mrpHeadRcvy,
                                 ".xlsx"))
 
 
+write.csv(mrpHeadRcvy, 
+          file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/2-Export-from-R",
+                      "/R_OUT - MRPHeadRecoveries_CHINOOK_",
+                      min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      "-",
+                      max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      "_LastUpdate_",
+                      Sys.Date(),
+                      ".csv"))
+
+
 # Export to github ---------------------------
 writexl::write_xlsx(mrpHeadRcvy, 
                     path = paste0(here::here("outputs"),
@@ -75,7 +86,15 @@ writexl::write_xlsx(mrpHeadRcvy,
                                   Sys.Date(),
                                   ".xlsx"))
 
-
+write.csv(mrpHeadRcvy, 
+          file=paste0(here::here("outputs"),
+                      "/R_OUT - MRPHeadRecoveries_CHINOOK_",
+                      min(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      "-",
+                      max(mrpHeadRcvy$`(R) SAMPLE YEAR`),
+                      "_LastUpdate_",
+                      Sys.Date(),
+                      ".xlsx"))
 
 
 # Error: Error in libxlsxwriter: 'Error creating output xlsx file. Usually a permissions error.' 

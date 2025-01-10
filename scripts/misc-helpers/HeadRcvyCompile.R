@@ -59,8 +59,6 @@ writexl::write_xlsx(CN_headRcvy,
                                 min(CN_headRcvy$`(R) SAMPLE YEAR`),
                                 "-",
                                 max(CN_headRcvy$`(R) SAMPLE YEAR`),
-                                "_LastUpdate_",
-                                Sys.Date(),
                                 ".xlsx"))
 
 
@@ -70,8 +68,6 @@ write.csv(CN_headRcvy,
                       min(CN_headRcvy$`(R) SAMPLE YEAR`),
                       "-",
                       max(CN_headRcvy$`(R) SAMPLE YEAR`),
-                      "_LastUpdate_",
-                      Sys.Date(),
                       ".csv"))
 
 
@@ -82,8 +78,6 @@ writexl::write_xlsx(CN_headRcvy,
                                   min(CN_headRcvy$`(R) SAMPLE YEAR`),
                                   "-",
                                   max(CN_headRcvy$`(R) SAMPLE YEAR`),
-                                  "_LastUpdate_",
-                                  Sys.Date(),
                                   ".xlsx"))
 
 write.csv(CN_headRcvy, 
@@ -92,8 +86,6 @@ write.csv(CN_headRcvy,
                       min(CN_headRcvy$`(R) SAMPLE YEAR`),
                       "-",
                       max(CN_headRcvy$`(R) SAMPLE YEAR`),
-                      "_LastUpdate_",
-                      Sys.Date(),
                       ".xlsx"))
 
 

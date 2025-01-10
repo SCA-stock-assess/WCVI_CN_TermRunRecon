@@ -275,14 +275,23 @@ a20recCompCS <- full_join(
   mutate(annual_sample_size = sum(n)) %>%
   print()
 
+# Note: not all samples necessarily are used because they must have a corresponding age as well as a stock ID
+
+
+# *** next day: add more detailed script for pooling rules same as in 01-age script (pull the sampel rate result from the age script somehow?? or export the
+# sample rate calculations from 01 into the mapping file for decision about how to pool comps)
 
 
 ########################################################################################################################################################
 
 #                                                                        JOIN + Export
 
+
+# ** joining comps to mapping file will be more difficult than expected... will have to link pooled results repeated for each month like ages
+
+
 # ============================== JOIN rec comps to RENmapping file ==============================
-RENmap01 <- left_join(RENmap %>% 
+RENmap04 <- left_join(RENmap03 %>% 
                         mutate(across(everything(), as.character)),
                       
                       a20recCompCS %>%
@@ -295,13 +304,28 @@ RENmap01 <- left_join(RENmap %>%
                                                                          TRUE~.)),
                                TermRun_sector01 = "Recreational",
                                TermRun_sector02 = "Area 20 Terminal") %>% 
-                        rename(Enumeration = monthly_catch_estimate,
-                               TermRun_AGEStemp = temporal_pool_it2,
-                               TermRun_temp_strata = MONTH,
-                               TermRun_AGESspat = subareas,
-                               TermRun_AGES_year = YEAR)
-) %>%
-  
+                        rename(TermRun_COMPS_year = YEAR) %>%
+                        filter(YEAR == RENmap03$TermRun_COMPS_year) %>% 
+                        mutate(across(everything(), as.character)),
+                      
+                      by=c("TermRun_sector01", "TermRun_sector02", "TermRun_COMPStemp", "TermRun_COMPSspat")
+                      ) %>%
+  mutate(across(everything(), as.character)) %>%
+  # The following coalesces replaces NA values in the original RENmap file with the values calculated in the scrips above:
+  mutate(n_age_2 = coalesce(n_age_2.x, n_age_2.y),
+         n_age_3 = coalesce(n_age_3.x, n_age_3.y),
+         n_age_4 = coalesce(n_age_4.x, n_age_4.y),
+         n_age_5 = coalesce(n_age_5.x, n_age_5.y),
+         n_age_6 = coalesce(n_age_6.x, n_age_6.y),
+         propn_age_2 = coalesce(propn_age_2.x, propn_age_2.y),
+         propn_age_3 = coalesce(propn_age_3.x, propn_age_3.y),
+         propn_age_4 = coalesce(propn_age_4.x, propn_age_4.y),
+         propn_age_5 = coalesce(propn_age_5.x, propn_age_5.y),
+         propn_age_6 = coalesce(propn_age_6.x, propn_age_6.y),
+         .keep="unused") %>%
+  relocate(c(Enumeration, contains("?"), contains("TermRun_AGES")), .after=TermRun_spatial_substrata) %>%
+  print()
+
 
 
 

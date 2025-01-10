@@ -2,10 +2,14 @@
 # Join CWT release data to Chinook head recovery numbers (currently, MRP only outputs by CWT code, not head tag number)
 
 # Work flow is:
-# 1.   Import CWT recovery data from local repo "outputs"
-# 2.   Import CWT release data from local repo "outputs" 
-# 3.   Smash them together
-# 4.   Save the resulting output file
+# ( If running for first time this year )
+# 1.    Go to MRPIS website and download year-specific recovery file: https://pac-salmon.dfo-mpo.gc.ca/CwtDataEntry/#/RecoveryExport
+# 2.    Save to Network drive: SCD_Stad\WCVI\CHINOOK\WCVI_TERMINAL_RUN\Annual_data_summaries_for_RunRecons\HeadRcvyCompile_base-files\1-Import-to-R
+# 3.    Run source() code around line 56 ("Option 1")
+# ( If just refreshing within a year for edits etc. )
+# 1.    Run code starting around line 59 ("Option 2")
+# FOR BOTH CASES:
+# 2.    Run the rest of the code from Part II onward. File will save to github repo and network (Y:\WCVI\CHINOOK\WCVI_TERMINAL_RUN\Annual_data_summaries_for_RunRecons\HeadRcvyCompile_base-files\2-Export-from-R)
 
 
 ################################################################################################################################################
@@ -18,7 +22,7 @@ gc() #free up memory and report the memory usage.
 
 
 # Define analysis year:
-analysis_year <- 2023
+#analysis_year <- 2023
 
 
 
@@ -29,12 +33,11 @@ analysis_year <- 2023
 
 
 # Load packages ----------------
-library(here)
 library(tidyverse)
-library(readxl)
-library(writexl)
-library(openxlsx)
-library(saaWeb)
+# library(readxl)
+# library(writexl)
+# library(openxlsx)
+# library(saaWeb)
 
 
 # Helpers -------------
@@ -45,16 +48,25 @@ library(saaWeb)
 
 ################################################################################################################################################
 
-#                                                                           I. Head Recoveries Load 
+#                                                                           I. Compile individual year files
 
 
-# Load files from local repo -------------
+# Option 1:   Run compile file (annual or semi-annual, not required every time) ------------------
+# source(here::here("scripts", "misc-helpers", "HeadRcvyCompile.R"))
+  # saves as mrpHeadRcvy
 
+
+# Option 2:   Load already compiled file from above ------------------
+mrpHeadRcvy <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/HeadRcvyCompile_base-files/1-Import-to-R", 
+                                 pattern="R_OUT - MRPHeadRecoveries_CHINOOK_.*\\.xlsx$", full.names=T), 
+                      function(x) {
+                        read.csv(x)
+                      })
 
 # Load file as a tibble
-head_rec <- list.files(here("outputs"), pattern = "(?i)headrecoveries", full.names = T) %>%
-  str_subset("(?i)chinook") %>% # The Chinook data (as opposed to all species)
-  read_excel
+# head_rec <- list.files(here::here("outputs"), pattern = "(?i)headrecoveries", full.names = T) %>%
+#   str_subset("(?i)chinook") %>% # The Chinook data (as opposed to all species)
+#   read_excel
 
 
 

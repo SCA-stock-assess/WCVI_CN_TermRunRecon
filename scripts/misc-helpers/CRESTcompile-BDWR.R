@@ -5,10 +5,7 @@
 
 
 # Load packages ---------------------------
-#library(here)
 library(tidyverse)
-# library(readxl)
-# library(writexl)
 
 
 
@@ -120,13 +117,14 @@ crestBDWR_CNgrouped <-
 left_join(crestBDWR, 
           streamAreas) %>% 
   filter(SPECIES==124) %>%
-  # --- Update existing CREST columns
+  
   mutate(
-    # 1. Create updated RESOLVED AGE column to incorporate PBT
+    # --- Update existing CREST columns ---
+    # -------- Create updated RESOLVED AGE column to incorporate PBT
     `(R) Resolved total age` = case_when((is.na(RESOLVED_AGE) | RESOLVED_AGE==0) & PBT_BROOD_YEAR %in% PBT_BYs ~ YEAR-as.numeric(PBT_BROOD_YEAR),
                                          TRUE ~ RESOLVED_AGE),
     
-    # 2. Create updated HATCHERY ORIGIN column to incorporate PBT ---
+    # -------- Create updated HATCHERY ORIGIN column to incorporate PBT and re-code for our terms
     `(R) Origin` = case_when(
       # If HATCHERY ORIGIN is a "Y", make it "Hatchery"
       HATCHERY_ORIGIN=="Y" ~ "Hatchery",
@@ -140,42 +138,109 @@ left_join(crestBDWR,
       # If it's none of these scenarios, make it "Unknown"
       TRUE ~ "Unknown"),
     
-    # 3. Fix Rollup to include missing IDs
+    # -------- Create updated Stock ID column to incorporate some missing otolith/CWT IDs 
     `(R) Resolved Stock Rollup` = case_when(is.na(RESOLVED_STOCK_ROLLUP) & 
                                               (!is.na(CWT_RESULT) & CWT_RESULT%notin%c("No Tag", "No Head", "Lost Tag") & !grepl("No Result", CWT_RESULT, ignore.case=T)) 
                                             ~ stringr::str_to_title(gsub("_", " ", CWT_RESULT)),
                                             TRUE ~ RESOLVED_STOCK_ROLLUP),
     `(R) Resolved Stock Rollup` = case_when(is.na(RESOLVED_STOCK_ROLLUP) & is.na(`(R) Resolved Stock Rollup`) & !is.na(OTO_STOCK) 
-                                    ~ #sapply(OTO_STOCK, function(x) {
-                                       #                         gsub(paste(c("H-", "S-", " R", " Cr"), collapse = "|"), , x)
-                                        #                        }),
-                                      stringr::str_to_title(OTO_STOCK),
-                                    TRUE ~ `(R) Resolved Stock Rollup`),
-    
-    # 4. Assign WCVI/NON-WCVI (level 1) and identify "orphans"
-    `(R) Term Run Group 1` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste(`(R) Origin`, sep=" ", "WCVI"),
-                                       RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & !is.na(RESOLVED_STOCK_ROLLUP) ~ paste(`(R) Origin`, sep=" ", "Non-WCVI"),
-                                       is.na(RESOLVED_STOCK_ROLLUP) & !is.na(`(R) Resolved Stock Rollup`) ~ "Manual rollup required - use '(R) Resolved Stock Rollup' column ",
-                                       is.na(`(R) Resolved Stock Rollup`) ~ paste(`(R) Origin`, sep=" ", "Unknown"),
-                                       TRUE ~ "FLAG"),
-    `(R) Term Run Group 2` = case_when(grepl(" WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
-                                       grepl("Non-WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
-                                       TRUE ~ paste(`(R) Term Run Group 1`)),
-    `(R) Term Run Group 3` = case_when(!is.na(RESOLVED_STOCK_ORIGIN) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN),
-                                       is.na(RESOLVED_STOCK_ORIGIN) & !is.na(`(R) Resolved Stock Rollup`) ~ paste0(`(R) Origin`, sep=" ", `(R) Resolved Stock Rollup`),
-                                       is.na(RESOLVED_STOCK_ORIGIN) & is.na(`(R) Resolved Stock Rollup`) ~ paste(`(R) Origin`, sep=" ", "Unknown"), 
-                                       TRUE ~ "FLAG"),
-    `(R) Term Run Group 4` = case_when(grepl(" WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Term Run Group 3`, " (WCVI)"),
-                                       TRUE ~ `(R) Term Run Group 3`))
+                                            ~ #sapply(OTO_STOCK, function(x) {
+                                              #                         gsub(paste(c("H-", "S-", " R", " Cr"), collapse = "|"), , x)
+                                              #                        }),
+                                              stringr::str_to_title(OTO_STOCK),
+                                            TRUE ~ `(R) Resolved Stock Rollup`)) %>% 
+  
+  mutate(
+    # --- Add new CREST columns ---
+    # -------- Create 'Term RR Roll Ups' column ---
+    `(R) Term RR Roll Ups` = case_when(
+      #2.0 Base case if is.na(RESOLVED_STOCK_ORIGIN) make it "Unknown"
+      is.na(RESOLVED_STOCK_ORIGIN) ~ "Unknown", 
+      #2.2 If it is NOT from NWVI or SWVI, it gets "NON-WCVI"
+      RESOLVED_STOCK_ROLLUP%notin%c("NWVI", "SWVI") ~ "NON-WCVI",
+      #2.4 Special case: Change "Tofino Hatchery" to "Bedwell"
+      RESOLVED_STOCK_ORIGIN=="Tofino Hatchery" ~ "Tofino Hatchery (Bedwell?)",    
+      #2.3 If it IS from NWVI or SWVI, this bit takes the stock ID from RESOLVED_STOCK_ORIGIN and removes 'creek' or 'river' so it just becomes uppercase BURMAN, CONUMA, etc.
+      RESOLVED_STOCK_ROLLUP%in%c("NWVI", "SWVI") ~ toupper(gsub(paste0("\\b(",paste(stopwords, collapse="|"),")\\b"), "", RESOLVED_STOCK_ORIGIN))),
     
     
+    # 3. Create 'TermSum' column ---
+    `(R) Term Sum` = paste(`(R) Origin`, `(R) Term RR Roll Ups`, sep=" "),
+    
+    # 4. Create 'TermCON' column ---
+    `(R) TermCON` = case_when(
+      #4.0 Base case unknown stock ID
+      is.na(RESOLVED_STOCK_ORIGIN) ~ `(R) Term Sum`,
+      #4.1 Identify all NON-WCVI stocks and carry through the "NON-WCVI" tag from '(R) Term Sum'
+      `(R) Term RR Roll Ups`=="NON-WCVI" ~ `(R) Term Sum`,
+      #4.2 Identify all of the focal rivers above that get their own group throughout the term RR process:
+      `(R) Term RR Roll Ups`%in%focal_a25 ~ `(R) Term Sum`,
+      #4.3 Identify all systems not in focal_a25 above, but still in area 25 (using "statarea.origin" created above) and make them "Other Area 25"
+      `(R) Term RR Roll Ups`%notin%focal_a25 & statarea.origin==25 ~ paste(`(R) Origin`, "Other Area 25", sep=" "),
+      #4.4 Same as above but for "Other Area 23"
+      `(R) Term RR Roll Ups`%notin%focal_a25 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
+      #4.5 Identify all systems NOT IN focal_a25, and also NOT assigned to "NON-WCVI", "Other Area 25", or "Other Area 23" 
+      `(R) Term RR Roll Ups`%notin%focal_a25 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" ")),
+    
+    # 5. Create TermNIT column ---
+    `(R) TermNIT` = case_when(
+      #5.0 Base case unknown stock ID
+      is.na(RESOLVED_STOCK_ORIGIN) ~ `(R) Term Sum`,
+      #5.1 same as 4.1
+      `(R) Term RR Roll Ups`=="NON-WCVI" ~ `(R) Term Sum`,
+      #5.2 same as 4.2 but area 22
+      `(R) Term RR Roll Ups`%in%focal_a22 ~ `(R) Term Sum`,
+      #5.3 same as 4.3 but area 22
+      `(R) Term RR Roll Ups`%notin%focal_a22 & statarea.origin==25 ~ paste(`(R) Origin`, "Other Area 25", sep=" "),
+      #5.4 same as 4.4 but area 22
+      `(R) Term RR Roll Ups`%notin%focal_a22 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
+      #5.5 same as 4.5 but area 22
+      `(R) Term RR Roll Ups`%notin%focal_a22 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" ")),
+    
+    # 6. Create TermArea23 column ---
+    `(R) TermArea23` = case_when(
+      #6.0 Base case unknown stock ID
+      is.na(RESOLVED_STOCK_ORIGIN) ~ `(R) Term Sum`,
+      #6.1 same as 4.1
+      `(R) Term RR Roll Ups`=="NON-WCVI" ~ `(R) Term Sum`,
+      #6.2 same as 4.2
+      `(R) Term RR Roll Ups`%in%focal_a23 ~ `(R) Term Sum`,
+      #6.3 same as 4.3
+      `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin==25 ~ paste(`(R) Origin`, "Other Area 25", sep=" "),
+      #6.4 same as 4.4  
+      `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
+      #6.5 same as 4.5
+      `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
+  print()
+  
+    
 
-# **** here next: how to group? do we have to stick to old groupings?? 
+    
+    
 
 
 
 
+#   # 4. Assign WCVI/NON-WCVI (level 1) and identify "orphans"
+#   `(R) Term Run Group 1` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste(`(R) Origin`, sep=" ", "WCVI"),
+#                                      RESOLVED_STOCK_ROLLUP %notin% c("SWVI", "NWVI") & !is.na(RESOLVED_STOCK_ROLLUP) ~ paste(`(R) Origin`, sep=" ", "Non-WCVI"),
+#                                      is.na(RESOLVED_STOCK_ROLLUP) & !is.na(`(R) Resolved Stock Rollup`) ~ "Manual rollup required - use '(R) Resolved Stock Rollup' column ",
+#                                      is.na(`(R) Resolved Stock Rollup`) ~ paste(`(R) Origin`, sep=" ", "Unknown"),
+#                                      TRUE ~ "FLAG"),
+# `(R) Term Run Group 2` = case_when(grepl(" WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
+#                                    grepl("Non-WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP),
+#                                    TRUE ~ paste(`(R) Term Run Group 1`)),
+# `(R) Term Run Group 3` = case_when(!is.na(RESOLVED_STOCK_ORIGIN) ~ paste(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN),
+#                                    is.na(RESOLVED_STOCK_ORIGIN) & !is.na(`(R) Resolved Stock Rollup`) ~ paste0(`(R) Origin`, sep=" ", `(R) Resolved Stock Rollup`),
+#                                    is.na(RESOLVED_STOCK_ORIGIN) & is.na(`(R) Resolved Stock Rollup`) ~ paste(`(R) Origin`, sep=" ", "Unknown"), 
+#                                    TRUE ~ "FLAG"),
+# `(R) Term Run Group 4` = case_when(grepl(" WCVI", `(R) Term Run Group 1`) ~ paste(`(R) Term Run Group 3`, " (WCVI)"),
+#                                    TRUE ~ `(R) Term Run Group 3`))
 
+  
+  
+  
+  
 #############################################################################################################################################################
 
 #                                                                           EXPORT 
@@ -202,7 +267,7 @@ openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBDWR
 
 # To github ---------------------------
 openxlsx::saveWorkbook(R_OUT_CREST.Bio,
-                       file=paste0(here("outputs"),
+                       file=paste0(here::here("outputs"),
                                    "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
                                    min(crestBDWR_CNgrouped$YEAR),
                                    "-",

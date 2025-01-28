@@ -35,11 +35,11 @@ PBT_inventory <-  readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PB
   filter(collection_extract %notin% c("ProvState_extract", "repunit_extract", "Notes", "StockCode_extract")) %>% 
   pivot_longer(cols=c("ALOUETTE_RIVER":"YUKON_RIVER@WHITEHORSE"), names_to = "system", values_to = "val") %>% 
   mutate(`(R) SAMPLE YEAR` = str_sub(collection_extract, start=1, end=4),
-         `(R) STOCK` = gsub(gsub(gsub(gsub(str_to_title(gsub(system, pattern="_",  replacement=" ")), 
+         `(R) STOCK` = trimws(gsub(gsub(gsub(gsub(str_to_title(gsub(system, pattern="_",  replacement=" ")), 
                                                 pattern="River", replacement=""),
                                            pattern="Creek", replacement=""),
                                       pattern="  ", replacement=" "), 
-                                 pattern=" -", replacement=" "),
+                                 pattern=" -", replacement=" ")),
          val = case_when(grepl(">1", val) ~ as.numeric(1),
                          val=="1*" ~ NA,
                          TRUE ~ as.numeric(val))

@@ -62,7 +62,7 @@ remove(findFirstFullPBTBY, SC_PBT_inventory)
 
 # To Network -------------------------
 writexl::write_xlsx(SC_PBTreliable, 
-                    "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/SC - Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
+                    "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/R_OPUT - SC Earliest reliable return year using PBT baseline by stock - draft working.xlsx")
 
 
 

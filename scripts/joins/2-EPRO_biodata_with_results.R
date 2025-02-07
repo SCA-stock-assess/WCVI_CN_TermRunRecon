@@ -57,9 +57,8 @@ source(here::here("scripts", "misc-helpers", "EPROcompile.R"))
 
 
 NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
-                                            pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
-                                            full.names = TRUE), 
-                            sheet="AC087805 (1)") %>% 
+                                            pattern = "^All CN Marks from NPAFC",    
+                                            full.names = TRUE)) %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
          `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 

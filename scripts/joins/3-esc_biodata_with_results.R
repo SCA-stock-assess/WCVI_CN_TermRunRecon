@@ -50,7 +50,7 @@ options(scipen = 9999)
 #3. Read in the file and reformat (slow) ----------------
 wcviCNescBiodat <- rbind(
   # --- Read in the 2015-last year tab ----
-  readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
+  readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
                                      full.names = TRUE), 
                      sheet=grep("Biodata 2015-", 
@@ -61,7 +61,7 @@ wcviCNescBiodat <- rbind(
                      guess_max=10000) %>%
     mutate(across(everything(), as.character)),
   # --- Read in the 2024 tab ---
-  readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
+  readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
                                      full.names = TRUE), 
                      sheet=grep(paste0("Biodata ", analysis_year), 
@@ -533,7 +533,7 @@ esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
 #                                                                           XIII. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-PBT_results <- readxl::read_excel(path="//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+PBT_results <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,

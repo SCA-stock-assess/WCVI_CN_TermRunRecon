@@ -48,7 +48,8 @@ options(scipen = 9999)
 #                                           recursive=F, pattern="^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx")   # <<<< add a file index value if needed e.g., [1]
 
 #3. Read in the file and reformat (slow) ----------------
-wcviCNescBiodat <- full_join(
+wcviCNescBiodat <- rbind(
+  # --- Read in the 2015-last year tab ----
   readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
                                      full.names = TRUE), 
@@ -58,8 +59,8 @@ wcviCNescBiodat <- full_join(
                                                                      full.names = TRUE)),
                                 ignore.case=T, value=T),
                      guess_max=10000) %>%
-    mutate(across(everything(.), ~as.character())),
-  
+    mutate(across(everything(), as.character)),
+  # --- Read in the 2024 tab ---
   readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
                                      full.names = TRUE), 
@@ -69,8 +70,8 @@ wcviCNescBiodat <- full_join(
                                                                      full.names = TRUE)),
                                 ignore.case=T, value=T),
                      guess_max=10000) %>%
-    mutate(across(everything(), ~as.character()))
-  ) %>% 
+    mutate(across(everything(), as.character))
+) %>% 
   select(Year, `Sample Month`:Species, `Fishery / River`:Gear, Sex, `POF Length (mm)`:`Egg Retention`, Comments) %>%
   mutate(`(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
                                                 paste0(`Otolith Lab Number`,sep="-",`Otolith Box #`,sep="-",`Otolith Specimen #`)),

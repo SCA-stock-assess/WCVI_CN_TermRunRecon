@@ -66,6 +66,13 @@ writexl::write_xlsx(crestBDWR,
                                 "_Biological_Data_With_Results.xlsx"))
 
 
+# ==================== LOAD TERM RUN REC SUBGROUP LOOKUP TABLE ==================== 
+termRun_RecSubGroups <- readxl::read_excel(path=here::here("data", "TermRun_Rec_PFMA_SubGroups.xlsx"), 
+                                           sheet="RRAreaLU")
+
+
+
+
 
 #############################################################################################################################################################
 
@@ -239,8 +246,18 @@ left_join(crestBDWR,
 
   
   
+#############################################################################################################################################################
+
+#                                                                    JOIN TO TERM RUN GROUP LOOKUP TABLE 
+# made by Piper-Lynn
+
+# Join the compiled BDWR to the Rec sub-groups
+crestBDWR_CNgrouped.recSubGroups <- left_join(crestBDWR_CNgrouped,
+                                              termRun_RecSubGroups,
+                                              by="SUBAREA")
   
-  
+
+
 #############################################################################################################################################################
 
 #                                                                           EXPORT 
@@ -257,7 +274,7 @@ openxlsx::addWorksheet(R_OUT_CREST.Bio, "CREST Biodata Compiled")
 
 
 # Add data to tabs ---------------------------
-openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBDWR_CNgrouped)
+openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBDWR_CNgrouped.recSubGroups)
 
 
 
@@ -269,9 +286,9 @@ openxlsx::writeData(R_OUT_CREST.Bio, sheet="CREST Biodata Compiled", x=crestBDWR
 openxlsx::saveWorkbook(R_OUT_CREST.Bio,
                        file=paste0(here::here("outputs"),
                                    "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
-                                   min(crestBDWR_CNgrouped$YEAR),
+                                   min(crestBDWR_CNgrouped.recSubGroups$YEAR),
                                    "-",
-                                   max(crestBDWR_CNgrouped$YEAR),
+                                   max(crestBDWR_CNgrouped.recSubGroups$YEAR),
                                    ".xlsx"),
                        overwrite=T,
                        returnValue=T)
@@ -281,20 +298,20 @@ openxlsx::saveWorkbook(R_OUT_CREST.Bio,
 openxlsx::saveWorkbook(R_OUT_CREST.Bio, 
                        file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R", 
                                    "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
-                                   min(crestBDWR_CNgrouped$YEAR),
+                                   min(crestBDWR_CNgrouped.recSubGroups$YEAR),
                                    "-",
-                                   max(crestBDWR_CNgrouped$YEAR),
+                                   max(crestBDWR_CNgrouped.recSubGroups$YEAR),
                                    ".xlsx"),
                        overwrite=T,
                        returnValue=T)
 
 
-write.csv(crestBDWR_CNgrouped, 
+write.csv(crestBDWR_CNgrouped.recSubGroups, 
           file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R", 
                       "/R_OUT - Biological_Data_With_Results (WCVI GROUPED) ",
-                      min(crestBDWR_CNgrouped$YEAR),
+                      min(crestBDWR_CNgrouped.recSubGroups$YEAR),
                       "-",
-                      max(crestBDWR_CNgrouped$YEAR),
+                      max(crestBDWR_CNgrouped.recSubGroups$YEAR),
                       ".csv"), row.names=F)
 
 

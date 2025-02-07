@@ -562,7 +562,7 @@ PBT_tagrate <- read.csv(here::here("data", "bch_v4.2b_2013-2022_brood-counts_tag
   rename(`(R) SAMPLE YEAR` = collection_extract) %>% 
   mutate(`(R) SAMPLE YEAR` = str_sub(`(R) SAMPLE YEAR`, start=1, end=4)) %>%
   mutate(Tag_Rate = case_when(grepl(">1", Tag_Rate) ~ "1",
-                              grepl("\\*", Tag_Rate) ~ "1",
+                              grepl("\\*", Tag_Rate) ~ NA,
                               TRUE ~ Tag_Rate)) %>%
   mutate_at("Tag_Rate", as.numeric) %>%
   filter(Tag_Rate > 0.70) %>%
@@ -966,32 +966,32 @@ R_OUT_ESC.RES <- openxlsx::createWorkbook()
 # Add sheets to the workbook --------------------
 openxlsx::addWorksheet(R_OUT_ESC.RES, "readme")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodata w RESULTS")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodat w RES - PBT parents")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC summary")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "qc0 - EBwR unCert Oto")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "!NPAFC_dupl!")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Oto stock ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Oto result")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No CWT ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Reslvd ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- Unreslvd ID")
-openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- Unreslvd age")
+#openxlsx::addWorksheet(R_OUT_ESC.RES, "Esc biodat w RES - PBT parents")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC summary")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "qc0 - EBwR unCert Oto")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "!NPAFC_dupl!")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Oto stock ID")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Oto result")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No CWT ID")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- No Reslvd ID")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- Unreslvd ID")
+# openxlsx::addWorksheet(R_OUT_ESC.RES, "QC- Unreslvd age")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - PADS unmatched")
 openxlsx::addWorksheet(R_OUT_ESC.RES, "antijoin - OM unmatched")
 
 # Write data to the sheets --------------------
 openxlsx::writeData(R_OUT_ESC.RES, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodata w RESULTS", x=esc_biodata_w_RESULTS)
-openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodat w RES - PBT parents", x=PBT_parents)
-openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
-openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc_EBwR_uncertOtoID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet="!NPAFC_dupl!", x=NPAFC_dupl.df)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto stock ID", x=qc_noOtoID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto result", x=qc_noOtoResults)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No CWT ID", x=qc_noCWTID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Reslvd ID", x=qc_noRslvdID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd ID", x=qc_unRslvdID)
-openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd age", x=qc_unRslvdAge)
+#openxlsx::writeData(R_OUT_ESC.RES, sheet="Esc biodat w RES - PBT parents", x=PBT_parents)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet="QC summary", x=qc_summary)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet="qc0 - EBwR unCert Oto", x=qc_EBwR_uncertOtoID)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet="!NPAFC_dupl!", x=NPAFC_dupl.df)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto stock ID", x=qc_noOtoID)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Oto result", x=qc_noOtoResults)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No CWT ID", x=qc_noCWTID)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- No Reslvd ID", x=qc_noRslvdID)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd ID", x=qc_unRslvdID)
+# openxlsx::writeData(R_OUT_ESC.RES, sheet = "QC- Unreslvd age", x=qc_unRslvdAge)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - PADS unmatched", x=antijoin_PADS)
 openxlsx::writeData(R_OUT_ESC.RES, sheet = "antijoin - OM unmatched", x=antijoin_OM)
 
@@ -1032,7 +1032,7 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 # To DFO Network drive --------------------
 # For run reconstruction: 
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",  
+                       file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",  
                                    "R_OUT - WCVI_Escapement-FSC_BioData_",
                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
                                    "-",
@@ -1046,7 +1046,7 @@ openxlsx::saveWorkbook(R_OUT_ESC.RES,
 
 # To biodata folder:
 openxlsx::saveWorkbook(R_OUT_ESC.RES, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",  
+                       file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/2-Escapement/",  
                                    "R_OUT - WCVI_Escapement-FSC_BioData_",
                                    min(as.numeric(esc_biodata_w_RESULTS$`(R) SAMPLE YEAR`)),
                                    "-",

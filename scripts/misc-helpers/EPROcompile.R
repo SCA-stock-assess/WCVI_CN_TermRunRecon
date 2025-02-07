@@ -20,14 +20,14 @@ library(tidyverse)
 # Read EPRO files as large list ---------------------------
 # !! before doing this you have to re-save the csvs as xlsx and change the tab name to match "All_Adult_Biosampling"
 wcviEPRO.LL <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 
-                                 pattern="^All_Adult_Biosampling_[a-zA-Z]*_AllStocks-AllSpecies_[0-9]{4}-[0-9]{4}_.*\\.xlsx$", full.names=T), 
+                                 pattern="^All_Adult_Biosampling_[0-9a-zA-Z]*_AllStocks-AllSpecies_[0-9]{4}-[0-9]{4}_.*\\.xlsx$", full.names=T), 
                       function(x) {
                         readxl::read_excel(x, sheet="All_Adult_Biosampling", guess_max=20000)
                       })   
 
 # Change filenames in the List:
 names(wcviEPRO.LL) <- list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 
-                                 pattern="^All_Adult_Biosampling_[a-zA-Z]*_AllStocks-AllSpecies_[0-9]{4}-[0-9]{4}_.*\\.xlsx$", full.names=F)
+                                 pattern="^All_Adult_Biosampling_[0-9a-zA-Z]*_AllStocks-AllSpecies_[0-9]{4}-[0-9]{4}_.*\\.xlsx$", full.names=F)
 
 
 # Convert the Large List into a useable R dataframe ---------------------------

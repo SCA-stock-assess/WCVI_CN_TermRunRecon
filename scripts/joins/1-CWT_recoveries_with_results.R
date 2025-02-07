@@ -92,9 +92,7 @@ CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DF
 CN_headRcvyResults <- left_join(CN_headRcvy,
                                 CN_relTagCodes,
                                by=c("MRP_TagCode" = "(R) TAGCODE"),
-                               relationship="many-to-one") %>% 
-  rename(`(R) SAMPLE YEAR`=X.R..SAMPLE.YEAR,
-         `(R) HEAD LABEL`=X.R..HEAD.LABEL)
+                               relationship="many-to-one") 
 
 
 

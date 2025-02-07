@@ -95,11 +95,6 @@ wcviCNescBiodat <- rbind(
                                           is.na(`Scale Format (5 down, 2 across, etc)`) & grepl("10-50", `Scale #`) ~ "10",
                                           TRUE ~ `Scale #`),
          `(R) SCALE BOOK-CELL CONCAT` = case_when(!is.na(`Scale Book #`) & !is.na(`Scale #`) ~ paste0(`(R) SCALE BOOK NUM`,sep="-",`(R) SCALE CELL NUM`)),
-         # `(R) FIELD SCALE BOOK-CELL CONCAT` = case_when(!is.na(`(R) FIELD SCALE BOOK NUM`) ~ paste0(`(R) FIELD SCALE BOOK NUM`,"-",`(R) SCALE CELL NUM`),
-         #                                                TRUE ~ NA),
-         # `(R) RESOVLED SCALE BOOK-CELL CONCAT` = case_when(is.na(`(R) FIELD SCALE BOOK-CELL CONCAT`) ~ `(R) SCALE BOOK-CELL CONCAT`,
-         #                                                   !is.na(`(R) FIELD SCALE BOOK-CELL CONCAT`) ~ `(R) FIELD SCALE BOOK-CELL CONCAT`,
-         #                                                   TRUE~"FLAG"),
          RrowID = seq(1:nrow(.)),
          Sex = case_when(Sex=="Female" ~ "F",
                          Sex=="Male" ~ "M",
@@ -141,7 +136,15 @@ CN_headRcvyResults <- readxl::read_excel(path=list.files(path = here::here("outp
                                                          pattern = "^R_OUT - MRPHeadRecoveries_CHINOOK_WITH RESULTS_",   
                                                          full.names = T),
                                          sheet="Sheet1",
-                                         trim_ws=T)
+                                         trim_ws=T) %>% 
+  rename(`(R) BROOD YEAR: CWT` = `MRP_Brood Year`) %>%
+  mutate(`(R) TOTAL AGE: CWT` = as.numeric(`(R) SAMPLE YEAR`) - `(R) BROOD YEAR: CWT`,
+         `(R) STOCK ID: CWT` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+                                           gsub(" Cr", "", 
+                                                gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
+                                                ignore.case=F),
+                                         TRUE ~ NA)) %>% 
+  print()
 
 
 # !! MAY GET:    Error: Std:: bad_alloc()  
@@ -158,10 +161,10 @@ CN_headRcvyResults <- readxl::read_excel(path=list.files(path = here::here("outp
 intersect(colnames(wcviCNescBiodat), colnames(CN_headRcvyResults))
 
 esc_biodata_headsCWT <- left_join(wcviCNescBiodat,
-                               CN_headRcvyResults %>% 
-                                 mutate_at("(R) SAMPLE YEAR", as.character),
-                               na_matches="never") %>% 
-  mutate(`(R) TAGCODE` = MRP_TagCode) %>%
+                                  CN_headRcvyResults %>% 
+                                    mutate_at("(R) SAMPLE YEAR", as.character),
+                                  na_matches="never") %>% 
+  rename(`(R) TAGCODE` = MRP_TagCode) %>%
   print()
 
 
@@ -219,6 +222,7 @@ esc_biodata_headsCWT <- left_join(wcviCNescBiodat,
 # Option 1: Run helper script to pull/compile scale data (saves as 'SC_age_data') --------------------------- (*slow*)
 # Do this if you need to add a new year. Otherwise, do option 2. 
 #  source(here::here("scripts", "functions", "pullChinookAgeData.R"))
+  # saves as many things, key one is SC_allAgesMaster
 
 
 # Option 2: Load already saved exported age master file --------------------------- (faster)
@@ -244,7 +248,8 @@ intersect(colnames(esc_biodata_headsCWT), colnames(SC_allAgesMaster))
 # IF you get a many-to-many error, you have duplicate scalebooks that were handed out to different regions. 
 # Will need to further filter down the SC_age_data file
 esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
-                                       SC_allAgesMaster,
+                                       SC_allAgesMaster %>% 
+                                         mutate(across(everything(), as.character)),
                                        na_matches="never") %>%
   mutate(`(R) TOTAL AGE: SCALE` = case_when(!is.na(PADS_GrAge) & !grepl("M|F", PADS_GrAge) ~ as.numeric(paste0(substr(PADS_GrAge,1,1))),
                                              `PADS_GrAge`=="1M" ~ 2,
@@ -254,9 +259,6 @@ esc_biodata_headsCWT_PADS <- left_join(esc_biodata_headsCWT,
                                              `PADS_GrAge`=="5M" ~ 6,
                                              `PADS_GrAge`=="6M" ~ 7),
          `(R) BROOD YEAR: SCALE` = as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`) %>%
-         #`(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: CWT`,
-          #                                     is.na(`(R) TOTAL AGE: CWT`) ~ as.numeric(`(R) SAMPLE YEAR`) - `(R) TOTAL AGE: SCALE`,
-           #                                    TRUE ~ NA)) %>% 
   arrange(`(R) SAMPLE YEAR`) %>%
   relocate(c(`(R) BROOD YEAR: CWT`, `(R) TOTAL AGE: CWT`, `(R) STOCK ID: CWT`), .before=`(R) TOTAL AGE: SCALE`) %>%
   print()
@@ -370,9 +372,8 @@ prob_orders <- factor(c("V LOW", "LOW", "MED", "HIGH"), levels=c("V LOW", "LOW",
 # Load NPAFC CN mark master file ---------------------------
 
 NPAFC <- readxl::read_excel(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
-                                            pattern = "^All CN Marks",   #ignore temp files, eg "~All CN Marks...,
-                                            full.names = TRUE), 
-                            sheet="AC087805 (1)") %>% 
+                                            pattern = "^All CN Marks from NPAFC",   #ignore temp files, eg "~All CN Marks...,
+                                            full.names = TRUE)) %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
          `(R) oto join BY` = NPAFC_BROOD_YEAR) %>% 

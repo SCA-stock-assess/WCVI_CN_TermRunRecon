@@ -61,7 +61,8 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GRO
                                             full.names = TRUE)) %>% 
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
-         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
+         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR
+         ) %>% 
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
                                     TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
@@ -163,17 +164,17 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 #                                                                           VI. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-PBTresults <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
-                                 sheet="Sheet1", guess_max=10000) %>% 
-  setNames(paste0('MGL_', names(.))) %>% 
-  mutate(`(R) DNA NUM` = MGL_oFish,
-         `(R) RETURN YEAR` = MGL_oYear,
-         MGL_Brood_Collection = str_to_title(gsub("_", " ", MGL_Brood_Collection, ignore.case = T))) %>% 
-  mutate_at(c("(R) DNA NUM", "(R) RETURN YEAR"), as.character) %>%
-  filter(grepl("Bedwell|Burman|Conuma|Cowichan|Cypre|Gold|Kennedy|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
-               Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Tahsis|Thornton|Toquart|Tranquil", 
-               MGL_Brood_Collection, ignore.case=T)) %>%
-  print()
+# PBTresults <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+#                                  sheet="Sheet1", guess_max=10000) %>% 
+#   setNames(paste0('MGL_', names(.))) %>% 
+#   mutate(`(R) DNA NUM` = MGL_oFish,
+#          `(R) RETURN YEAR` = MGL_oYear,
+#          MGL_Brood_Collection = str_to_title(gsub("_", " ", MGL_Brood_Collection, ignore.case = T))) %>% 
+#   mutate_at(c("(R) DNA NUM", "(R) RETURN YEAR"), as.character) %>%
+#   filter(grepl("Bedwell|Burman|Conuma|Cowichan|Cypre|Gold|Kennedy|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
+#                Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Tahsis|Thornton|Toquart|Tranquil", 
+#                MGL_Brood_Collection, ignore.case=T)) %>%
+#   print()
 
 
 # ======================== Load PBT inventory ========================  
@@ -209,14 +210,16 @@ source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
 
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
   mutate(
+         # Total PBT age column (temp fix til EPRO has this):
+         `(R) TOTAL AGE: PBT` = case_when(Dam.Dna.Sample.Year %in% c(2019:2030) ~ `(R) RETURN YEAR`-as.numeric(Dam.Dna.Sample.Year),
+                                           is.na(Dam.Dna.Sample.Year) & !is.na(Sire.Dna.Sample.Year) ~ `(R) RETURN YEAR`-as.numeric(Sire.Dna.Sample.Year)),
          # AGE ID: 
          `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
-                                                     #is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
-                                                     is.na(`(R) TOTAL AGE: CWT`) #& is.na(`(R) TOTAL AGE: PBT`) 
-                                                     & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
+                                                     is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
+                                                     is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
                                                      TRUE ~ NA),
          `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE: CWT`,
-                                              #`(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
+                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
                                               `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE: SCALE`,
                                               TRUE ~ NA),
          
@@ -368,6 +371,11 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
     #`(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
     #                                         TRUE ~ NA)
     ) %>% 
+  relocate(c(`(R) RETURN YEAR`, `(R) BROOD YEAR: CWT`, `(R) BROOD YEAR: SCALE`, `(R) RESOLVED FINAL BROOD YEAR`, 
+             `(R) TOTAL AGE: CWT`, `(R) TOTAL AGE: PBT`, `(R) TOTAL AGE: SCALE`, `(R) RESOLVED TOTAL AGE METHOD`, `(R) RESOLVED TOTAL AGE`, 
+             `(R) ORIGIN`, 
+             `(R) CWT STOCK ID`, `(R) OTOLITH STOCK ID`, `(R) OTOLITH ID METHOD`, 
+             `(R) RESOLVED STOCK ID`, `(R) RESOLVED STOCK ID METHOD`, `(R) RESOLVED STOCK-ORIGIN`), .after=last_col()) %>%
   print()
 
 
@@ -517,7 +525,7 @@ R_OUT_EPRO.NPAFC <- openxlsx::createWorkbook()
 # Add empty tabs to the workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "readme")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "All Facilities w RESULTS")
-openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "PBT Summary")
+#openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "PBT Summary")
 # openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC summary")
 # openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- No Oto stock ID")
 # openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- Oto sample no result")
@@ -529,7 +537,7 @@ openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "PBT Summary")
 # Write data to tabs ---------------------------
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="All Facilities w RESULTS", x=wcviCNepro_w_Results)
-openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="PBT Summary", x=PBTsummary)
+#openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="PBT Summary", x=PBTsummary)
 # openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="QC summary", x=qc_summary)
 # openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- No Oto stock ID", x=qc_noOtoID)
 # openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet = "QC- Oto sample no result", x=qc_noOtoResults)

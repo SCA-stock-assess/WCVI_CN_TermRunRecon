@@ -5,10 +5,8 @@
 
 
 # Load packages ----------------
-#library(here)
-#library(tidyverse)
-#library(readxl)
-#library(writexl)
+library(tidyverse)
+
 
 
 
@@ -69,8 +67,8 @@ remove(wcviOtos.LL)
 
 # Export to Network ---------------------------
 writexl::write_xlsx(wcviOtos, 
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/2-Export-from-R",
-                                "/R_OUT - OtoManager_AllSpecies_Area20-27andOffshore",
+                    path=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/OtoCompile_base-files/RecoverySpecimens/2-Export-from-R/",
+                                "R_OUT - OtoManager_AllSpecies_Area20-27andOffshore",
                                 "_",
                                 min(wcviOtos$`(R) SAMPLE YEAR`),
                                 "-",
@@ -78,6 +76,7 @@ writexl::write_xlsx(wcviOtos,
                                 "_LastUpdate_",
                                 Sys.Date(),
                                 ".xlsx"))
+# might throw an error - either you have the file open, or it's too big to write
 
 
 

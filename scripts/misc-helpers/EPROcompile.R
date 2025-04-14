@@ -58,12 +58,16 @@ wcviEPRO <- do.call("rbind", wcviEPRO.LL) %>%
                                                  Scale.Part.Age=="5M" ~ 6,
                                                  Scale.Part.Age=="6M" ~ 7,
                                                  T ~ NA_real_),
+    `(R) TOTAL AGE: PBT` = case_when(Dam.Dna.Sample.Year %in% c(2000:3000) ~ `(R) RETURN YEAR`-as.numeric(Dam.Dna.Sample.Year),
+                                     is.na(Dam.Dna.Sample.Year) & !is.na(Sire.Dna.Sample.Year) ~ `(R) RETURN YEAR`-as.numeric(Sire.Dna.Sample.Year)),
     `(R) BROOD YEAR: CWT` = `(R) RETURN YEAR` - `(R) TOTAL AGE: CWT`,
     `(R) BROOD YEAR: SCALE` = `(R) RETURN YEAR` - `(R) TOTAL AGE: SCALE`,
+    `(R) BROOD YEAR: PBT` = case_when(Dam.Dna.Sample.Year %in% c(2000:3000) ~ as.numeric(Dam.Dna.Sample.Year),
+                                      is.na(Dam.Dna.Sample.Year) & !is.na(Sire.Dna.Sample.Year) ~ as.numeric(Sire.Dna.Sample.Year)),
     `(R) RESOLVED BROOD YEAR` = case_when(!is.na(`(R) BROOD YEAR: CWT`) ~ `(R) BROOD YEAR: CWT`,
-                                          is.na(`(R) BROOD YEAR: CWT`) ~ `(R) BROOD YEAR: SCALE`,
+                                          is.na(`(R) BROOD YEAR: CWT`) & !is.na(`(R) BROOD YEAR: PBT`) ~ `(R) BROOD YEAR: PBT`,
+                                          is.na(`(R) BROOD YEAR: CWT`) & is.na(`(R) BROOD YEAR: PBT`) & !is.na(`(R) BROOD YEAR: SCALE`) ~ `(R) BROOD YEAR: SCALE`,
                                           TRUE ~ NA)
-    #UEID = paste0(analysis_year, "-", seq(1:nrow(.)))
     ) %>%
   filter(grepl("Chinook", Spawning.Stock.Name)) %>%
   print()

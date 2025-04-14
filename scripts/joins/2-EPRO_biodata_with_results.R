@@ -210,10 +210,7 @@ source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
 
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
   mutate(
-         # Total PBT age column (temp fix til EPRO has this):
-         `(R) TOTAL AGE: PBT` = case_when(Dam.Dna.Sample.Year %in% c(2019:2030) ~ `(R) RETURN YEAR`-as.numeric(Dam.Dna.Sample.Year),
-                                           is.na(Dam.Dna.Sample.Year) & !is.na(Sire.Dna.Sample.Year) ~ `(R) RETURN YEAR`-as.numeric(Sire.Dna.Sample.Year)),
-         # AGE ID: 
+         # AGE DECISIONS: 
          `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
                                                      is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
                                                      is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
@@ -226,30 +223,26 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
          `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) RETURN YEAR`) - `(R) RESOLVED TOTAL AGE`,
     
     
-         # 1. Identify hatchery/natural origin
-         `(R) ORIGIN` = case_when(#(Otolith.Hatch.Code %in% c("Destroyed", "No Sample") | is.na(Otolith.Hatch.Code)) & (is.na(Cwt.Tag.Code) | Cwt.Tag.Code =="No tag") & (External.Marks=="Unclipped") ~ "Unknown",
-                                  External.Marks=="Clipped" ~ "Hatchery",
-                                  !is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "Hatchery",
-                                  !is.na(Otolith.Hatch.Code) & !grepl("test|no|not|NS|destroyed", Otolith.Hatch.Code, ignore.case=T) ~ "Hatchery", 
-                                  #!is.na(MGL_Parental_Collection) ~ "Hatchery", 
-                                  grepl("no mark|not marked", Otolith.Hatch.Code, ignore.case=T) ~ "Natural",
-                                  # If the system name is present in the Reliable PBT records, and the return year is >= the first full PBT baseline year for that system, then call it natural
-                                  # ******* THIS ISNT WORKING  -- FIX NEXT DAY! 
-                                  #(str_sub(gsub(" Cr", "",
-                                  #                     gsub(" R", "",
-                                  #                          gsub(" Fall Chinook", "", Spawning.Stock.Name)
-                                  #                          )
-                                  #                     ),
-                                  #               start=6, end=20) %in% PBTreliableShort$`(R) STOCK` & 
-                                  #   `(R) RETURN YEAR` >= SC_PBTreliable$firstFullBY)  
-                                  #  ~ "Natural (PBT flag)",
+         # ORIGIN DECISIONS 
+         `(R) ORIGIN METHOD` = case_when(External.Marks=="Clipped" ~ "Ad clip",
+                                         !is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "CWT",
+                                         !is.na(Otolith.Hatch.Code) & !grepl("test|no|not|NS|destroyed", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith mark", 
+                                         !is.na(Sire.Dna.Waterbody.Site.Name) | !is.na(Dam.Dna.Waterbody.Site.Name) ~ "PBT (parent hit)", 
+                                         grepl("no mark|not marked", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith (no mark)",
+                                         is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
+                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2013 & grepl("robertson|sarita", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
+                                         is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
+                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2020 & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
+                                         is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
+                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2019 & grepl("nitinat|san juan", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
+                                          TRUE ~ NA),
+         
+         `(R) ORIGIN` = case_when(`(R) ORIGIN METHOD` %in% c("Ad clip", "CWT", "Otolith mark", "PBT (parent hit)") ~ "Hatchery",
+                                  `(R) ORIGIN METHOD` %in% c("Otolith (no mark)", "PBT (no hit)") ~ "Natural",
                                   TRUE ~ "Unknown"),
          
- #writexl::write_xlsx(wcviCNepro_w_Results, "C:/Users/DAVIDSONKA/Desktop/wcviCNepro_w_Results test.xlsx")
-         
- 
- 
-         # 2. Identify CWT Stock ID 
+         # STOCK ID DECISIONS
+         # Identify CWT Stock ID 
          `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
                                           gsub(" Cr", "", 
                                                gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
@@ -257,16 +250,10 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                         TRUE ~ NA),
         
     
-        # 3. Identify PBT Stock ID
-        # `(R) PBT STOCK ID` = case_when(!is.na(MGL_Parental_Collection) ~ str_to_title(gsub(" Creek", "",
-        #                                                                                    gsub(" River", "",
-        #                                                                                         gsub("_", 
-        #                                                                                              " ", 
-        #                                                                                              MGL_Parental_Collection, 
-        #                                                                                              ignore.case = T),
-        #                                                                                         ignore.case=T),
-        #                                                                                    ignore.case=T)),
-        #                                TRUE ~ NA),
+        #  Identify PBT Stock ID
+        `(R) PBT STOCK ID` = case_when(!is.na(Dam.Dna.Waterbody.Site.Name) ~ Dam.Dna.Waterbody.Site.Name,
+                                       is.na(Dam.Dna.Waterbody.Site.Name) & !is.na(Sire.Dna.Waterbody.Site.Name) ~ Sire.Dna.Waterbody.Site.Name,
+                                       TRUE ~ NA),
          
          
          # 4. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
@@ -274,7 +261,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                              !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
                                                "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
                                              #is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",    # NOT RELEVANT FOR EPRO output 
-                                             TRUE~NA),
+                                             TRUE ~ NA),
          
          
          # 5. Identify otolit stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
@@ -373,7 +360,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
     ) %>% 
   relocate(c(`(R) RETURN YEAR`, `(R) BROOD YEAR: CWT`, `(R) BROOD YEAR: SCALE`, `(R) RESOLVED FINAL BROOD YEAR`, 
              `(R) TOTAL AGE: CWT`, `(R) TOTAL AGE: PBT`, `(R) TOTAL AGE: SCALE`, `(R) RESOLVED TOTAL AGE METHOD`, `(R) RESOLVED TOTAL AGE`, 
-             `(R) ORIGIN`, 
+             `(R) ORIGIN METHOD`, `(R) ORIGIN`, 
              `(R) CWT STOCK ID`, `(R) OTOLITH STOCK ID`, `(R) OTOLITH ID METHOD`, 
              `(R) RESOLVED STOCK ID`, `(R) RESOLVED STOCK ID METHOD`, `(R) RESOLVED STOCK-ORIGIN`), .after=last_col()) %>%
   print()

@@ -228,7 +228,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                          !is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "CWT",
                                          !is.na(Otolith.Hatch.Code) & !grepl("test|no|not|NS|destroyed", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith mark", 
                                          !is.na(Sire.Dna.Waterbody.Site.Name) | !is.na(Dam.Dna.Waterbody.Site.Name) ~ "PBT (parent hit)", 
-                                         grepl("no mark|not marked", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith (no mark)",
+                                         grepl("no mark|not marked|NM", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith (no mark)",
                                          is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
                                            (`(R) RESOLVED FINAL BROOD YEAR`>=2013 & grepl("robertson|sarita", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
                                          is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 

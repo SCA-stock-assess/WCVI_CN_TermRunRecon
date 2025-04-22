@@ -60,14 +60,14 @@ writexl::write_xlsx(crestBDWR,
                     "_Biological_Data_With_Results.xlsx"))
 
 ## temporary because VPN not working? 
-writexl::write_xlsx(crestBDWR, 
-                    path=paste0("C:/Users/DAVIDSONKA/Desktop/R_OUT - ",
-                                min(crestBDWR$YEAR), "-", max(crestBDWR$YEAR),
-                                "_Biological_Data_With_Results.xlsx"))
+# writexl::write_xlsx(crestBDWR, 
+#                     path=paste0("C:/Users/DAVIDSONKA/Desktop/R_OUT - ",
+#                                 min(crestBDWR$YEAR), "-", max(crestBDWR$YEAR),
+#                                 "_Biological_Data_With_Results.xlsx"))
 
 
 # ==================== LOAD TERM RUN REC SUBGROUP LOOKUP TABLE ==================== 
-termRun_RecSubGroups <- readxl::read_excel(path=here::here("data", "TermRun_Rec_PFMA_SubGroups.xlsx"), 
+termRun_RecSubGroups <- readxl::read_excel(path=here::here("data", "lookups", "LOOKUP_CREST_PFMA-termRun-subgroup.xlsx"), 
                                            sheet="RRAreaLU")
 
 

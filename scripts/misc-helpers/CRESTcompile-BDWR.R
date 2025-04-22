@@ -49,7 +49,7 @@ remove(crestBDWR.LL)
 # NuSEDS ---------------------------
 # This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
 # Should load pullNusedsData function and streamAreas dataframe: 
-source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
+source(here::here("scripts", "misc-helpers", "CRESTcompile-streamLookups.R"))      
 # saves as streamAreas
 
 

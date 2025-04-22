@@ -20,7 +20,7 @@ library(tidyverse)
 streamAreas <- #left_join(
   # Load stream by area from NuSEDS query - a little slow.
   #saaWeb::pullNusedsData(here("scripts","json","nuseds_Chinook_stream-area.json"), password=NULL) %>%      # saaWeb bugged, manual load for now
-  readxl::read_excel(path=here::here("data", "NuSEDS_streamAuxFile.xlsx"),
+  readxl::read_excel(path=here::here("data", "lookups", "LOOKUP_NuSEDS_stream-areas.xlsx"),
             sheet="Data") %>%
   group_by(`Waterbody Name`) %>% 
   summarize(Area=unique(Area)) %>% 

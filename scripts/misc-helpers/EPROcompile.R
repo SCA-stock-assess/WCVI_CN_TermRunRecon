@@ -70,6 +70,7 @@ wcviEPRO <- do.call("rbind", wcviEPRO.LL) %>%
                                           TRUE ~ NA)
     ) %>%
   filter(grepl("Chinook", Spawning.Stock.Name)) %>%
+  distinct(across(Facility.Name:Ihn.Lab.Reading.Uom)) %>%
   print()
 
 # Clean up ---------------------------

@@ -73,8 +73,8 @@ writexl::write_xlsx(wcviOtos,
                                 min(wcviOtos$`(R) SAMPLE YEAR`),
                                 "-",
                                 max(wcviOtos$`(R) SAMPLE YEAR`),
-                                "_LastUpdate_",
-                                Sys.Date(),
+                                #"_LastUpdate_",
+                                #Sys.Date(),
                                 ".xlsx"))
 # might throw an error - either you have the file open, or it's too big to write
 
@@ -86,8 +86,8 @@ writexl::write_xlsx(wcviOtos,
                                 min(wcviOtos$`(R) SAMPLE YEAR`),
                                 "-",
                                 max(wcviOtos$`(R) SAMPLE YEAR`),
-                                "_LastUpdate_",
-                                Sys.Date(),
+                                #"_LastUpdate_",
+                                #Sys.Date(),
                                 ".xlsx"))
 
 

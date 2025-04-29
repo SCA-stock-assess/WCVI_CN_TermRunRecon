@@ -161,44 +161,15 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 
 #############################################################################################################################################################
 
-#                                                                           VI. LOAD PBT DATA
-
-# ======================== Load PBT results ========================  
-# PBTresults <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
-#                                  sheet="Sheet1", guess_max=10000) %>% 
-#   setNames(paste0('MGL_', names(.))) %>% 
-#   mutate(`(R) DNA NUM` = MGL_oFish,
-#          `(R) RETURN YEAR` = MGL_oYear,
-#          MGL_Brood_Collection = str_to_title(gsub("_", " ", MGL_Brood_Collection, ignore.case = T))) %>% 
-#   mutate_at(c("(R) DNA NUM", "(R) RETURN YEAR"), as.character) %>%
-#   filter(grepl("Bedwell|Burman|Conuma|Cowichan|Cypre|Gold|Kennedy|Leiner|Campbell|Qualicum|Marble|Nahmint|Nanaimo|Nimpkish|Nitinat|
-#                Oyster|Phillips|Puntledge|Quinsam|Robertson|Salmon River Jnst|San Juan|Sarita|Sooke|Tahsis|Thornton|Toquart|Tranquil", 
-#                MGL_Brood_Collection, ignore.case=T)) %>%
-#   print()
+#                                                                           VI. LOAD PBT INVENTORY
 
 
 # ======================== Load PBT inventory ========================  
 # Run PBT source code -------------------------   
-source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
+# source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))   -- need to update file call in source script
 # saves a few dataframes 
 
 
-
-#############################################################################################################################################################
-
-#                                                                           VII. JOIN JOIN EPRO+NPAFC+CWT to PBT
-
-
-# Join EPRO master file to PBT ---------------------------
-# intersect(colnames(wcviCNepro_w_NPAFC.MRP), colnames(PBTresults))
-# 
-# wcviCNepro_w_NPAFC.MRP.PBT <- left_join(wcviCNepro_w_NPAFC.MRP %>%
-#                                           mutate_at("(R) DNA NUM", as.character) %>% 
-#                                           mutate_at("(R) RETURN YEAR", as.character),
-#                                         PBTresults ,
-#                                     by=c("(R) DNA NUM", "(R) RETURN YEAR")) %>%
-#   mutate(`(R) TOTAL AGE: PBT` = MGL_Offspring_Age) %>%
-#   print()
 
 
 
@@ -210,7 +181,7 @@ source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))
 
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
   mutate(
-         # AGE DECISIONS: 
+         # ----- AGE DECISIONS: 
          `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
                                                      is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
                                                      is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
@@ -223,17 +194,24 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
          `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) RETURN YEAR`) - `(R) RESOLVED TOTAL AGE`,
     
     
-         # ORIGIN DECISIONS 
+         # ----- ORIGIN DECISIONS 
          `(R) ORIGIN METHOD` = case_when(External.Marks=="Clipped" ~ "Ad clip",
                                          !is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "CWT",
-                                         !is.na(Otolith.Hatch.Code) & !grepl("test|no|not|NS|destroyed", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith mark", 
-                                         !is.na(Sire.Dna.Waterbody.Site.Name) | !is.na(Dam.Dna.Waterbody.Site.Name) ~ "PBT (parent hit)", 
-                                         grepl("no mark|not marked|NM", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith (no mark)",
-                                         is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
+                                         !is.na(Otolith.Hatch.Code) & !grepl("test|no|not|NS|destroyed|NM|unreadable|0|unmountable", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith mark", 
+                                         (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
+                                           (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ "PBT (parent hit)", 
+                                         grepl("no mark|not marked|NM|0", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith (no mark)",
+                                         
+                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
                                            (`(R) RESOLVED FINAL BROOD YEAR`>=2013 & grepl("robertson|sarita", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
-                                         is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
+                                         
+                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
                                            (`(R) RESOLVED FINAL BROOD YEAR`>=2020 & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
-                                         is.na(Sire.Dna.Waterbody.Site.Name) & is.na(Dam.Dna.Waterbody.Site.Name) & 
+                                         
+                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
                                            (`(R) RESOLVED FINAL BROOD YEAR`>=2019 & grepl("nitinat|san juan", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
                                           TRUE ~ NA),
          
@@ -241,7 +219,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                   `(R) ORIGIN METHOD` %in% c("Otolith (no mark)", "PBT (no hit)") ~ "Natural",
                                   TRUE ~ "Unknown"),
          
-         # STOCK ID DECISIONS
+         # ----- STOCK ID DECISIONS
          # Identify CWT Stock ID 
          `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
                                           gsub(" Cr", "", 
@@ -251,8 +229,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
         
     
         #  Identify PBT Stock ID
-        `(R) PBT STOCK ID` = case_when(!is.na(Dam.Dna.Waterbody.Site.Name) ~ Dam.Dna.Waterbody.Site.Name,
-                                       is.na(Dam.Dna.Waterbody.Site.Name) & !is.na(Sire.Dna.Waterbody.Site.Name) ~ Sire.Dna.Waterbody.Site.Name,
+        `(R) PBT STOCK ID` = case_when((!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Dam.Dna.Waterbody.Site.Name),
+                                       is.na(Dam.Dna.Waterbody.Site.Name) & (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Sire.Dna.Waterbody.Site.Name),
                                        TRUE ~ NA),
          
          
@@ -323,15 +301,15 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
   mutate(
     # 6. Identify the method used to determine the final stock ID: CWT > PBT > Otolith
     `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
-                                               #is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ "PBT",
-                                               is.na(`(R) CWT STOCK ID`) #& is.na(`(R) PBT STOCK ID`) 
+                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ "PBT",
+                                               is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) 
                                                & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
                                                TRUE ~ NA),
     
     # 7. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
     `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
-                                        #is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
-                                        is.na(`(R) CWT STOCK ID`) #& is.na(`(R) PBT STOCK ID`) 
+                                        is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
+                                        is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) 
                                         & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
                                         #is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
                                         `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
@@ -342,8 +320,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
     `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`),
     
     # 9. Create flag for cases where PBT, CWT and/or Otolith ID(s) disagree
-    `(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "FLAG: CWT/Otolith stock ID disagree",
-                                             TRUE ~ NA),
+    #`(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "FLAG: CWT/Otolith stock ID disagree",
+    #                                         TRUE ~ NA),
     #`(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) CWT STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: CWT/PBT stock ID disagree",
     #                                         TRUE ~ NA),
     #`(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) OTOLITH STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: PBT/Otolith stock ID disagree",
@@ -351,8 +329,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
     
     
     # 10. Create flag for cases where PBT, CWT and/or scale age(s) disagree
-    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
-                                             TRUE ~ NA),
+    #`(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
+    #                                         TRUE ~ NA),
     #`(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: PBT` ~ "FLAG: CWT/PBT ages disagree",
     #                                         TRUE ~ NA),
     #`(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
@@ -363,7 +341,21 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
              `(R) ORIGIN METHOD`, `(R) ORIGIN`, 
              `(R) CWT STOCK ID`, `(R) OTOLITH STOCK ID`, `(R) OTOLITH ID METHOD`, 
              `(R) RESOLVED STOCK ID`, `(R) RESOLVED STOCK ID METHOD`, `(R) RESOLVED STOCK-ORIGIN`), .after=last_col()) %>%
+  mutate(`(R) CREST BIOKEY` = paste0(stringr::str_sub(Spawning.Year, 3, 4), 
+                                     "-", 
+                                     stringr::str_extract(File_source, "(?<=All_Adult_Biosampling_)\\d+(?=-)"),
+                                     "-",
+                                     Activity.No,
+                                     "-",
+                                     Adult.No)) %>%
+  relocate(`(R) CREST BIOKEY`, .before = File_source) %>%
   print()
+
+
+
+
+
+
 
 
 
@@ -402,7 +394,10 @@ PBTsummary <- left_join(PBTresults %>%
 
 #                                                                           VIII. QC and readme
 
-# ======================== Extract PBT parental records ========================  
+ 
+# ================== QC ================== 
+ 
+#  Extract PBT parental records ---------------------------
   # --> Can't do this yet as EPRO file doesn't go back far enough (EPRO records only back to ~2021 at best)
 # PBT_parents <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
 #   filter(`(R) DNA NUM` %in% c(SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_mFish),]$MGL_mFish, 
@@ -411,67 +406,67 @@ PBTsummary <- left_join(PBTresults %>%
 
 # QC flags ---------------------------
 # There is brood year data and a useable hatch code but the Otolith stock ID didn't populate (e.g., R code errors)
-qc_noOtoID <- wcviCNepro_w_Results %>%
-  filter(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
-  print()
+# qc_noOtoID <- wcviCNepro_w_Results %>%
+#   filter(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
+#   print()
+# 
+# # There is an otolith sample that was taken and a useable brood year, but no otolith result (e.g., sample processing errors)
+# qc_noOtoResults <- wcviCNepro_w_Results %>%
+#   filter(!is.na(`(R) OTOLITH BOX-VIAL CONCAT`) & !is.na(`(R) RESOLVED BROOD YEAR`) & is.na(`(R) HATCHCODE`)) %>%
+#   print()
+# 
+# # There is a useable CWT but no stock ID (e.g., R code errors)
+# qc_noCWTID <- wcviCNepro_w_Results %>% 
+#   filter(!is.na(Cwt.Tag.Code) & Cwt.Tag.Code%notin%c("No Tag","Lost Tag","No Head") & Sample.Status=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
+#   filter()
+# 
+# # Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)
+# qc_noRslvdID <- wcviCNepro_w_Results %>% 
+#   filter(`(R) RESOLVED STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK_1) & !is.na(`MRP_Stock Site Name`)) %>% 
+#   print()
+# 
+# # Stock ID(s) disagree (e.g., processing error)
+# qc_unRslvdID <- wcviCNepro_w_Results %>% 
+#   filter(across(c(`(R) STOCK ID FLAG: CWT-OTO`:`(R) STOCK ID FLAG: PBT-OTO`), ~ grepl("FLAG", .x))) %>%
+#   print()
+# 
+# # Scale, CWT and/or PBT age(s) disagree
+# qc_unRslvdAge <- wcviCNepro_w_Results %>% 
+#   filter(across(c(`(R) AGE FLAG: CWT-SCALE`:`(R) AGE FLAG: PBT-SCALE`), ~ grepl("FLAG", .x))) %>%
+#   print()
+# 
+# 
+# # QC summary Report ---------------------------
+# qc_summary <- data.frame(qc_flagName = c("QC- No Oto ID",
+#                                          "QC- Oto sample no result",
+#                                          "QC- No CWT ID",
+#                                          "QC- No resolved ID",
+#                                          "QC- Stock IDs disagree",
+#                                          "QC- Ages disagree",
+#                                          "",
+#                                          "total EPRO records:"),
+#                          number_records = c(nrow(qc_noOtoID),
+#                                             nrow(qc_noOtoResults),
+#                                             nrow(qc_noCWTID),
+#                                             nrow(qc_noRslvdID),
+#                                             nrow(qc_unRslvdID),
+#                                             nrow(qc_unRslvdAge),
+#                                             "",
+#                                             nrow(wcviCNepro_w_Results)),
+#                          description = c("Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
+#                                          "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
+#                                          "There is CWT info available but no Stock ID. Note sometimes this is due to exceptionally young age classes (eg, Jimmies) being sampled, or more rarely species ID issues (e.g., tag code 186168). Use https://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/TagSearch to search individual tag #s if concerned about results.",
+#                                          "There is a CWT or an NPAFC ID but no Resolved stock ID.",
+#                                          "CWT, PBT and/or Otolith stock ID(s) disagree.",
+#                                          "CWT, PBT and/or scale age(s) disagree.",
+#                                          "",
+#                                          paste0("for ", paste(unique(wcviCNepro_w_Results$`(R) RETURN YEAR`), collapse = " ") ))) %>% 
+#   print()
 
-# There is an otolith sample that was taken and a useable brood year, but no otolith result (e.g., sample processing errors)
-qc_noOtoResults <- wcviCNepro_w_Results %>%
-  filter(!is.na(`(R) OTOLITH BOX-VIAL CONCAT`) & !is.na(`(R) RESOLVED BROOD YEAR`) & is.na(`(R) HATCHCODE`)) %>%
-  print()
-
-# There is a useable CWT but no stock ID (e.g., R code errors)
-qc_noCWTID <- wcviCNepro_w_Results %>% 
-  filter(!is.na(Cwt.Tag.Code) & Cwt.Tag.Code%notin%c("No Tag","Lost Tag","No Head") & Sample.Status=="Tag Read Ok" & is.na(`MRP_Stock Site Name`)) %>% 
-  filter()
-
-# Stock ID is unknown but there is a useable otolith and/or CWT stock ID available (e.g., code errors)
-qc_noRslvdID <- wcviCNepro_w_Results %>% 
-  filter(`(R) RESOLVED STOCK ID`=="Unknown" & !is.na(NPAFC_STOCK_1) & !is.na(`MRP_Stock Site Name`)) %>% 
-  print()
-
-# Stock ID(s) disagree (e.g., processing error)
-qc_unRslvdID <- wcviCNepro_w_Results %>% 
-  filter(across(c(`(R) STOCK ID FLAG: CWT-OTO`:`(R) STOCK ID FLAG: PBT-OTO`), ~ grepl("FLAG", .x))) %>%
-  print()
-
-# Scale, CWT and/or PBT age(s) disagree
-qc_unRslvdAge <- wcviCNepro_w_Results %>% 
-  filter(across(c(`(R) AGE FLAG: CWT-SCALE`:`(R) AGE FLAG: PBT-SCALE`), ~ grepl("FLAG", .x))) %>%
-  print()
 
 
-# QC summary Report ---------------------------
-qc_summary <- data.frame(qc_flagName = c("QC- No Oto ID",
-                                         "QC- Oto sample no result",
-                                         "QC- No CWT ID",
-                                         "QC- No resolved ID",
-                                         "QC- Stock IDs disagree",
-                                         "QC- Ages disagree",
-                                         "",
-                                         "total EPRO records:"),
-                         number_records = c(nrow(qc_noOtoID),
-                                            nrow(qc_noOtoResults),
-                                            nrow(qc_noCWTID),
-                                            nrow(qc_noRslvdID),
-                                            nrow(qc_unRslvdID),
-                                            nrow(qc_unRslvdAge),
-                                            "",
-                                            nrow(wcviCNepro_w_Results)),
-                         description = c("Otolith hatch code and BY are given but there is no corresponding stock ID in the NPAFC file. Likely due to an error with mark reading.",
-                                         "Otolith sample taken and BY available, but no hatchcode (results not processed yet?).",
-                                         "There is CWT info available but no Stock ID. Note sometimes this is due to exceptionally young age classes (eg, Jimmies) being sampled, or more rarely species ID issues (e.g., tag code 186168). Use https://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/TagSearch to search individual tag #s if concerned about results.",
-                                         "There is a CWT or an NPAFC ID but no Resolved stock ID.",
-                                         "CWT, PBT and/or Otolith stock ID(s) disagree.",
-                                         "CWT, PBT and/or scale age(s) disagree.",
-                                         "",
-                                         paste0("for ", paste(unique(wcviCNepro_w_Results$`(R) RETURN YEAR`), collapse = " ") ))) %>% 
-  print()
-
-
-
-# Create readme ---------------------------
-readme <- data.frame(`1` = c("date rendered:", 
+# ================== README ================== 
+ readme <- data.frame(`1` = c("date rendered:", 
                              "source R code:", 
                              "source EPRO files:",
                              "source NPAFC file:",

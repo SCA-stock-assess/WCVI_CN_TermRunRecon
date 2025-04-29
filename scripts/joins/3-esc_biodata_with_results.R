@@ -627,21 +627,22 @@ esc_biodata_headsCWT_PADS_otoNPAFC_PBT <- left_join(esc_biodata_headsCWT_PADS_ot
 #                                                                           XIII. ASSIGN FINAL AGE and STOCK ID
 
 
-esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>% 
+esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC %>% 
   mutate(# AGE METHOD: CWT > PBT > scales
          `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
-                                                     is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
-                                                     is.na(`(R) TOTAL AGE: CWT`) & is.na(`(R) TOTAL AGE: PBT`) & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
+                                                     #is.na(`(R) TOTAL AGE: CWT`) & !is.na(`(R) TOTAL AGE: PBT`) ~ "PBT",
+                                                     is.na(`(R) TOTAL AGE: CWT`) #& is.na(`(R) TOTAL AGE: PBT`) 
+                                                     & !is.na(`(R) TOTAL AGE: SCALE`) ~ "Scale",
                                                      TRUE ~ NA),
          # AGE APPLIED: CWT > PBT > scales
          `(R) RESOLVED TOTAL AGE` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) TOTAL AGE: CWT`,
-                                              `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
+                                              #`(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) TOTAL AGE: PBT`,
                                               `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE: SCALE`,
                                               TRUE ~ NA),
          
          # BROOD YEAR: CWT > PBT > scales
          `(R) RESOLVED BROOD YEAR` = case_when(`(R) RESOLVED TOTAL AGE METHOD`=="CWT" ~ `(R) BROOD YEAR: CWT`,
-                                                     `(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) BROOD YEAR: PBT`,
+                                                     #`(R) RESOLVED TOTAL AGE METHOD`=="PBT" ~ `(R) BROOD YEAR: PBT`,
                                                      `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) BROOD YEAR: SCALE`,
                                                      TRUE ~ NA),
          
@@ -652,12 +653,12 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
          # Identify hatchery/natural origin - not using stock ID columns to avoid any issues with assigning stock ID. 
          `(R) ORIGIN` = case_when(`AD Clipped?` == "Y" ~ "Hatchery",
                                   `OM_READ STATUS` == "Marked" ~ "Hatchery",
-                                  !is.na(MGL_Parental_Collection) ~ "Hatchery", 
+                                  #!is.na(MGL_Parental_Collection) ~ "Hatchery", 
                                   #This line below is probably redundant as all CWT fish will be ad-clipped
                                   !is.na(`(R) TAGCODE`) ~ "Hatchery",
                                   `OM_READ STATUS` == "Not Marked" ~ "Natural (assumed)",
                                   # This line below looks up any system-year that doesn't have a PBT hit in the tag rate baseline. If the system-year was PBT tagged, but there is no PBT hit, it assigns "natural"
-                                  is.na(MGL_Parental_Collection) & `(R) SYSTEM-YEAR` %in% PBT_tagrate$`(R) SYSTEM-YEAR`  ~ "Natural (PBT)",
+                                  #is.na(MGL_Parental_Collection) & `(R) SYSTEM-YEAR` %in% PBT_tagrate$`(R) SYSTEM-YEAR`  ~ "Natural (PBT)",
                                   TRUE ~ "Unknown"),
          
          # 2. Identify CWT Stock ID
@@ -772,8 +773,9 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
     
     # 7. Identify the method used to determine the final stock ID: CWT > PBT > Otolith > No PBT 
     `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ "CWT",
-                                               is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ "PBT",
-                                               is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
+                                               #is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ "PBT",
+                                               is.na(`(R) STOCK ID: CWT`) #& is.na(`(R) STOCK ID: PBT`) 
+                                               & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
                                                `(R) ORIGIN`=="Natural (assumed)" ~ "Otolith (no mark)",
                                                `(R) ORIGIN`=="Natural (PBT)" ~ "PBT (no match)",
                                                TRUE ~ NA),
@@ -781,8 +783,9 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
     
     # 8. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty) > Natural IDs
     `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: CWT`,
-                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ `(R) STOCK ID: PBT`,
-                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,
+                                        #is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ `(R) STOCK ID: PBT`,
+                                        is.na(`(R) STOCK ID: CWT`) #& is.na(`(R) STOCK ID: PBT`) 
+                                        & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,
                                         `(R) ORIGIN`=="Natural (assumed)" ~ paste0(stringr::str_to_title(gsub(" River", "",
                                                                                                               gsub(" Creek", "",
                                                                                                                    `Fishery / River`,
@@ -803,21 +806,21 @@ esc_biodata_w_RESULTS <- esc_biodata_headsCWT_PADS_otoNPAFC_PBT %>%
     
     
     # 10. Create flag for cases where CWT and Otolith IDs disagree
-    `(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) STOCK ID: CWT` != `(R) STOCK ID: OTOLITH` ~ "FLAG: CWT/Otolith stock ID disagree",
-                                             TRUE ~ NA),
-    `(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) STOCK ID: CWT` != `(R) STOCK ID: PBT` ~ "FLAG: CWT/PBT stock ID disagree",
-                                             TRUE ~ NA),
-    `(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) STOCK ID: OTOLITH` != `(R) STOCK ID: PBT` ~ "FLAG: PBT/Otolith stock ID disagree",
-                                             TRUE ~ NA),
+    #`(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) STOCK ID: CWT` != `(R) STOCK ID: OTOLITH` ~ "FLAG: CWT/Otolith stock ID disagree",
+     #                                        TRUE ~ NA),
+    #`(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) STOCK ID: CWT` != `(R) STOCK ID: PBT` ~ "FLAG: CWT/PBT stock ID disagree",
+    #                                         TRUE ~ NA),
+    #`(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) STOCK ID: OTOLITH` != `(R) STOCK ID: PBT` ~ "FLAG: PBT/Otolith stock ID disagree",
+    #                                         TRUE ~ NA),
     
     
     # 11. Create flag for cases where PBT, CWT and/or scale age(s) disagree
-    `(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
-                                          TRUE ~ NA),
-    `(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: PBT` ~ "FLAG: CWT/PBT ages disagree",
-                                        TRUE ~ NA),
-    `(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
-                                          TRUE ~ NA)
+    #`(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
+    #                                      TRUE ~ NA),
+    #`(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: PBT` ~ "FLAG: CWT/PBT ages disagree",
+    #                                    TRUE ~ NA),
+    #`(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
+    #                                      TRUE ~ NA)
   ) %>%
   print()
 

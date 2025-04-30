@@ -212,7 +212,12 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                          
                                          (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                            (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2019 & grepl("nitinat|san juan", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
+                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2019 & grepl("nitinat", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
+                                         
+                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2018 & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
+                                         
                                           TRUE ~ NA),
          
          `(R) ORIGIN` = case_when(`(R) ORIGIN METHOD` %in% c("Ad clip", "CWT", "Otolith mark", "PBT (parent hit)") ~ "Hatchery",

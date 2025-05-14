@@ -150,7 +150,7 @@ writexl::write_xlsx(OtosRef,
 
 
 # Export to github ---------------------------
-writexl::write_xlsx(wcviOtos, 
+writexl::write_xlsx(OtosRef, 
                     path=paste0(here::here("outputs", "R_OUT - OtoManager_CN_REFERENCEspecimens_BY_"),
                                 min(OtosRef[!is.na(OtosRef$`BROOD YEAR`),]$`BROOD YEAR`),
                                 "-",

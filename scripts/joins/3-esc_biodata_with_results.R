@@ -533,7 +533,7 @@ esc_biodata_headsCWT_PADS_otoNPAFC <- left_join(esc_biodata_headsCWT_PADS_oto,
 #                                                                           XIII. LOAD PBT DATA
 
 # ======================== Load PBT results ========================  
-PBT_results <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/2023-09-14 Chinook_Brood_2013-2021_PBT_results.xlsx",
+PBT_results <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/results/Chinook_Master_SEP_formatted_crosses_2015-2023_v.2024-12-02.xlsx",
                                  sheet="Sheet1", guess_max=10000) %>% 
   setNames(paste0('MGL_', names(.))) %>% 
   mutate(`(R) DNA NUM` = MGL_oFish,

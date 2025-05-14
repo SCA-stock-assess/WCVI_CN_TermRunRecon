@@ -8,6 +8,7 @@ scripts/json/nuseds_ages_CN_2012-2021.json
 outputs/R_OUT - NuSEDS Chinook Age results 2012-2021.xlsx
 outputs/R_OUT - MRPHeadRecoveries_CHINOOK_*.csv
 outputs/R_OUT - MRPHeadRecoveries_CHINOOK_*.xlsx
+outputs/R_OUT - Biological_Data_*.xlsx
 functions/getAgeDataMRP.R
 functions/getCWTData.R
 functions/getNusedsData.R

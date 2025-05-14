@@ -23,6 +23,12 @@ writexl::write_xlsx(pbtsummary,
 
 
 # To DFO Network drive ---------------------------
+# Biodata management:
 writexl::write_xlsx(pbtsummary,
-                    path=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/",
-                                "R_OUT - PBT_Tag_Rates_AllStocks-All BYs.xlsx"))
+                    path=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/PBT/Chinook/",
+                                "R_OUT - PBT_Tag_Rates_WCVIStocks-All BYs.xlsx"))
+
+# Run reconstruction data summaries:
+writexl::write_xlsx(pbtsummary,
+                    path=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
+                                "R_OUT - PBT_Tag_Rates_WCVIStocks-All BYs.xlsx"))

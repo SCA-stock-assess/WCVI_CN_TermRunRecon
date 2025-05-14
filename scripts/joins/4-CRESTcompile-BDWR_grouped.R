@@ -59,35 +59,11 @@ writexl::write_xlsx(crestBDWR,
                     min(crestBDWR$YEAR), "-", max(crestBDWR$YEAR),
                     "_Biological_Data_With_Results.xlsx"))
 
-## temporary because VPN not working? 
-# writexl::write_xlsx(crestBDWR, 
-#                     path=paste0("C:/Users/DAVIDSONKA/Desktop/R_OUT - ",
-#                                 min(crestBDWR$YEAR), "-", max(crestBDWR$YEAR),
-#                                 "_Biological_Data_With_Results.xlsx"))
 
 
 # ==================== LOAD TERM RUN REC SUBGROUP LOOKUP TABLE ==================== 
 termRun_RecSubGroups <- readxl::read_excel(path=here::here("data", "lookups", "LOOKUP_CREST_PFMA-termRun-subgroup.xlsx"), 
                                            sheet="RRAreaLU")
-
-
-
-
-
-#############################################################################################################################################################
-
-#                                                                           ADD VARIABLES
-# 
-# crestBDWRcompiled <- crestBDWR %>% 
-#   mutate(`(R) Origin` = case_when(HATCHERY_ORIGIN=="Y" ~ "Hatchery",
-#                                   THERMALMARK=="Not Marked" ~ "Natural (assumed)",
-#                                   TRUE ~ "Unknown"),
-#          `(R) RESOLVED ORIGIN-STOCK ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
-#                                                     TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ORIGIN)),
-#          `(R) RESOLVED ORIGIN-REGION ID` = case_when(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1 <0.75 ~ paste0(`(R) Origin`, sep=" ", "Unknown (<75% GSI assignment)"),
-#                                             TRUE ~ paste0(`(R) Origin`, sep=" ", RESOLVED_STOCK_ROLLUP))) %>% 
-#   print()
-# 
 
 
 

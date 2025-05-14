@@ -375,7 +375,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
 #   The purpose is for analysts to be able to assess the stock/origin composition of the otolith/CWT/scale dataset, and compare it to the PBT dataset for
 #   whatever years are available. 
 #   For simplicity, this is only done for stock-years with a reliable, complete PBT baseline (i.e., ages 2-6 were all PBTed at > 70% tag rate). Therefore,
-#   it is a minimal summary as PBT is very new. 
+#   it is a minimal summary as PBT is relatively new. 
 
 PBTsummary <- left_join(PBTresults %>% 
                           group_by(MGL_Brood_Collection, MGL_oYear, MGL_Offspring_Age, MGL_Parental_Collection) %>% 

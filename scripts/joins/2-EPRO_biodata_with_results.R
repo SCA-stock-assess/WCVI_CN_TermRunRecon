@@ -180,6 +180,10 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 
 
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
+  mutate(Otolith.Hatch.Code = case_when(grepl("no mark|not marked|NM|nomk", Otolith.Hatch.Code, ignore.case=T) ~ "NO MARK",
+                                           Otolith.Hatch.Code==0 ~ "Not read",
+                                           is.na(Otolith.Bag.No) ~ "No sample",
+                                           TRUE ~ Otolith.Hatch.Code)) %>%
   mutate(
          # ----- AGE DECISIONS: 
          `(R) RESOLVED TOTAL AGE METHOD` = case_when(!is.na(`(R) TOTAL AGE: CWT`) ~ "CWT",
@@ -191,42 +195,70 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                               `(R) RESOLVED TOTAL AGE METHOD`=="Scale" ~ `(R) TOTAL AGE: SCALE`,
                                               TRUE ~ NA),
          
-         `(R) RESOLVED FINAL BROOD YEAR` = as.numeric(`(R) RETURN YEAR`) - `(R) RESOLVED TOTAL AGE`,
+         `(R) RESOLVED BROOD YEAR` = as.numeric(`(R) RETURN YEAR`) - `(R) RESOLVED TOTAL AGE`,
     
     
-         # ----- ORIGIN DECISIONS 
-         `(R) ORIGIN METHOD` = case_when(External.Marks=="Clipped" ~ "Ad clip",
-                                         !is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "CWT",
-                                         !is.na(Otolith.Hatch.Code) & !grepl("test|no|not|NS|destroyed|NM|unreadable|0|unmountable", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith mark", 
-                                         (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
-                                           (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ "PBT (parent hit)", 
-                                         grepl("no mark|not marked|NM|0", Otolith.Hatch.Code, ignore.case=T) ~ "Otolith (no mark)",
-                                         
-                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2013 & grepl("robertson|sarita", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
-                                         
-                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2020 & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
-                                         
-                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2019 & grepl("nitinat", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
-                                         
-                                         (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                           (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                           (`(R) RESOLVED FINAL BROOD YEAR`>=2018 & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "PBT (no hit)",
-                                         
-                                          TRUE ~ NA),
+         # ----- ORIGIN OPTIONS 
+         `(R) ORIGIN: CLIP` = case_when(External.Marks=="Clipped" ~ "Hatchery",
+                                        TRUE ~ NA),
+         `(R) ORIGIN: CWT` = case_when(!is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "Hatchery",
+                                       TRUE ~ NA),
+         `(R) ORIGIN: PBT` = case_when((!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
+                                         (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ "Hatchery",
+                                       
+                                       # PBT hit absent (stock/BY dependent)
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR`>=2013 & grepl("robertson|sarita", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR`>=2020 & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR`>=2019 & grepl("nitinat", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR`>=2018 & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       TRUE ~ NA),
+         `(R) ORIGIN: OTOLITH` = case_when(grepl("H|,", Otolith.Hatch.Code) #& !grepl("test|no|not|NS|destroyed|NM|unreadable|0|unmountable", Otolith.Hatch.Code, ignore.case=T) 
+                                           ~ "Hatchery", 
+                                           Otolith.Hatch.Code == "NO MARK" ~ "Natural",
+                                           TRUE ~ "Unknown"),
          
-         `(R) ORIGIN` = case_when(`(R) ORIGIN METHOD` %in% c("Ad clip", "CWT", "Otolith mark", "PBT (parent hit)") ~ "Hatchery",
-                                  `(R) ORIGIN METHOD` %in% c("Otolith (no mark)", "PBT (no hit)") ~ "Natural",
-                                  TRUE ~ "Unknown"),
+         `(R) RESOLVED ORIGIN` = case_when(`(R) ORIGIN: CLIP`=="Hatchery" ~ "Hatchery",
+                                           `(R) ORIGIN: CWT`=="Hatchery" ~ "Hatchery",
+                                           `(R) ORIGIN: PBT`=="Hatchery" ~ "Hatchery",
+                                           `(R) ORIGIN: OTOLITH`=="Hatchery" & `(R) ORIGIN: PBT`=="Natural" ~ "Hatchery, but PBT/Oto disagree",
+                                           `(R) ORIGIN: OTOLITH`=="Hatchery" & (`(R) ORIGIN: PBT`=="Hatchery"|is.na(`(R) ORIGIN: PBT`)) ~ "Hatchery",
+                                           
+                                           `(R) ORIGIN: PBT`=="Natural" ~ "Natural (assumed)",
+                                           `(R) ORIGIN: OTOLITH`=="Natural" & `(R) ORIGIN: PBT`=="Hatchery" ~ "Hatchery",
+                                           `(R) ORIGIN: OTOLITH`=="Natural" & (`(R) ORIGIN: PBT`=="Natural" | is.na(`(R) ORIGIN: PBT`)) ~ "Natural (assumed)",
+                                           TRUE ~ "Unknown"),
+
+         
+         `(R) RESOLVED ORIGIN METHOD` = case_when(# Ad clip 
+                                         !is.na(`(R) ORIGIN: CLIP`) ~ "Ad clip (presence)",
+                                         
+                                         # CWT  
+                                         !is.na(`(R) ORIGIN: CWT`) ~ "CWT (presence)",
+                                         
+                                         # PBT  
+                                         !is.na(`(R) ORIGIN: PBT`) ~ "PBT (presence/absence)",
+                                         
+                                         # Otolith mark 
+                                         !is.na(`(R) ORIGIN: OTOLITH`) ~ "Otolith (presence/absence)", 
+                                         
+                                         TRUE ~ NA),
+         
          
          # ----- STOCK ID DECISIONS
          # Identify CWT Stock ID 
-         `(R) CWT STOCK ID` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
+         `(R) STOCK ID: CWT` = case_when(!is.na(`MRP_Stock Site Name`) ~ 
                                           gsub(" Cr", "", 
                                                gsub(" R", "", `MRP_Stock Site Name`, ignore.case = F), 
                                                ignore.case=F),
@@ -234,22 +266,22 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
         
     
         #  Identify PBT Stock ID
-        `(R) PBT STOCK ID` = case_when((!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Dam.Dna.Waterbody.Site.Name),
+        `(R) STOCK ID: PBT` = case_when((!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Dam.Dna.Waterbody.Site.Name),
                                        is.na(Dam.Dna.Waterbody.Site.Name) & (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Sire.Dna.Waterbody.Site.Name),
                                        TRUE ~ NA),
          
          
          # 4. Before identifying otolith ID, determine the certainty of the ID (accounts for any duplication of hatchcodes within a BY)
-         `(R) OTOLITH ID METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
+         `(R) STOCK ID: OTOLITH METHOD` = case_when(!is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ "To stock (certain)",
                                              !is.na(NPAFC_STOCK_1) & !is.na(NPAFC_STOCK_2) ~ 
                                                "Duplicate BY-hatchcode at >1 facility, assumed stock ID (moderately certain ID)",
                                              #is.na(NPAFC_STOCK_1) & !is.na(OM_FACILITY) ~ "Issue with BY-hatchcode read/application, identified to facility or assumed stock based on facility (least certain ID)",    # NOT RELEVANT FOR EPRO output 
                                              TRUE ~ NA),
          
          
-         # 5. Identify otolit stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
-         `(R) OTOLITH STOCK ID` = case_when(
-           # 5 a) NSingle otolith stock choice (certain ID)
+         # 5. Identify otolith stock ID - Note at this point it is irrelevant if a CWT exists because we want to test later whether CWT ID and Otolith ID agree
+         `(R) STOCK ID: OTOLITH` = case_when(
+           # 5 a) Single otolith stock choice (certain ID)
            !is.na(NPAFC_STOCK_1) & is.na(NPAFC_STOCK_2) ~ 
              gsub(" R", "", 
                   gsub("River", "R",
@@ -263,17 +295,17 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                   ignore.case=F),
            
              # 5 b) Multiple HIGH probability otolith matches, flag for manual ID: 
-             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
                (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2=="HIGH" | NPAFC_wcvi_prob_3=="HIGH" | NPAFC_wcvi_prob_4=="HIGH") ~  
                "!! manual decision needed, refer to release sizes!!",
              
              # 5 c) Multiple MEDIUM probability otolith matches, flag for manual ID: 
-             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
                (NPAFC_wcvi_prob_1=="MED" & NPAFC_wcvi_prob_2=="MED" | NPAFC_wcvi_prob_3=="MED" | NPAFC_wcvi_prob_4=="MED") ~  
                "!! manual decision needed, refer to release sizes!!",
              
              # 5 d) Multiple otolith matches but Stock1 is HIGH probability and the rest are NOT, therefore choose Otolith stock 1: 
-             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
                (NPAFC_wcvi_prob_1=="HIGH" & NPAFC_wcvi_prob_2!="HIGH" | NPAFC_wcvi_prob_3!="HIGH" | NPAFC_wcvi_prob_4!="HIGH") ~  
                gsub(" R", "",
                     gsub(" Cr", "",  
@@ -283,7 +315,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                     ignore.case=F),
              
              # 5 e) Multiple otolith matches but Stock1 is med-high probability and the rest are not, choose Otolith stock 1: 
-             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
                (NPAFC_wcvi_prob_1=="MED-HIGH" & NPAFC_wcvi_prob_2!="MED-HIGH" | NPAFC_wcvi_prob_3!="MED-HIGH" | NPAFC_wcvi_prob_4!="MED-HIGH") ~  
                gsub(" R", "",
                     gsub(" Cr", "",  
@@ -293,7 +325,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                     ignore.case=F),
              
              # 5 f) LOW probability otoliths, just choose stock1:
-             (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
+           (!is.na(NPAFC_STOCK_1) | !is.na(NPAFC_STOCK_2) | !is.na(NPAFC_STOCK_3) | !is.na(NPAFC_STOCK_4)) & 
                (NPAFC_wcvi_prob_1%in%c("MED","LOW","V LOW") & NPAFC_wcvi_prob_2%in%c("LOW", "V LOW") | NPAFC_wcvi_prob_3%in%c("LOW", "V LOW")  | NPAFC_wcvi_prob_4%in%c("LOW", "V LOW") ) ~  
                gsub(" R", "",
                     gsub(" Cr", "",  
@@ -305,46 +337,31 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
            TRUE ~ NA)) %>% 
   mutate(
     # 6. Identify the method used to determine the final stock ID: CWT > PBT > Otolith
-    `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) CWT STOCK ID`) ~ "CWT",
-                                               is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ "PBT",
-                                               is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) 
-                                               & !is.na(`(R) OTOLITH ID METHOD`) ~ paste0("Otolith", sep=" - ", `(R) OTOLITH ID METHOD`),
+    `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ "CWT",
+                                               is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ "PBT",
+                                               is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) 
+                                               & !is.na(`(R) STOCK ID: OTOLITH METHOD`) ~ paste0("Otolith", sep=" - ", `(R) STOCK ID: OTOLITH METHOD`),
                                                TRUE ~ NA),
     
     # 7. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
-    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) CWT STOCK ID`) ~ `(R) CWT STOCK ID`,
-                                        is.na(`(R) CWT STOCK ID`) & !is.na(`(R) PBT STOCK ID`) ~ `(R) PBT STOCK ID`,
-                                        is.na(`(R) CWT STOCK ID`) & is.na(`(R) PBT STOCK ID`) 
-                                        & !is.na(`(R) OTOLITH STOCK ID`) ~ `(R) OTOLITH STOCK ID`,
-                                        #is.na(`(R) CWT STOCK ID`) & is.na(`(R) OTOLITH STOCK ID`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
-                                        `(R) ORIGIN`=="Natural" ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
+    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: CWT`,
+                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ `(R) STOCK ID: PBT`,
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) 
+                                        & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,
+                                        #is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: OTOLITH`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
+                                        grepl("Natural", `(R) RESOLVED ORIGIN`, ignore.case=T) ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
                                                                          " (assumed)"), 
                                         TRUE ~ "Unknown"),
     
     # 8. Combine the origin and ID into the final grouping level for the Term Run files 
-    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`),
-    
-    # 9. Create flag for cases where PBT, CWT and/or Otolith ID(s) disagree
-    #`(R) STOCK ID FLAG: CWT-OTO` = case_when(`(R) CWT STOCK ID` != `(R) OTOLITH STOCK ID` ~ "FLAG: CWT/Otolith stock ID disagree",
-    #                                         TRUE ~ NA),
-    #`(R) STOCK ID FLAG: CWT-PBT` = case_when(`(R) CWT STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: CWT/PBT stock ID disagree",
-    #                                         TRUE ~ NA),
-    #`(R) STOCK ID FLAG: PBT-OTO` = case_when(`(R) OTOLITH STOCK ID` != `(R) PBT STOCK ID` ~ "FLAG: PBT/Otolith stock ID disagree",
-    #                                         TRUE ~ NA),
-    
-    
-    # 10. Create flag for cases where PBT, CWT and/or scale age(s) disagree
-    #`(R) AGE FLAG: CWT-SCALE` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: SCALE` ~ "FLAG: CWT/scale ages disagree",
-    #                                         TRUE ~ NA),
-    #`(R) AGE FLAG: CWT-PBT` = case_when(`(R) TOTAL AGE: CWT` != `(R) TOTAL AGE: PBT` ~ "FLAG: CWT/PBT ages disagree",
-    #                                         TRUE ~ NA),
-    #`(R) AGE FLAG: PBT-SCALE` = case_when(`(R) TOTAL AGE: SCALE` != `(R) TOTAL AGE: PBT` ~ "FLAG: PBT/scale ages disagree",
-    #                                         TRUE ~ NA)
-    ) %>% 
-  relocate(c(`(R) RETURN YEAR`, `(R) BROOD YEAR: CWT`, `(R) BROOD YEAR: SCALE`, `(R) RESOLVED FINAL BROOD YEAR`, 
-             `(R) TOTAL AGE: CWT`, `(R) TOTAL AGE: PBT`, `(R) TOTAL AGE: SCALE`, `(R) RESOLVED TOTAL AGE METHOD`, `(R) RESOLVED TOTAL AGE`, 
-             `(R) ORIGIN METHOD`, `(R) ORIGIN`, 
-             `(R) CWT STOCK ID`, `(R) OTOLITH STOCK ID`, `(R) OTOLITH ID METHOD`, 
+    `(R) RESOLVED STOCK-ORIGIN` = paste0(`(R) RESOLVED ORIGIN`, sep=" ", `(R) RESOLVED STOCK ID`)) %>% 
+  
+  relocate(c(`(R) RETURN YEAR`,
+             `(R) TOTAL AGE: CWT`, `(R) TOTAL AGE: PBT`, `(R) TOTAL AGE: SCALE`, `(R) RESOLVED TOTAL AGE`, `(R) RESOLVED TOTAL AGE METHOD`, 
+             `(R) BROOD YEAR: CWT`, `(R) BROOD YEAR: PBT`, `(R) BROOD YEAR: SCALE`, `(R) RESOLVED BROOD YEAR`, 
+             
+             `(R) ORIGIN: CLIP`, `(R) ORIGIN: CWT`, `(R) ORIGIN: PBT`, `(R) ORIGIN: OTOLITH`, `(R) RESOLVED ORIGIN`, `(R) RESOLVED ORIGIN METHOD`,  
+             `(R) STOCK ID: CWT`, `(R) STOCK ID: CWT`, `(R) STOCK ID: OTOLITH`, `(R) STOCK ID: OTOLITH METHOD`, 
              `(R) RESOLVED STOCK ID`, `(R) RESOLVED STOCK ID METHOD`, `(R) RESOLVED STOCK-ORIGIN`), .after=last_col()) %>%
   mutate(`(R) CREST BIOKEY` = paste0(stringr::str_sub(Spawning.Year, 3, 4), 
                                      "-", 
@@ -358,8 +375,11 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
 
 
 
-
-
+View(
+  wcviCNepro_w_Results %>% 
+    filter(Spawning.Stock.Name=="2023 San Juan R Fall Chinook") %>%
+    select(Otolith.Hatch.Code, `(R) HATCHCODE`, `(R) HATCH CODE test`, Otolith.Bag.No, Otolith.Vial.No)
+)
 
 
 

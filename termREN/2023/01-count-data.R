@@ -226,7 +226,7 @@ openxlsx::addStyle(wb=MAPPING.OUT, sheet="Sheet1", cols=11:19, rows=1:(nrow(mapp
 openxlsx::addStyle(wb=MAPPING.OUT, sheet="Sheet1", cols=c(13,14,16), rows=8:11, style=openxlsx::createStyle(fgFill= "#D9D9D9"), gridExpand=T)
 openxlsx::conditionalFormatting(wb=MAPPING.OUT, sheet="Sheet1", cols=10, rows=2:(nrow(mapping_out)+1), rule="J2==\"\"", 
                                 style=openxlsx::createStyle(bgFill="yellow"))
-openxlsx::saveWorkbook(MAPPING.OUT, file=here::here("termREN", analysis_year, paste0("R_OUT - TERMREN_mapping_", analysis_year, "-output_from_00.xlsx")), 
+openxlsx::saveWorkbook(MAPPING.OUT, file=here::here("termREN", analysis_year, paste0("R_OUT - TERMREN_mapping_", analysis_year, "-output_from_01.xlsx")), 
                        overwrite = T)                   
 
 

@@ -193,107 +193,107 @@ left_join(crestBio,
 
 
 # QC flags ---------------------------
-
-# Otolith sample and age data (for stock ID) available but no result (possible oto processing error)
-qc_otoNoSample <- crestBio_grouped %>% 
-  filter(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & !is.na(RESOLVED_AGE) & THERMALMARK!="Not Marked")
-
-# Scale sample available but no result (possible scale processing error)
-qc_scaleNoAge <- crestBio_grouped %>% 
-  filter(is.na(RESOLVED_AGE) & is.na(PART_AGE_CODE) & !is.na(SCALE_BOOK) & !is.na(SCALE_NO))
-
-# DNA sample available but no DNA result (possible DNA processing error)
-qc_WmanNoSample <- crestBio_grouped %>% 
-  filter(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE")
-
-# CWT head label available but no CWT result
-qc_CWTnoID <- crestBio_grouped %>% 
-  filter(!is.na(CWT_HEAD_LABEL) & is.na(CWT_RESULT))
-
-# Non-standard CWT head label
-qc_CWTzero <- crestBio_grouped %>% 
-  filter(CWT_HEAD_LABEL==0)
-
-# CWT-based stock ID disagrees with certain (>=80%) DNA stock ID
-qc_CWTDNAdisagree <- crestBio_grouped %>% 
-  filter(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME) 
-
-# Otolith-based stock ID disagrees with certain (>=80%) DNA stock ID
-qc_otoDNAdisagree <- crestBio_grouped %>% 
-  filter(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
-
-# DNA stock assignments that are below the recommended 80% threshold
-qc_DNAuncert <- crestBio_grouped %>% 
-  filter(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8)
-
-
-# Possible candidates for PBT assignment
-qc_PBTmaybe <- crestBio_grouped %>% 
-  filter(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2))
-
-# Suspicious Southern US assignment - i.e., a fish assumed to be Southern US with little to no evidence (given mass marking is now a thing for WCVI and not limited to S. US)
-qc_susSUS <- crestBio_grouped %>% 
-  filter(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
-           !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
-           !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
-           !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE")
-
-# CWT BY age disagrees with scale age 
-qc_ageDisagree <- crestBio_grouped %>% 
-  filter((YEAR-CWT_BROOD_YEAR) != RESOLVED_AGE)
-
-# A non-standard sex assignment
-qc_nonstdSex <- crestBio_grouped %>% 
-  filter(SEX %notin% c("M","F"))
-
-
-
-
-# QC summary report ---------------------------
-qc_summary <- data.frame(`QC flag/tab name` = c("qc_otoNoSample",
-                                         "qc_scaleNoAge",
-                                         "qc_WmanNoSample",
-                                         "qc_CWTnoID",
-                                         "qc_CWTzero",
-                                         "qc_CWTDNAdisagree",
-                                         "qc_otoDNAdisagree",
-                                         "qc_DNAuncert",
-                                         "qc_PBTmaybe",
-                                         "qc_susSUS",
-                                         "qc_ageDisagree",
-                                         "qc_nonstdSex",
-                                         "",
-                                         "total CREST records:"),
-                         `number of records` = c(nrow(qc_otoNoSample),
-                                            nrow(qc_scaleNoAge),
-                                            nrow(qc_WmanNoSample),
-                                            nrow(qc_CWTnoID),
-                                            nrow(qc_CWTzero),
-                                            nrow(qc_CWTDNAdisagree),
-                                            nrow(qc_otoDNAdisagree),
-                                            nrow(qc_DNAuncert),
-                                            nrow(qc_PBTmaybe),
-                                            nrow(qc_susSUS),
-                                            nrow(qc_ageDisagree),
-                                            nrow(qc_nonstdSex),
-                                            "",
-                                            nrow(crestBio_grouped)),
-                         description = c("Otolith box/vial numbers exist but there is 'No Sample'",
-                                         "Scale book and number but no age, and no explanation given (e.g., resorbed etc)",
-                                         "A CWT head label was submitted but the stock ID result is blank",
-                                         "CWT head label entered as '0' or other non-standard format.",
-                                         "Whatman sheet/DNA tracking numbers exist but no GSI result (blank)",
-                                         "Stock ID assigned by CWT but GSI (>=80% certainty) disagrees",
-                                         "Stock ID assigned by otolith thermal mark but GSI (>=80% certainty) disagrees",
-                                         "A stock ID assigned by DNA but with <80% certainty (not recommended)",
-                                         "Hatchery origin given as a blank, but some possibility for PBT assignment (PROB=1.00). Note this should be approached with lots of caution and is stock-specific.",
-                                         "'SUS (assumed)' that have ID methods available - A CWT head label was submitted but the stock ID result is blank",
-                                         "Cases where the scale age does not match the CWT brood year age (calculated as catch year-CWT_BROOD_YEAR)",
-                                         "Sex designation is non-standard, i.e., is not M or F - propose changing all other designations to 'unk'?",
-                                         "",
-                                         paste0("for ", paste(unique(crestBio_grouped$YEAR), collapse = " ") ))) %>% 
-  print()
-
+# 
+# # Otolith sample and age data (for stock ID) available but no result (possible oto processing error)
+# qc_otoNoSample <- crestBio_grouped %>% 
+#   filter(!is.na(OTOLITH_BOX) & !is.na(OTOLITH_SPECIMEN) & !is.na(RESOLVED_AGE) & THERMALMARK!="Not Marked")
+# 
+# # Scale sample available but no result (possible scale processing error)
+# qc_scaleNoAge <- crestBio_grouped %>% 
+#   filter(is.na(RESOLVED_AGE) & is.na(PART_AGE_CODE) & !is.na(SCALE_BOOK) & !is.na(SCALE_NO))
+# 
+# # DNA sample available but no DNA result (possible DNA processing error)
+# qc_WmanNoSample <- crestBio_grouped %>% 
+#   filter(!is.na(SPECIMEN_REFERENCE_DNA_NO) & is.na(DNA_RESULTS_STOCK_1) | DNA_RESULTS_STOCK_1=="NO SAMPLE")
+# 
+# # CWT head label available but no CWT result
+# qc_CWTnoID <- crestBio_grouped %>% 
+#   filter(!is.na(CWT_HEAD_LABEL) & is.na(CWT_RESULT))
+# 
+# # Non-standard CWT head label
+# qc_CWTzero <- crestBio_grouped %>% 
+#   filter(CWT_HEAD_LABEL==0)
+# 
+# # CWT-based stock ID disagrees with certain (>=80%) DNA stock ID
+# qc_CWTDNAdisagree <- crestBio_grouped %>% 
+#   filter(RESOLVED_STOCK_SOURCE=="CWT" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME) 
+# 
+# # Otolith-based stock ID disagrees with certain (>=80%) DNA stock ID
+# qc_otoDNAdisagree <- crestBio_grouped %>% 
+#   filter(RESOLVED_STOCK_SOURCE=="Otolith Stock" & PROB_1>=0.8 & RESOLVED_STOCK_ORIGIN!=REGION_1_NAME)
+# 
+# # DNA stock assignments that are below the recommended 80% threshold
+# qc_DNAuncert <- crestBio_grouped %>% 
+#   filter(RESOLVED_STOCK_SOURCE=="DNA" & PROB_1<0.8)
+# 
+# 
+# # Possible candidates for PBT assignment
+# qc_PBTmaybe <- crestBio_grouped %>% 
+#   filter(is.na(HATCHERY_ORIGIN) & PROB_1==1 & is.na(DNA_STOCK_2))
+# 
+# # Suspicious Southern US assignment - i.e., a fish assumed to be Southern US with little to no evidence (given mass marking is now a thing for WCVI and not limited to S. US)
+# qc_susSUS <- crestBio_grouped %>% 
+#   filter(RESOLVED_STOCK_ORIGIN=="SUS (assumed)" & 
+#            !is.na(CWT_RESULT) & CWT_RESULT!="No Tag" & 
+#            !is.na(THERMALMARK) & !THERMALMARK%in%c("No Sample","Not Marked") &
+#            !is.na(DNA_RESULTS_STOCK_1) & DNA_RESULTS_STOCK_1!="NO SAMPLE")
+# 
+# # CWT BY age disagrees with scale age 
+# qc_ageDisagree <- crestBio_grouped %>% 
+#   filter((YEAR-CWT_BROOD_YEAR) != RESOLVED_AGE)
+# 
+# # A non-standard sex assignment
+# qc_nonstdSex <- crestBio_grouped %>% 
+#   filter(SEX %notin% c("M","F"))
+# 
+# 
+# 
+# 
+# # QC summary report ---------------------------
+# qc_summary <- data.frame(`QC flag/tab name` = c("qc_otoNoSample",
+#                                          "qc_scaleNoAge",
+#                                          "qc_WmanNoSample",
+#                                          "qc_CWTnoID",
+#                                          "qc_CWTzero",
+#                                          "qc_CWTDNAdisagree",
+#                                          "qc_otoDNAdisagree",
+#                                          "qc_DNAuncert",
+#                                          "qc_PBTmaybe",
+#                                          "qc_susSUS",
+#                                          "qc_ageDisagree",
+#                                          "qc_nonstdSex",
+#                                          "",
+#                                          "total CREST records:"),
+#                          `number of records` = c(nrow(qc_otoNoSample),
+#                                             nrow(qc_scaleNoAge),
+#                                             nrow(qc_WmanNoSample),
+#                                             nrow(qc_CWTnoID),
+#                                             nrow(qc_CWTzero),
+#                                             nrow(qc_CWTDNAdisagree),
+#                                             nrow(qc_otoDNAdisagree),
+#                                             nrow(qc_DNAuncert),
+#                                             nrow(qc_PBTmaybe),
+#                                             nrow(qc_susSUS),
+#                                             nrow(qc_ageDisagree),
+#                                             nrow(qc_nonstdSex),
+#                                             "",
+#                                             nrow(crestBio_grouped)),
+#                          description = c("Otolith box/vial numbers exist but there is 'No Sample'",
+#                                          "Scale book and number but no age, and no explanation given (e.g., resorbed etc)",
+#                                          "A CWT head label was submitted but the stock ID result is blank",
+#                                          "CWT head label entered as '0' or other non-standard format.",
+#                                          "Whatman sheet/DNA tracking numbers exist but no GSI result (blank)",
+#                                          "Stock ID assigned by CWT but GSI (>=80% certainty) disagrees",
+#                                          "Stock ID assigned by otolith thermal mark but GSI (>=80% certainty) disagrees",
+#                                          "A stock ID assigned by DNA but with <80% certainty (not recommended)",
+#                                          "Hatchery origin given as a blank, but some possibility for PBT assignment (PROB=1.00). Note this should be approached with lots of caution and is stock-specific.",
+#                                          "'SUS (assumed)' that have ID methods available - A CWT head label was submitted but the stock ID result is blank",
+#                                          "Cases where the scale age does not match the CWT brood year age (calculated as catch year-CWT_BROOD_YEAR)",
+#                                          "Sex designation is non-standard, i.e., is not M or F - propose changing all other designations to 'unk'?",
+#                                          "",
+#                                          paste0("for ", paste(unique(crestBio_grouped$YEAR), collapse = " ") ))) %>% 
+#   print()
+# 
 
 
 
@@ -306,9 +306,10 @@ readme <- data.frame(`1` = c("date rendered:",
                              "",
                              "",
                              "Tab name:",
-                             "Biological_Data_With_GROUPED",
-                             "QC summary",
-                             "QC-..."),
+                             "Biological_Data_With_GROUPED"#,
+                             #"QC summary",
+                             #"QC-..."
+                             ),
                      `2` = c(as.character(Sys.Date()), 
                              "https://github.com/SCA-stock-assess/WCVI_CN_TermRunRecon/blob/main/scripts/misc-helpers/CRESTcompile.R", 
                              "SCD_Stad/WCVI/CHINOOK?WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/1-Import-to-R",
@@ -317,9 +318,9 @@ readme <- data.frame(`1` = c("date rendered:",
                              "Changed the terminology and made some manual adjustments to Robertson, Toquart/Toquaht, Big Q, Tranquil and Omega Pacific in stream aux file.",
                              "",
                              "Tab description:",
-                             "CREST Biodata from 'Biological Data with Results' report, 2017-recent year for terminal run reconstruction. Joined years of files together and assigned TermRR roll-up groupings. Requires manual tump of area/year files from CREST.",
-                             "Summary of QC flag columns and # of entries belonging to that flag.",
-                             "QC flag tabs. See QC summary for details."
+                             "CREST Biodata from 'Biological Data with Results' report, 2017-recent year for terminal run reconstruction. Joined years of files together and assigned TermRR roll-up groupings. Requires manual tump of area/year files from CREST."#
+                             #"Summary of QC flag columns and # of entries belonging to that flag.",
+                             #"QC flag tabs. See QC summary for details."
                      ))
 
 
@@ -337,37 +338,37 @@ R_OUT_CREST.CODED <- openxlsx::createWorkbook()
 # Add tabs to Workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "readme")
 openxlsx::addWorksheet(R_OUT_CREST.CODED, "Biological_Data_With_GROUPED")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC Report")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto sample no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale sample no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Whatman sample no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT no result")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT non-standard")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT-DNA stock ID disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto-DNA stock ID disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Uncertain DNA used")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- PBT possible")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- S.US suspicious")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale-CWT age disagree")
-openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Non-standard sex ID")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC Report")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto sample no result")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale sample no result")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Whatman sample no result")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT no result")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT non-standard")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- CWT-DNA stock ID disagree")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Oto-DNA stock ID disagree")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Uncertain DNA used")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- PBT possible")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- S.US suspicious")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Scale-CWT age disagree")
+# openxlsx::addWorksheet(R_OUT_CREST.CODED, "QC- Non-standard sex ID")
 
 
 # Add data to tabs ---------------------------
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_CREST.CODED, sheet="Biological_Data_With_GROUPED", x=crestBio_grouped)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC Report", x=qc_summary)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto sample no result", x=qc_otoNoSample)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale sample no result", x=qc_scaleNoAge)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Whatman sample no result", x=qc_WmanNoSample)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT no result", x=qc_CWTnoID)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT non-standard", x=qc_CWTzero)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT-DNA stock ID disagree", x=qc_CWTDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto-DNA stock ID disagree", x=qc_otoDNAdisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Uncertain DNA used", x=qc_DNAuncert)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- PBT possible", x=qc_PBTmaybe)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- S.US suspicious", x=qc_susSUS)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale-CWT age disagree", x=qc_ageDisagree)
-openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_nonstdSex)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC Report", x=qc_summary)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto sample no result", x=qc_otoNoSample)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale sample no result", x=qc_scaleNoAge)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Whatman sample no result", x=qc_WmanNoSample)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT no result", x=qc_CWTnoID)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT non-standard", x=qc_CWTzero)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- CWT-DNA stock ID disagree", x=qc_CWTDNAdisagree)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Oto-DNA stock ID disagree", x=qc_otoDNAdisagree)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Uncertain DNA used", x=qc_DNAuncert)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- PBT possible", x=qc_PBTmaybe)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- S.US suspicious", x=qc_susSUS)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Scale-CWT age disagree", x=qc_ageDisagree)
+# openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_nonstdSex)
 
 
 
@@ -375,15 +376,15 @@ openxlsx::writeData(R_OUT_CREST.CODED, sheet="QC- Non-standard sex ID", x=qc_non
 # ==================== EXPORT EXCEL FILE ==================== 
 
 # To github ---------------------------
-openxlsx::saveWorkbook(R_OUT_CREST.CODED,
-                      file=paste0(here::here("outputs"),
-                                  "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
-                                  min(crestBio_grouped$YEAR),
-                                  "-",
-                                  max(crestBio_grouped$YEAR),
-                                  ".xlsx"),
-                      overwrite=T,
-                      returnValue=T)
+# openxlsx::saveWorkbook(R_OUT_CREST.CODED,
+#                       file=paste0(here::here("outputs"),
+#                                   "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
+#                                   min(crestBio_grouped$YEAR),
+#                                   "-",
+#                                   max(crestBio_grouped$YEAR),
+#                                   ".xlsx"),
+#                       overwrite=T,
+#                       returnValue=T)
 
 
 # To Network: 
@@ -399,15 +400,15 @@ openxlsx::saveWorkbook(R_OUT_CREST.CODED,
 
 
 # To Desktop: 
-openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
-                       file=paste0("C:/Users/DAVIDSONKA/Desktop", 
-                                   "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
-                                   min(crestBio_grouped$YEAR),
-                                   "-",
-                                   max(crestBio_grouped$YEAR),
-                                   ".xlsx"),
-                       overwrite=T,
-                       returnValue=T)
+# openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
+#                        file=paste0("C:/Users/DAVIDSONKA/Desktop", 
+#                                    "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
+#                                    min(crestBio_grouped$YEAR),
+#                                    "-",
+#                                    max(crestBio_grouped$YEAR),
+#                                    ".xlsx"),
+#                        overwrite=T,
+#                        returnValue=T)
 
 
 # /END!

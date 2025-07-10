@@ -292,7 +292,9 @@ write.csv(crestBDWR_CNgrouped.recSubGroups,
 
 
 
-
+# Clean up for purposes of source() calls -------------------
+remove(list=c("crestBDWR", "crestBDWR_CNgrouped", "streamAreas", "termRun_RecSubGroups", "focal_a22", "focal_a23", "focal_a25", "PBT_BYs", "R_OUT_CREST.Bio", 
+              "stopwords", "%notin%"))
 
 
 

@@ -1,10 +1,12 @@
-# Compiling enumeration data 
+# Compiling all enumeration data for Term Renfrew
+# Mostly just FSC, CREST, Escapement
+# Some manual additions are needed after this script is run. See the R_OUT - ... output-from-01.xlsx file
 # July 2025
 
 
 # set up ----------------
 library(tidyverse)
-analysis_year <- 2023
+source(here::here("set-analysis-year.R"))
 "%notin%" <- Negate("%in%")
 
 
@@ -47,9 +49,10 @@ rec <- readxl::read_excel(path="//ent.dfo-mpo.ca/dfo-mpo/GROUP/PAC/Reg_Shares/FH
                           sheet="YTD") %>%
   filter(SPECIES%in%c("CHINOOK SALMON", "BOAT TRIPS"), DISPOSITION%in%c("Kept", "Effort"), MONTH%in%c("July", "August", "September"), 
          CREEL_SUB_AREA %in%c("20A", "20B", "20E", "Area 20 (West)", "Area 20 (WCVI)")) %>% 
-  mutate(subareas_catch = paste0(unique(CREEL_SUB_AREA), collapse=", ")) %>%
-  group_by(YEAR, MONTH, SPECIES) %>% 
-  summarize(monthly_catch_estimate = sum(ESTIMATE, na.rm=T), subareas_catch=unique(subareas_catch)) %>% 
+  #mutate(subareas_catch = paste0(unique(CREEL_SUB_AREA), collapse=", ")) %>%
+  group_by(YEAR, MONTH, PFMA, CREEL_SUB_AREA, SPECIES) %>% 
+  summarize(monthly_catch_estimate = sum(ESTIMATE, na.rm=T)#, subareas_catch=unique(subareas_catch)
+            ) %>% 
   ungroup() %>%
   pivot_wider(names_from = SPECIES, values_from = monthly_catch_estimate) %>% 
   mutate(`CHINOOK SALMON` = case_when((!is.na(`BOAT TRIPS`) | `BOAT TRIPS`>0) & is.na(`CHINOOK SALMON`) ~ 0,
@@ -59,7 +62,7 @@ rec <- readxl::read_excel(path="//ent.dfo-mpo.ca/dfo-mpo/GROUP/PAC/Reg_Shares/FH
   select(-c(SPECIES)) %>%
   rename(TermRun_Year=YEAR,
          TermRun_temp_strata=MONTH,
-         TermRun_spatial_substrata=subareas_catch,
+         #TermRun_spatial_substrata=subareas_catch,
          Count=monthly_catch_estimate) %>%
   mutate(TermRun_sector01="Recreational",
          TermRun_sector02="Area 20 Terminal",
@@ -220,14 +223,24 @@ mapping_out <- readxl::read_excel(path=here::here("termREN", analysis_year,
 
 MAPPING.OUT <- openxlsx::createWorkbook()
 openxlsx::addWorksheet(wb=MAPPING.OUT, "Sheet1")
+openxlsx::addWorksheet(wb=MAPPING.OUT, "Next steps")
 openxlsx::writeData(wb=MAPPING.OUT, sheet="Sheet1", x=mapping_out,
                     headerStyle = openxlsx::createStyle(textDecoration = "bold"))
+openxlsx::writeData(wb=MAPPING.OUT, sheet="Next steps", x=data.frame("Step" = c("1. Manual fill:", "", "2. Re-save:"), 
+                                                                     "Description" = c("Yellow cells in the Count column indicate fishery or escapement strata where there were no counts added. These require manual intervention to determine whether the count should be zero (e.g., no fishery), or manually added (e.g., some tributary escapement estimates not captured in New Esc Index). Or, this might show issues with the 01-count-data.R code, or places where data are not being pulled in properly. Please review and add all manual Count data as needed!",
+                                                                                       "",
+                                                                                       "You have two options. If you're confident with this effort and the output from 01-count-data you can save it with the same file name, or change the name. If you rename, it will affect how you load it into the next script 02-.... If you don't rename, you wil lose manual entry work should you ever need to re-run 01-count-data.R. The choice is yours!"
+                                                                     )))
 openxlsx::addStyle(wb=MAPPING.OUT, sheet="Sheet1", cols=11:19, rows=1:(nrow(mapping_out)+1), style=openxlsx::createStyle(fgFill= "#FFF2CC"), gridExpand=T)
 openxlsx::addStyle(wb=MAPPING.OUT, sheet="Sheet1", cols=c(13,14,16), rows=8:11, style=openxlsx::createStyle(fgFill= "#D9D9D9"), gridExpand=T)
 openxlsx::conditionalFormatting(wb=MAPPING.OUT, sheet="Sheet1", cols=10, rows=2:(nrow(mapping_out)+1), rule="J2==\"\"", 
                                 style=openxlsx::createStyle(bgFill="yellow"))
 openxlsx::saveWorkbook(MAPPING.OUT, file=here::here("termREN", analysis_year, paste0("R_OUT - TERMREN_mapping_", analysis_year, "-output_from_01.xlsx")), 
-                       overwrite = T)                   
+                       overwrite = T)     
 
 
 
+
+
+# Clean up script for purpose of source() call ----------------------
+remove(compiled_counts, mapping_out, MAPPING.OUT)

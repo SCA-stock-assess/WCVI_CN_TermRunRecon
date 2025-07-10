@@ -397,22 +397,22 @@ View(
 #   For simplicity, this is only done for stock-years with a reliable, complete PBT baseline (i.e., ages 2-6 were all PBTed at > 70% tag rate). Therefore,
 #   it is a minimal summary as PBT is relatively new. 
 
-PBTsummary <- left_join(PBTresults %>% 
-                          group_by(MGL_Brood_Collection, MGL_oYear, MGL_Offspring_Age, MGL_Parental_Collection) %>% 
-                          summarize(n=n()) %>% 
-                          ungroup() %>%
-                          rename(BY = MGL_oYear,
-                                 Broodstock_collection = MGL_Brood_Collection,
-                                 Resolved_age = MGL_Offspring_Age,
-                                 Resolved_hatchery_PBTorigin = MGL_Parental_Collection) %>%
-                          mutate(`(R) STOCK` = gsub(gsub(Broodstock_collection, pattern=" River", replacement=""),
-                                                    pattern=" Creek", replacement="")),
-                        PBTreliableShort %>% 
-                          select(-c(fullPBT_BYid)) %>%
-                          mutate(flag = "RETURN YEAR WITH FULL PBT BASELINE"),
-                        by=c("BY" = "firstFullReturnYr",
-                             "(R) STOCK")
-)
+# PBTsummary <- left_join(PBTresults %>% 
+#                           group_by(MGL_Brood_Collection, MGL_oYear, MGL_Offspring_Age, MGL_Parental_Collection) %>% 
+#                           summarize(n=n()) %>% 
+#                           ungroup() %>%
+#                           rename(BY = MGL_oYear,
+#                                  Broodstock_collection = MGL_Brood_Collection,
+#                                  Resolved_age = MGL_Offspring_Age,
+#                                  Resolved_hatchery_PBTorigin = MGL_Parental_Collection) %>%
+#                           mutate(`(R) STOCK` = gsub(gsub(Broodstock_collection, pattern=" River", replacement=""),
+#                                                     pattern=" Creek", replacement="")),
+#                         PBTreliableShort %>% 
+#                           select(-c(fullPBT_BYid)) %>%
+#                           mutate(flag = "RETURN YEAR WITH FULL PBT BASELINE"),
+#                         by=c("BY" = "firstFullReturnYr",
+#                              "(R) STOCK")
+# )
 
 
 #############################################################################################################################################################
@@ -599,6 +599,7 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
 # /END!
 
 
-
+# Cleaup for source() call purposes--------------
+remove(list=c("CN_relTagCodes", "NPAFC", "readme", "wcviCNepro_w_NPAFC", "wcviCNepro_w_NPAFC.MRP", "wcviEPRO", "analysis_year", "R_OUT_EPRO.NPAFC", "%notin%"))
 
 

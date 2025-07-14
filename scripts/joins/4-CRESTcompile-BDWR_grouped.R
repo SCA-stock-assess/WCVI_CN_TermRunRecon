@@ -193,7 +193,10 @@ left_join(crestBDWR,
       #6.4 same as 4.4  
       `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
       #6.5 same as 4.5
-      `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" "))) %>%
+      `(R) Term RR Roll Ups`%notin%focal_a23 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" ")),
+    
+    `(R) TERM WCVI NEW` = case_when(RESOLVED_STOCK_ROLLUP %in% c("SWVI", "NWVI") ~ paste0(`(R) Origin`, " WCVI"),
+                                    TRUE ~ "NON-WCVI")) %>%
   print()
   
     

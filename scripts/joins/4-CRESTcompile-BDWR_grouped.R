@@ -79,7 +79,12 @@ termRun_RecSubGroups <- readxl::read_excel(path=here::here("data", "lookups", "L
 # Focal streams in each area to highlight ---------------------------
 focal_a22 <- c("CONUMA", "NITINAT", "ROBERTSON", "SAN JUAN")
 focal_a23 <- c("CONUMA", "NITIANT", "ROBERTSON")
-focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")
+#focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")   # added gold, leiner, tahsis Aug 2025 PLB request
+focal_a25XTRA <- c("GOLD", "LEINER", "TAHSIS")   # added gold, leiner, tahsis Aug 2025 PLB request
+focal_a25ALL <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")    
+
+
+
 
 # Used to remove the river/creek suffix later ---------------------------
 stopwords <- c(" River", " Creek")
@@ -157,13 +162,21 @@ left_join(crestBDWR,
       #4.1 Identify all NON-WCVI stocks and carry through the "NON-WCVI" tag from '(R) Term Sum'
       `(R) Term RR Roll Ups`=="NON-WCVI" ~ `(R) Term Sum`,
       #4.2 Identify all of the focal rivers above that get their own group throughout the term RR process:
-      `(R) Term RR Roll Ups`%in%focal_a25 ~ `(R) Term Sum`,
+      `(R) Term RR Roll Ups`%in%focal_a25ALL ~ `(R) Term Sum`,                                                              
+      #NEW- for PLB Aug 2025. Pull out hatchery Leiner, Tahsis and Gold:
+      `(R) Origin`=="Hatchery" & `(R) Term RR Roll Ups` %in% focal_a25XTRA ~ `(R) Term Sum`,
       #4.3 Identify all systems not in focal_a25 above, but still in area 25 (using "statarea.origin" created above) and make them "Other Area 25"
-      `(R) Term RR Roll Ups`%notin%focal_a25 & statarea.origin==25 ~ paste(`(R) Origin`, "Other Area 25", sep=" "),
+      `(R) Term RR Roll Ups`%notin%focal_a25ALL & statarea.origin==25 ~ paste(`(R) Origin`, "Other Area 25", sep=" "),       
       #4.4 Same as above but for "Other Area 23"
-      `(R) Term RR Roll Ups`%notin%focal_a25 & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
+      `(R) Term RR Roll Ups`%notin%focal_a25ALL & statarea.origin==23 ~ paste(`(R) Origin`, "Other Area 23", sep=" "),
       #4.5 Identify all systems NOT IN focal_a25, and also NOT assigned to "NON-WCVI", "Other Area 25", or "Other Area 23" 
-      `(R) Term RR Roll Ups`%notin%focal_a25 & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" ")),
+      `(R) Term RR Roll Ups`%notin%focal_a25ALL & statarea.origin%notin%c(23,25) ~ paste(`(R) Origin`, "Other WCVI", sep=" ")),
+    
+    
+    
+    
+    
+    
     
     # 5. Create TermNIT column ---
     `(R) TermNIT` = case_when(
@@ -292,6 +305,20 @@ write.csv(crestBDWR_CNgrouped.recSubGroups,
                       "-",
                       max(crestBDWR_CNgrouped.recSubGroups$YEAR),
                       ".csv"), row.names=F)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

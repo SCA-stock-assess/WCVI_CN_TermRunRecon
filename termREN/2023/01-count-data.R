@@ -208,7 +208,7 @@ spawners <- readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Oper
 compiled_counts <- bind_rows(fsc, rec, broodstock, first_set, spawners) 
 
 mapping_out <- readxl::read_excel(path=here::here("termREN", analysis_year, 
-                                                   paste0("TERMREN_mapping_", analysis_year, "_tt.xlsx")),
+                                                   paste0("TERMREN_mapping_", analysis_year, ".xlsx")),
                                    sheet="termREN_map", skip=1) %>%
   mutate(across(everything(), as.character)) %>%
   left_join(compiled_counts) %>%

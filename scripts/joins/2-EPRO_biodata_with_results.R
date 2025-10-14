@@ -93,7 +93,7 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GRO
                                      NPAFC_wcvi_prob=="C" ~ "MED",
                                      NPAFC_wcvi_prob=="D" ~ "LOW",
                                      NPAFC_wcvi_prob=="E" ~ "V LOW")) %>%
-  group_by( `(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  group_by(`(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
   pivot_wider(names_from = group,
               values_from= c(NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, NPAFC_STATE_PROVINCE, NPAFC_REGION, NPAFC_wcvi_prob, NPAFC_NUMBER_RELEASED)) %>%
   select( `(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`, contains("1"), contains("2"), contains("3"), contains("4")) %>% 
@@ -171,6 +171,29 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 
 
 
+#############################################################################################################################################################
+
+#                                                                           VI. LOAD GSI DATA (OPPORTUNISTIC)
+
+# ======================== Load GSI data ========================  
+sj.24pitch <- left_join(readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2024/Chinook/San Juan Deadpitch/PID20240136(1)_San_Juan_DP(24)_sc640_2025-02-27_NF.xlsx",
+                                           sheet="repunits_table_ids"),
+                        readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2024/Chinook/San Juan Deadpitch/PID20240136(1)_San_Juan_DP(24)_sc640_2025-02-27_NF.xlsx",
+                                           sheet="extraction_sheet") %>%
+                          select(indiv, Fish)) %>%
+  mutate(across(everything(), as.character))
+
+
+
+# Join EPRO master file to GSI file ---------------------------
+wcviCNepro_w_NPAFC.MRP.GSI <- left_join(wcviCNepro_w_NPAFC.MRP,
+                                        sj.24pitch %>% 
+                                          mutate(across(c(Fish), as.numeric)),
+                                        by=c("(R) DNA NUM" = "Fish")) %>% 
+  mutate(`(R) BROOD YEAR: PBT` = case_when(!is.na(PBT_brood_year) ~ PBT_brood_year,
+                                           TRUE ~ `(R) BROOD YEAR: PBT`),
+         `(R) TOTAL AGE: PBT` = case_when(!is.na(`(R) BROOD YEAR: PBT`) ~ `(R) RETURN YEAR`-`(R) BROOD YEAR: PBT`,
+                                          TRUE ~ `(R) TOTAL AGE: PBT`))
 
 
 #############################################################################################################################################################
@@ -179,7 +202,7 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 
 
 
-wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
+wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
   mutate(Otolith.Hatch.Code = case_when(grepl("no mark|not marked|NM|nomk", Otolith.Hatch.Code, ignore.case=T) ~ "NO MARK",
                                            Otolith.Hatch.Code==0 ~ "Not read",
                                            is.na(Otolith.Bag.No) ~ "No sample",
@@ -206,6 +229,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
          `(R) ORIGIN: PBT` = case_when((!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
                                          (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ "Hatchery",
                                        
+                                       ID_Source=="PBT" ~ "Hatchery",
+                                       
                                        # PBT hit absent (stock/BY dependent)
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
@@ -222,6 +247,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
                                          (`(R) RESOLVED BROOD YEAR`>=2018 & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       ID_Source=="GSI" ~ "Natural",
                                        
                                        TRUE ~ NA),
          `(R) ORIGIN: OTOLITH` = case_when(grepl("H|,", Otolith.Hatch.Code) #& !grepl("test|no|not|NS|destroyed|NM|unreadable|0|unmountable", Otolith.Hatch.Code, ignore.case=T) 
@@ -268,6 +295,9 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
         #  Identify PBT Stock ID
         `(R) STOCK ID: PBT` = case_when((!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Dam.Dna.Waterbody.Site.Name),
                                        is.na(Dam.Dna.Waterbody.Site.Name) & (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Sire.Dna.Waterbody.Site.Name),
+                                       ID_Source=="PBT" ~ gsub(stringr::str_to_title(stringr::str_replace_all(PBT_brood_collection, "_", " ")),
+                                                               pattern=" River",
+                                                               replacement=""),
                                        TRUE ~ NA),
          
          
@@ -334,19 +364,26 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
                          ignore.case = F), 
                     ignore.case=F),
            #//end 5. 
-           TRUE ~ NA)) %>% 
+           TRUE ~ NA),
+        
+        `(R) STOCK ID: GSI` = case_when(ID_Source=="GSI" & associated_collection_prob>0.75 ~ gsub(stringr::str_to_title(stringr::str_replace_all(top_collection, "_", " ")), 
+                                                                                                  pattern=" River", 
+                                                                                                  replacement=""),
+                                        TRUE ~ NA)) %>% 
   mutate(
     # 6. Identify the method used to determine the final stock ID: CWT > PBT > Otolith
     `(R) RESOLVED STOCK ID METHOD` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ "CWT",
                                                is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ "PBT",
+                                               !is.na(`(R) STOCK ID: GSI`) ~ "GSI",
                                                is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) 
                                                & !is.na(`(R) STOCK ID: OTOLITH METHOD`) ~ paste0("Otolith", sep=" - ", `(R) STOCK ID: OTOLITH METHOD`),
                                                TRUE ~ NA),
     
     # 7. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
     `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: CWT`,
-                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) ~ `(R) STOCK ID: PBT`,
-                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) 
+                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: GSI`) ~ `(R) STOCK ID: PBT`,
+                                        !is.na(`(R) STOCK ID: GSI`) & !is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: GSI`,
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: GSI`) 
                                         & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,
                                         #is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: OTOLITH`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
                                         grepl("Natural", `(R) RESOLVED ORIGIN`, ignore.case=T) ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
@@ -361,7 +398,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP %>%
              `(R) BROOD YEAR: CWT`, `(R) BROOD YEAR: PBT`, `(R) BROOD YEAR: SCALE`, `(R) RESOLVED BROOD YEAR`, 
              
              `(R) ORIGIN: CLIP`, `(R) ORIGIN: CWT`, `(R) ORIGIN: PBT`, `(R) ORIGIN: OTOLITH`, `(R) RESOLVED ORIGIN`, `(R) RESOLVED ORIGIN METHOD`,  
-             `(R) STOCK ID: CWT`, `(R) STOCK ID: CWT`, `(R) STOCK ID: OTOLITH`, `(R) STOCK ID: OTOLITH METHOD`, 
+             `(R) STOCK ID: CWT`, `(R) STOCK ID: PBT`, `(R) STOCK ID: OTOLITH`, `(R) STOCK ID: OTOLITH METHOD`, `(R) STOCK ID: GSI`,
              `(R) RESOLVED STOCK ID`, `(R) RESOLVED STOCK ID METHOD`, `(R) RESOLVED STOCK-ORIGIN`), .after=last_col()) %>%
   mutate(`(R) CREST BIOKEY` = paste0(stringr::str_sub(Spawning.Year, 3, 4), 
                                      "-", 

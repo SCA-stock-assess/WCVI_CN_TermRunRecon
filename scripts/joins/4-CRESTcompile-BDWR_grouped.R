@@ -35,8 +35,10 @@ names(crestBDWR.LL) <- list.files(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/O
 
 
 # Convert the Large List into a useable R dataframe ---------------------------
-crestBDWR <- do.call("rbind", crestBDWR.LL) %>%
-  tibble::rownames_to_column(var="file_source") %>%
+crestBDWR <- crestBDWR.LL %>%
+  #do.call("rbind", crestBDWR.LL) %>%
+  #tibble::rownames_to_column(var="file_source") %>%
+  reduce(full_join) %>%
   print()
 
 
@@ -323,7 +325,7 @@ write.csv(crestBDWR_CNgrouped.recSubGroups,
 
 
 # Clean up for purposes of source() calls -------------------
-remove(list=c("crestBDWR", "crestBDWR_CNgrouped", "streamAreas", "termRun_RecSubGroups", "focal_a22", "focal_a23", "focal_a25", "PBT_BYs", "R_OUT_CREST.Bio", 
+remove(list=c("crestBDWR", "crestBDWR_CNgrouped", "streamAreas", "termRun_RecSubGroups", "focal_a22", "focal_a23", "focal_a25XTRA", "focal_a25ALL", "PBT_BYs", "R_OUT_CREST.Bio", 
               "stopwords", "%notin%"))
 
 

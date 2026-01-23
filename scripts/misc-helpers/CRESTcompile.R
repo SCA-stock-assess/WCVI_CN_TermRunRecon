@@ -6,7 +6,7 @@
 
 
 ## A note about this: as of NOv 2024 it has become apparent the WCVI CREST query is not appropriate anymore. Too many bugs not being maintained. From now on,
-##  use BDWR query.  b
+##  use BDWR query.  
 
 
 # ============================= SET UP ============================= 
@@ -50,7 +50,7 @@ crestBio <- do.call("rbind", crestBio.LL) %>%
 # Load Stream aux foile ---------------------------
 # This is for if we want roll up groups like "Other Area 23", "Other Area 25", etc.
 # Should load pullNusedsData function and streamAreas dataframe: 
-source(here::here("scripts", "misc-helpers", "CRESTcompile-streamAuxFile.R"))      
+source(here::here("scripts", "misc-helpers", "CRESTcompile-streamLookups.R"))      
 # saves as streamAreas
 
 
@@ -389,7 +389,7 @@ openxlsx::writeData(R_OUT_CREST.CODED, sheet="Biological_Data_With_GROUPED", x=c
 
 # To Network: 
 openxlsx::saveWorkbook(R_OUT_CREST.CODED, 
-                       file=paste0("//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CRESTcompile_base-files/2-Export-from-R", 
+                       file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/CREST-BDWRcompile_base-files/2-Export-from-R", 
                                    "/R_OUT - Biological_Data_with_Results AND TERM GROUPINGS ",
                                    min(crestBio_grouped$YEAR),
                                    "-",

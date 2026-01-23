@@ -48,7 +48,7 @@ options(scipen = 9999)
 #                                           recursive=F, pattern="^[^~]*_WCVI_Escapement-FSC_BioData*.xlsx")   # <<<< add a file index value if needed e.g., [1]
 
 #3. Read in the file and reformat (slow) ----------------
-wcviCNescBiodat <- rbind(
+wcviCNescBiodat <- #rbind(
   # --- Read in the 2015-last year tab ----
   readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/2-Escapement/",
                                      pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
@@ -59,19 +59,19 @@ wcviCNescBiodat <- rbind(
                                                                      full.names = TRUE)),
                                 ignore.case=T, value=T),
                      guess_max=10000) %>%
-    mutate(across(everything(), as.character)),
-  # --- Read in the 2024 tab ---
-  readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/2-Escapement/",
-                                     pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
-                                     full.names = TRUE), 
-                     sheet=grep(paste0("Biodata ", analysis_year), 
-                                readxl::excel_sheets(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
-                                                                     pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
-                                                                     full.names = TRUE)),
-                                ignore.case=T, value=T),
-                     guess_max=10000) %>%
-    mutate(across(everything(), as.character))
-) %>% 
+    mutate(across(everything(), as.character)) %>%
+  # --- Read in the 2024 tab if different ---
+  # readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/2-Escapement/",
+  #                                    pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
+  #                                    full.names = TRUE), 
+  #                    sheet=grep(paste0("Biodata ", analysis_year), 
+  #                               readxl::excel_sheets(path=list.files(path = "//dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/SC_BioData_Management/2-Escapement/",
+  #                                                                    pattern = "^\\d{4}-\\d{4}_WCVI_Escapement-FSC_BioData.xlsx$",    
+  #                                                                    full.names = TRUE)),
+  #                               ignore.case=T, value=T),
+  #                    guess_max=10000) %>%
+    #mutate(across(everything(), as.character))
+#) %>% 
   select(Year, `Sample Month`:Species, `Fishery / River`:Gear, Sex, `POF Length (mm)`:`Egg Retention`, Comments) %>%
   mutate(`(R) OTOLITH LBV CONCAT` = case_when(!is.na(`Otolith Lab Number`) & !is.na(`Otolith Box #`) & !is.na(`Otolith Specimen #`) ~ 
                                                 paste0(`Otolith Lab Number`,sep="-",`Otolith Box #`,sep="-",`Otolith Specimen #`)),
@@ -101,8 +101,8 @@ wcviCNescBiodat <- rbind(
                          TRUE ~ Sex),
          `Fishery / River` = case_when(`Fishery / River`=="Moheya River" ~ "Moyeha River",
                                        TRUE ~ `Fishery / River`),
-         `(R) DNA NUM` = case_when(!is.na(`Specimen Reference DNA #...43`) ~ `Specimen Reference DNA #...43`,
-                                   is.na(`Specimen Reference DNA #...43`) & (!grepl("Whatman",`DNA Container Type 1`) & 
+         `(R) DNA NUM` = case_when(!is.na(`Specimen Reference DNA #1`) ~ `Specimen Reference DNA #1`,
+                                   is.na(`Specimen Reference DNA #1`) & (!grepl("Whatman",`DNA Container Type 1`) & 
                                                                                !is.na(`DNA Container Type 1`) & 
                                                                                `DNA Container Type 1`%notin%c("FIN", "vial")) ~  `DNA Container Type 1`,
                                    TRUE ~ NA)) %>%
@@ -111,8 +111,8 @@ wcviCNescBiodat <- rbind(
          `(R) OTOLITH LAB NUM` = `Otolith Lab Number`,
          `(R) SAMPLE YEAR` = Year,
          `(R) HEAD LABEL` = `CWT Head Label #`) %>%
-  drop_na(`(R) SAMPLE YEAR`) %>%    # remove entries without year specified
-  mutate_at(c("(R) SCALE BOOK NUM", "(R) HEAD LABEL", "(R) SAMPLE YEAR"), as.character) %>%
+  drop_na(`(R) SAMPLE YEAR`) %>%    
+  mutate(across(c("(R) SCALE BOOK NUM", "(R) HEAD LABEL", "(R) SAMPLE YEAR"), ~as.character(.))) %>%
   print()
 
 

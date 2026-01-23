@@ -190,10 +190,13 @@ wcviCNepro_w_NPAFC.MRP.GSI <- left_join(wcviCNepro_w_NPAFC.MRP,
                                         sj.24pitch %>% 
                                           mutate(across(c(Fish), as.numeric)),
                                         by=c("(R) DNA NUM" = "Fish")) %>% 
+  mutate(across(PBT_brood_year, as.numeric)) %>%
   mutate(`(R) BROOD YEAR: PBT` = case_when(!is.na(PBT_brood_year) ~ PBT_brood_year,
                                            TRUE ~ `(R) BROOD YEAR: PBT`),
          `(R) TOTAL AGE: PBT` = case_when(!is.na(`(R) BROOD YEAR: PBT`) ~ `(R) RETURN YEAR`-`(R) BROOD YEAR: PBT`,
                                           TRUE ~ `(R) TOTAL AGE: PBT`))
+
+
 
 
 #############################################################################################################################################################
@@ -226,7 +229,9 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                                         TRUE ~ NA),
          `(R) ORIGIN: CWT` = case_when(!is.na(Cwt.Tag.Code) & !grepl("lost tag|no data|no head|no tag", Cwt.Tag.Code, ignore.case=T) ~ "Hatchery",
                                        TRUE ~ NA),
-         `(R) ORIGIN: PBT` = case_when((!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
+         `(R) ORIGIN: PBT` = case_when(ID_Source=="Too few loci" ~ NA,
+                                       
+                                       (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
                                          (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ "Hatchery",
                                        
                                        ID_Source=="PBT" ~ "Hatchery",
@@ -254,7 +259,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
          `(R) ORIGIN: OTOLITH` = case_when(grepl("H|,", Otolith.Hatch.Code) #& !grepl("test|no|not|NS|destroyed|NM|unreadable|0|unmountable", Otolith.Hatch.Code, ignore.case=T) 
                                            ~ "Hatchery", 
                                            Otolith.Hatch.Code == "NO MARK" ~ "Natural",
-                                           TRUE ~ "Unknown"),
+                                           TRUE ~ NA),
          
          `(R) RESOLVED ORIGIN` = case_when(`(R) ORIGIN: CLIP`=="Hatchery" ~ "Hatchery",
                                            `(R) ORIGIN: CWT`=="Hatchery" ~ "Hatchery",
@@ -380,13 +385,13 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                                                TRUE ~ NA),
     
     # 7. Assign the final stock ID: CWT > PBT > Otolith (with varying levels of oto certainty)
-    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: CWT`,
-                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: GSI`) ~ `(R) STOCK ID: PBT`,
-                                        !is.na(`(R) STOCK ID: GSI`) & !is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: GSI`,
-                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: GSI`) 
-                                        & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,
-                                        #is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: OTOLITH`) & !is.na(`(R) OTOLITH FACILITY ID`) ~ `(R) OTOLITH FACILITY ID`,            # irrelevant for EPRO output
-                                        grepl("Natural", `(R) RESOLVED ORIGIN`, ignore.case=T) ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
+    `(R) RESOLVED STOCK ID` = case_when(!is.na(`(R) STOCK ID: CWT`) ~ `(R) STOCK ID: CWT`,   #if CWT, take CWT first
+                                        is.na(`(R) STOCK ID: CWT`) & !is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: GSI`) ~ `(R) STOCK ID: PBT`,   # if no CWT, take PBT
+                                        #is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & !is.na(`(R) STOCK ID: GSI`)  ~ `(R) STOCK ID: GSI`,   # if no CWT, no PBT take GSI ?
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) #& is.na(`(R) STOCK ID: GSI`) 
+                                          & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,                                                  # if no cwt, no pbt, take otolith
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: OTOLITH`) & !is.na(`(R) STOCK ID: GSI`) ~ `(R) STOCK ID: GSI`,
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: OTOLITH`) & is.na(`(R) STOCK ID: GSI`) & grepl("Natural", `(R) RESOLVED ORIGIN`, ignore.case=T) ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
                                                                          " (assumed)"), 
                                         TRUE ~ "Unknown"),
     
@@ -410,13 +415,6 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
   relocate(`(R) CREST BIOKEY`, .before = File_source) %>%
   print()
 
-
-
-View(
-  wcviCNepro_w_Results %>% 
-    filter(Spawning.Stock.Name=="2023 San Juan R Fall Chinook") %>%
-    select(Otolith.Hatch.Code, `(R) HATCHCODE`, `(R) HATCH CODE test`, Otolith.Bag.No, Otolith.Vial.No)
-)
 
 
 

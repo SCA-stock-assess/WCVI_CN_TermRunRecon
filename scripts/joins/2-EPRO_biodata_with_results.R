@@ -35,7 +35,7 @@ library(tidyverse)
 
 # Helpers -------------
 "%notin%" <- Negate("%in%")
-analysis_year <- 2024
+analysis_year <- 2025
 
 
 
@@ -56,6 +56,7 @@ source(here::here("scripts", "misc-helpers", "EPROcompile.R"))
 #                                                                           II. NPAFC LOAD
 
 
+# This file might need to be refreshed, depending on if Aidan has done it or not! 
 NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All CN Marks from NPAFC",    
                                             full.names = TRUE)) %>% 
@@ -124,7 +125,7 @@ wcviCNepro_w_NPAFC <- left_join(wcviEPRO %>%
 
 # Option 1: Load function to query MRPIS CWT releases --------------------------- 
   # Run this if it hasn't been refreshed in a while (**VERY SLOW**)
-# source(here("scripts","functions","pullChinookCWTReleases.R"))
+# source(here::here("scripts","functions","pullChinookCWTReleases.R"))
 # saves as CN_relTagCodes
 
 
@@ -166,7 +167,7 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 
 # ======================== Load PBT inventory ========================  
 # Run PBT source code -------------------------   
-# source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))   -- need to update file call in source script
+# source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))   -- NOT NEEDED?
 # saves a few dataframes 
 
 
@@ -183,6 +184,7 @@ sj.24pitch <- left_join(readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/
                           select(indiv, Fish)) %>%
   mutate(across(everything(), as.character))
 
+# ***** Add 2025 SJ dp!
 
 
 # Join EPRO master file to GSI file ---------------------------
@@ -239,19 +241,63 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                                        # PBT hit absent (stock/BY dependent)
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR`>=2013 & grepl("robertson|sarita", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2013,2015,2019,2020,2021,2023,2024) & grepl("robertson", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR`>=2020 & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2013,2015,2016,2017,2019,2020,2021,2022,2023) & grepl("sarita", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2020,2021,2022,2024) & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR`>=2019 & grepl("nitinat", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021) & grepl("nitinat", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR`>=2018 & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2022,2023) & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2016,2019) & grepl("bedwell", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014,2015,2023) & grepl("burman", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       # (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                       #   (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                       #   (`(R) RESOLVED BROOD YEAR` %in% c(2020,2023) & grepl("gold", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014,2019,2020,2021,2024) & grepl("leiner", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2022) & grepl("marble", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2016,2019,2020) & grepl("nahmint", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021,2024) & grepl("tahsis", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2023,2024) & grepl("thornton", Spawning.Stock.Name, ignore.case=T)) ~ "Natural* (this population should not have natural production)",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014) & grepl("tlupana", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2023) & grepl("toquart", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
                                        ID_Source=="GSI" ~ "Natural",
                                        

@@ -233,8 +233,9 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                                        TRUE ~ NA),
          `(R) ORIGIN: PBT` = case_when(ID_Source=="Too few loci" ~ NA,
                                        
-                                       (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | 
-                                         (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ "Hatchery",
+                                       !is.na(Sire.Dna.Waterbody.Site.Name) #& !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) 
+                                        | !is.na(Dam.Dna.Waterbody.Site.Name) #& !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) 
+                                           ~ "Hatchery",
                                        
                                        ID_Source=="PBT" ~ "Hatchery",
                                        

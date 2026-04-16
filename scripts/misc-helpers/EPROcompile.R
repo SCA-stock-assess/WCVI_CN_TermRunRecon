@@ -14,7 +14,6 @@ library(tidyverse)
 
 # ==================== 1. LOAD EPRO BASE FILES (2022-2023 data) ==================== 
 
-
 # Read EPRO files as large list ---------------------------
 # !! before doing this you have to re-save the csvs as xlsx and change the tab name to match "All_Adult_Biosampling"
 wcviEPRO.LL <- lapply(list.files("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R", 

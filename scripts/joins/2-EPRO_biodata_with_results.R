@@ -5,7 +5,7 @@
 # 1.1. Download all facility files 'All Adult Biosampling' reports from EPRO: https://epro-stage.azure.cloud.dfo-mpo.gc.ca/EProWeb/#home
 #       1.2. Store EPRO files on Network drive location
 # 2.   Load EPRO files into R from Network drive (Step I) 
-# 3.   Load NPAFC mark master file from SCD_Stad network drive (Step II): dcbcpbsna01a.ENT.dfo-mpo.ca/PBS_SA_DFS$/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks....xlsx
+# 3.   Load NPAFC mark master file from SCD_Stad network drive (Step II): SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks....xlsx
 # 4.   Join EPRO to NPAFC mark master file (Step III)
 # 5.   Load CWT release tag codes from last 10 years (Step IV)
 # 6.   Join EPRO+NPAFC file to CWT tag codes (Step V)
@@ -13,79 +13,70 @@
 # 5.   Run QC report(s) (Step VII)
 # 6.   Export to git and Sharepoint for subsequent use in run reconstructions (Step VIII)
 
-################################################################################################################################################
-################################################################################################################################################
 
-# BEFORE YOU START: 
-# Set up ----------------
-rm(list = ls(all.names = TRUE)) # will clear all objects includes hidden objects.
-gc() #free up memory and report the memory usage.
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
+# ==================== BEFORE YOU START: ====================
+## Set up ----------------
+rm(list = ls(all.names = TRUE)) # will clear all objects from Environment including hidden objects.
+gc()                            # free up memory and report the memory usage.
 
-################################################################################################################################################
-################################################################################################################################################
-
-# Now should be able to highlight and run all! 
-
-
-# Load packages ----------------
-library(tidyverse)
-
-
-# Helpers -------------
-"%notin%" <- Negate("%in%")
+# ***** MANUAL UPATE: 
 analysis_year <- 2025
 
 
+## Load packages & helpers ----------------
+library(tidyverse)
+"%notin%" <- Negate("%in%")
 
 
-################################################################################################################################################
-
-#                                                                           I. COMBINE EPRO FACILITY FILES 
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-# Load source() EPRO compile code ---------------------------
+# ===================== I. COMBINE EPRO FACILITY FILES =====================
+
+## Load source() EPRO compile code ---------------------------
+# This code references a background script, "EPROcompile.R" which essentially just reads in the individual
+# All Adult Biosampling files for each Facility, renames some columns, and compiles them into 1 flat file for 
+# subsequent manipulation across facilities and years. 
+# The EPROcompile.R script should not require any updates. 
+
 source(here::here("scripts", "misc-helpers", "EPROcompile.R"))
-# saves as wcviEPRO
+# --> saves in Environment as wcviEPRO. Note that it is filtered down to just Chinook at a later stage. 
 
 
-
-################################################################################################################################################
-
-#                                                                           II. NPAFC LOAD
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-# This file might need to be refreshed, depending on if Aidan has done it or not! 
+# ===================== II. NPAFC LOAD =====================
+
+# We have to load our marks file because EPRO only joins results to hatch code, not to stock ID, which is not super helpful
+
+# *** This list.files() part can be tricky - it will always take the top file "[1]" which was necessary to code in because sometimes
+# multiple files are added with new dates. You may need to update the [1] if it isn't the right file
 NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
-                                            pattern = "^All CN Marks from NPAFC",    
-                                            full.names = TRUE)) %>% 
+                                            pattern = "^All Canadian Marks in NPAFC Database",    
+                                            full.names = TRUE)[1]) %>% 
+  filter(SPECIES=="CHINOOK") %>%
   setNames(paste0('NPAFC_', names(.))) %>% 
   rename(`(R) HATCHCODE` = NPAFC_HATCH_CODE,
-         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR
-         ) %>% 
+         `(R) RESOLVED BROOD YEAR` = NPAFC_BROOD_YEAR) %>% 
   mutate(NPAFC_FACILITY = case_when(is.na(NPAFC_FACILITY) ~ NPAFC_AGENCY,
                                     TRUE ~ NPAFC_FACILITY),
          NPAFC_STOCK = case_when(is.na(NPAFC_STOCK) ~ NPAFC_FACILITY,
                                  TRUE ~ NPAFC_STOCK),
          `(R) BYHID` = case_when(!is.na( `(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) ~ paste0( `(R) RESOLVED BROOD YEAR`, " - ", `(R) HATCHCODE`),
                                  TRUE ~ NA)) %>%
-  # This filter line below initially removed some marks to avoid duplicates, but the work-around below now addresses this more systematically. Below is just
-  #     kept for reference for now
-  #filter(NPAFC_STATE_PROVINCE %in% c("BRITISH COLUMBIA", "IDAHO", "WASHINGTON", "OREGON"),
-  # 2. Remove the one case where RCH and Nanaimo Hatchery used the same mark in 2018 and assume it was a RCH fish
-  #!grepl("NANAIMO", NPAFC_FACILITY) | `(R) BROOD YEAR`!=2018 | `(R) HATCHCODE`!="H5"
-  #) %>%
   select( `(R) RESOLVED BROOD YEAR`, NPAFC_FACILITY, NPAFC_RELEASE_YEAR, NPAFC_STOCK, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_REGION, `(R) BYHID`, NPAFC_NUMBER_RELEASED) %>% 
   distinct( `(R) RESOLVED BROOD YEAR`, `(R) HATCHCODE`, NPAFC_STATE_PROVINCE, NPAFC_FACILITY, NPAFC_STOCK, .keep_all=T) %>% 
-  #group_by(`(R) BROOD YEAR`, `(R) HATCHCODE`, `(R) BYHID`) %>% 
+  # This section below is for the few cases where there may be read issues or duplicate marks. It basically assigns the likelihood of a given mark to being from a broad region. This came up for example in the San Juan where we had a bunch of Russian fish that PBT later confirmed were SJ (poor mark application)
   mutate(NPAFC_wcvi_prob = case_when(NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("NWVI","SWVI") ~ "A",
                                      NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("LWFR","TOMM", "TOMF") ~ "B",
                                      NPAFC_STATE_PROVINCE%in%c("IDAHO","OREGON","WASHINGTON") ~ "B",
                                      NPAFC_STATE_PROVINCE=="BRITISH COLUMBIA" & NPAFC_REGION%in%c("GSVI","JNST") ~ "C",
                                      NPAFC_STATE_PROVINCE=="ALASKA" ~ "D",
                                      NPAFC_STATE_PROVINCE=="KAMCHATKA" ~ "E")) %>%
-  #mutate(NPAFC_wcvi_prob = reorder(NPAFC_wcvi_prob, prob_orders))  %>% 
   arrange(`(R) BYHID`, NPAFC_wcvi_prob) %>%
   mutate(group = case_when(!is.na(`(R) BYHID`) ~ with(., ave(seq_along(`(R) BYHID`), `(R) BYHID`, FUN = seq_along)),
                            TRUE ~ 1),
@@ -101,35 +92,35 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GRO
   print()
 
 
-
-#############################################################################################################################################################
-
-#                                                                           III. JOIN EPRO + NPAFC
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-# Join EPRO master file to NPAFC master mark file ---------------------------
-intersect(colnames(wcviEPRO), colnames(NPAFC))
+# ===================== III. JOIN EPRO + NPAFC =====================
+# This step joins the NPAFC mark records to the EPRO file based on hatchcode and BY
 
+## Join wcviEPRO to NPAFC master mark file ---------------------------
 wcviCNepro_w_NPAFC <- left_join(wcviEPRO %>%
                                   filter(Species=="Chinook"),
                                     NPAFC,
                                     by=c("(R) RESOLVED BROOD YEAR", "(R) HATCHCODE"),
-                                    relationship="many-to-one")
+                                    relationship="many-to-one",
+                                na_matches = "never")
 
 
-
-#############################################################################################################################################################
-
-#                                                                           IV. CWT LOAD
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-# Option 1: Load function to query MRPIS CWT releases --------------------------- 
-  # Run this if it hasn't been refreshed in a while (**VERY SLOW**)
-# source(here::here("scripts","functions","pullChinookCWTReleases.R"))
-# saves as CN_relTagCodes
+# ===================== IV. CWT LOAD =====================
+# Like thermal marks, EPRO only joins results to tag codes, not stock IDs. So again, we need to be able to link tag codes to stock IDs.
+
+## Option 1: Load function to query MRPIS CWT releases --------------------------- 
+# Run this if it hasn't been refreshed in a while - maybe do once/yr (**VERY SLOW**)
+  # source(here::here("scripts","functions","pullChinookCWTReleases.R"))
+# --> saves as CN_relTagCodes in Environment, and also exports an excel copy to the network drive
 
 
-# Option 2: Load CWT data export from source() above directly --------------------------- (much quicker)
+## Option 2: Load CWT data export from source() above directly --------------------------- 
+# If you have already run the source() line above for the year, just load the already dumped Excel version from the network drive (much quicker)
 CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/",
                                                      pattern = "^R_OUT - Chinook CWT release tagcodes",    
                                                      full.names = T), 
@@ -137,33 +128,35 @@ CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DF
   print()
 
 
-
 # If you get an error message about "atomic vectors"  
-  # try restarting R and/or your computer. It's can be related to connectivity access and just means R isn't talking to the DFO network properly
+  # --> try restarting R and/or your computer. It's can be related to connectivity access and just means R isn't talking to the DFO network properly
 
 # If you get a message about: Error in openSaaWebConnection(extractor_usage_url, user_name, password) : Error when setting up connection to web server: 401
-  # you may not have the config file in your working directory, or the json query doc name is wrong. 
+  # --> you may not have the config file in your working directory, or the json query doc name is wrong. 
+
+# If you get an error message about std::bad_alloc() ever
+  # --> it means you don't have enough memory. Try closing a lot of windows, and clicking the donut memory icon up by your Global Environment to free up unused memory
 
 
-
-#############################################################################################################################################################
-
-#                                                                           V. JOIN EPRO+NPAFC + CWT
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-# Join EPRO master file to NPAFC master mark file ---------------------------
-intersect(colnames(wcviCNepro_w_NPAFC), colnames(CN_relTagCodes))
+# ===================== V. JOIN EPRO+NPAFC + CWT ===================== 
+# This step joins the EPRO file (which now includes thermal mark IDs) to the CWT stock IDs.
 
+
+## Join EPRO master file to NPAFC master mark file ---------------------------
 wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
                                     CN_relTagCodes,
                                     by="(R) TAGCODE",
                                     relationship="many-to-one")
 
 
-#############################################################################################################################################################
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
-#                                                                           VI. LOAD PBT INVENTORY
 
+# ===================== VI. LOAD PBT INVENTORY =====================
+# ignore for now
 
 # ======================== Load PBT inventory ========================  
 # Run PBT source code -------------------------   
@@ -171,25 +164,34 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
 # saves a few dataframes 
 
 
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
-#############################################################################################################################################################
 
-#                                                                           VI. LOAD GSI DATA (OPPORTUNISTIC)
+# ===================== VI. LOAD GSI DATA (OPPORTUNISTIC) =====================
+# This is a manual stage if you know you have escapement GSI results that aren't in EPRO (EPRO can't handle GSI results right now).
+# This was created manually in 2024 for San Juan deadpitch GSI specifically. Until the workflow of getting escapement biodata into CREST is fully formed, this is a bit of a manual step unfortunately.
 
-# ======================== Load GSI data ========================  
-sj.24pitch <- left_join(readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2024/Chinook/San Juan Deadpitch/PID20240136(1)_San_Juan_DP(24)_sc640_2025-02-27_NF.xlsx",
+
+## Load GSI data ---------------------------
+sj.dpitch <- left_join(readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2024/Chinook/San Juan Deadpitch/PID20240136(1)_San_Juan_DP(24)_sc640_2025-02-27_NF.xlsx",
                                            sheet="repunits_table_ids"),
                         readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2024/Chinook/San Juan Deadpitch/PID20240136(1)_San_Juan_DP(24)_sc640_2025-02-27_NF.xlsx",
                                            sheet="extraction_sheet") %>%
                           select(indiv, Fish)) %>%
-  mutate(across(everything(), as.character))
+  mutate(across(everything(), as.character)) %>%
+  rbind(left_join(readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2025/Chinook/San Juan/PID20250144(1)_SanJuan_DP(25)_b2_sc746_2026-02-09_NF.xlsx",
+                                     sheet="repunits_table_ids"),
+                  readxl::read_excel(path="//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/SC_BioData_Management/15-DNA_Results/2025/Chinook/San Juan/PID20250144(1)_SanJuan_DP(25)_b2_sc746_2026-02-09_NF.xlsx",
+                                     sheet="extraction_sheet") %>%
+                    select(indiv, Fish)))
 
-# ***** Add 2025 SJ dp!
 
 
-# Join EPRO master file to GSI file ---------------------------
+## Join EPRO master file to GSI file ---------------------------
+# Again, join to ever-growing WCVI EPRO file
+
 wcviCNepro_w_NPAFC.MRP.GSI <- left_join(wcviCNepro_w_NPAFC.MRP,
-                                        sj.24pitch %>% 
+                                        sj.dpitch %>% 
                                           mutate(across(c(Fish), as.numeric)),
                                         by=c("(R) DNA NUM" = "Fish")) %>% 
   mutate(across(PBT_brood_year, as.numeric)) %>%
@@ -199,12 +201,11 @@ wcviCNepro_w_NPAFC.MRP.GSI <- left_join(wcviCNepro_w_NPAFC.MRP,
                                           TRUE ~ `(R) TOTAL AGE: PBT`))
 
 
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-#############################################################################################################################################################
-
-#                                                                           VII. ASSIGN FINAL STOCK ID and ORIGIN
-
+# ===================== VII. ASSIGN FINAL STOCK ID and ORIGIN =====================
+# This is where the final rollups/stock/age IDs required for the run reconstruction happen
 
 
 wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
@@ -233,72 +234,93 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                                        TRUE ~ NA),
          `(R) ORIGIN: PBT` = case_when(ID_Source=="Too few loci" ~ NA,
                                        
-                                       !is.na(Sire.Dna.Waterbody.Site.Name) #& !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) 
-                                        | !is.na(Dam.Dna.Waterbody.Site.Name) #& !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) 
+                                       (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) | (!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name))
                                            ~ "Hatchery",
                                        
                                        ID_Source=="PBT" ~ "Hatchery",
                                        
-                                       # PBT hit absent (stock/BY dependent)
+                                       # PBT hit absent (stock/BY dependent) *****REQUIRES MANUAL ADDITION OF BYS***** - tag rates were updated by SEP/MGL April 2026 to include 1P or 2P. Prior to this believe it was only based on 2P, but have updated BYs to reflect 1P tag rates
+                                       # Bedwell: only 2 years with PBT
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2013,2015,2019,2020,2021,2023,2024) & grepl("robertson", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2016,2019) & grepl("BEDWELL", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Burman: When expanded to allow 1P more BYs are added. Pre-2019 BYs required >= 95% tag rate for 2P method.
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2013,2015,2016,2017,2019,2020,2021,2022,2023) & grepl("sarita", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
-
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014,2019,2021,2022,2023,2024) & grepl("BURMAN", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       # Conuma: All recent BYs high quality for both 1P and 2P. 
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2020,2021,2022,2024) & grepl("conuma", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2020,2021,2022,2023,2024,2025) & grepl("CONUMA", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Cypre: no PBT
+                                       
+                                       # Gold: 2024 1P method was 93% (close) but not included based on cut-off here of wanting >= 95% PBT rate
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021) & grepl("nitinat", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2022,2023,2025) & grepl("GOLD", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Kennedy Lower: no PBT
+                                       
+                                       # Leiner: BYs 2022 and 2023 <90% PBT'd even by 1P method
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2022,2023) & grepl("san juan", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021,2024) & grepl("LEINER", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
-                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2016,2019) & grepl("bedwell", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
-                                       
-                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014,2015,2023) & grepl("burman", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
-                                       
-                                       # (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                       #   (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                       #   (`(R) RESOLVED BROOD YEAR` %in% c(2020,2023) & grepl("gold", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
-                                       
-                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
-                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014,2019,2020,2021,2024) & grepl("leiner", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
-                                       
+                                       # Marble: only 1 year PBT'd (all others 0s)
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
                                          (`(R) RESOLVED BROOD YEAR` %in% c(2022) & grepl("marble", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Nahmint: Many early years with 100% tag rate for 1P, but 2P is relatively low. 2018-2020 very high PBT rate (100% both methods)
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2016,2019,2020) & grepl("nahmint", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2018,2019,2020,2023,2024,2025) & grepl("NAHMINT", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Nitinat: 1P method made significant improvements
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021,2024) & grepl("tahsis", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021,2022,2023,2024,2025) & grepl("NITINAT", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Robertson: Unclear on 2025 tag rate, need to update
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2023,2024) & grepl("thornton", Spawning.Stock.Name, ignore.case=T)) ~ "Natural* (this population should not have natural production)",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2013,2015,2019,2020,2021,2023,2024) & grepl("ROBERTSON", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # San Juan: 1P made significant improvements in allowable BYs. 2018 is also close - 93% 2P tag rate.
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2014) & grepl("tlupana", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021,2022,2023,2024) & grepl("SAN JUAN", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
                                        
+                                       # Sarita: early BYs close but <90%
                                        (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
                                          (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
-                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2023) & grepl("toquart", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2013,2015,2019,2020,2021,2022,2023,2024,2025) & grepl("SARITA", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+
+                                       # Sucwoa:  no PBT
+                                       
+                                       # Tahsis: BY 2025 unclear, may need updating later 
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2021,2022,2023,2024) & grepl("TAHSIS", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       # Tahsish: no PBT
+                                       
+                                       # Thornton: BY 2025 may need updating later 
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2023,2024) & grepl("THORNTON", Spawning.Stock.Name, ignore.case=T)) ~ "Natural* (this population should not have natural production)",
+                                       
+                                       # Tlupana: essentially no PBT
+
+                                       # Toquart: BY 2025 may need updating later
+                                       (is.na(Sire.Dna.Waterbody.Site.Name) | grepl("N/A", Sire.Dna.Waterbody.Site.Name)) & 
+                                         (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & 
+                                         (`(R) RESOLVED BROOD YEAR` %in% c(2019,2020,2023,2024) & grepl("TOQUART", Spawning.Stock.Name, ignore.case=T)) ~ "Natural",
+                                       
+                                       # Tranquil: no PBT
                                        
                                        ID_Source=="GSI" ~ "Natural",
                                        
@@ -346,7 +368,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
     
         #  Identify PBT Stock ID
         `(R) STOCK ID: PBT` = case_when((!is.na(Dam.Dna.Waterbody.Site.Name) & !grepl("N/A", Dam.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Dam.Dna.Waterbody.Site.Name),
-                                       is.na(Dam.Dna.Waterbody.Site.Name) & (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Sire.Dna.Waterbody.Site.Name),
+                                       (is.na(Dam.Dna.Waterbody.Site.Name) | grepl("N/A", Dam.Dna.Waterbody.Site.Name)) & (!is.na(Sire.Dna.Waterbody.Site.Name) & !grepl("N/A", Sire.Dna.Waterbody.Site.Name)) ~ sub(" [^ ]+$", "", Sire.Dna.Waterbody.Site.Name),
                                        ID_Source=="PBT" ~ gsub(stringr::str_to_title(stringr::str_replace_all(PBT_brood_collection, "_", " ")),
                                                                pattern=" River",
                                                                replacement=""),
@@ -463,10 +485,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
   print()
 
 
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
-
-
-#############################################################################################################################################################
 
 #                                                                                 PBT SUMMARY 
 
@@ -581,8 +601,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                              "assumptions made/notes:", 
                              "",
                              "TAB NAME",
-                             "AllFacilities w RESULTS" ,
-                             "PBT Summary"
+                             "AllFacilities w RESULTS" #,
+                             #"PBT Summary"
                              #"QC Report",
                              #"QC-..."
 ),
@@ -591,11 +611,11 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
         "SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RETURN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/1-Import-to-R (saved from online EPRO output)",
         "SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks from NPAFC Otolith Database to {MOST RECENT DATE}.xlsx",
         "http://pac-salmon.dfo-mpo.gc.ca/MRPWeb/#/Notice", 
-        "2021 CURRENTLY INCOMPLETE - EPRO STILL UPDATING HISTORICAL YEARS",
+        "have manually input good BYs for PBT tag rates at WCVI facilities, these require manual updating.",
         "",
         "TAB DESCRIPTION",
-        "All EPRO facilities 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID.",
-        "Summary of PBT results (only up to 2021) for each system. Flag included for return years with full PBT so that hatchery/natural composition can be used (if desired)."
+        "All EPRO facilities 'All Adult Biosampling' reports for WCVI combined into 1 file and joined to 1. the NPAFC mark file to give otolith stock ID and 2. CWT releases for last 10 years to give CWT stock ID." #,
+        #"Summary of PBT results (only up to 2021) for each system. Flag included for return years with full PBT so that hatchery/natural composition can be used (if desired)."
         #"Summary of QC flags, # of entries belonging to that flag and descriptions.",
         #"QC flag tabs. See QC summary report for details."
         ))
@@ -682,6 +702,6 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
 
 
 # Cleaup for source() call purposes--------------
-remove(list=c("CN_relTagCodes", "NPAFC", "readme", "wcviCNepro_w_NPAFC", "wcviCNepro_w_NPAFC.MRP", "wcviEPRO", "analysis_year", "R_OUT_EPRO.NPAFC", "%notin%"))
+#remove(list=c("CN_relTagCodes", "NPAFC", "readme", "wcviCNepro_w_NPAFC", "wcviCNepro_w_NPAFC.MRP", "wcviEPRO", "analysis_year", "R_OUT_EPRO.NPAFC", "%notin%"))
 
 

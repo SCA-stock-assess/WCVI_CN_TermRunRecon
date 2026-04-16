@@ -20,9 +20,6 @@
 rm(list = ls(all.names = TRUE)) # will clear all objects from Environment including hidden objects.
 gc()                            # free up memory and report the memory usage.
 
-# ***** MANUAL UPATE: 
-analysis_year <- 2025
-
 
 ## Load packages & helpers ----------------
 library(tidyverse)

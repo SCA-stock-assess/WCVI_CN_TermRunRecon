@@ -2,19 +2,19 @@
 # Join EPRO to NPAFC mark master file to assign stock IDs to otolith hatch codes (missing step in EPRO as of Sept 2023)
 
 # Work flow is:
-# 1.1. Download all facility files 'All Adult Biosampling' reports from EPRO: https://epro-stage.azure.cloud.dfo-mpo.gc.ca/EProWeb/#home
-#       1.2. Store EPRO files on Network drive location
-# 2.   Load EPRO files into R from Network drive (Step I) 
-# 3.   Load NPAFC mark master file from SCD_Stad network drive (Step II): SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/All CN Marks....xlsx
-# 4.   Join EPRO to NPAFC mark master file (Step III)
-# 5.   Load CWT release tag codes from last 10 years (Step IV)
-# 6.   Join EPRO+NPAFC file to CWT tag codes (Step V)
-# 7.   Assign final stock ID (Step VI)
-# 5.   Run QC report(s) (Step VII)
-# 6.   Export to git and Sharepoint for subsequent use in run reconstructions (Step VIII)
+# 1.1. Download all WCVI facility files 'All Adult Biosampling' reports from EPRO: https://epro-stage.azure.cloud.dfo-mpo.gc.ca/EProWeb/#home
+#       1.2. Store EPRO files on Network drive location: "Y:\WCVI\CHINOOK\WCVI_TERMINAL_RUN\Annual_data_summaries_for_RunRecons\EPROcompile_base-files\1-Import-to-R"
+# 2.   Load EPRO files into R from Network drive  
+# 3.   Load NPAFC mark master file from SCD_Stad network drive: SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/
+# 4.   Join EPRO to NPAFC mark master file  
+# 5.   Load CWT release tag codes from last 10 years (direct saaWeb query, or load of previously dumped data from "Y:\WCVI\CHINOOK\WCVI_TERMINAL_RUN\Annual_data_summaries_for_RunRecons\R_OUT - Chinook CWT release tagcodes BY 2004-2024.xlsx")
+# 6.   Join EPRO+NPAFC file to CWT tag codes  
+# 7.   Assign final stock/origin/age 
+# 5.   Run QC report(s)  - removed for now
+# 6.   Export to git and network for subsequent use in run reconstructions 
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
 # ==================== BEFORE YOU START: ====================
@@ -31,10 +31,10 @@ library(tidyverse)
 "%notin%" <- Negate("%in%")
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== I. COMBINE EPRO FACILITY FILES =====================
+# ===================== COMBINE EPRO FACILITY FILES =====================
 
 ## Load source() EPRO compile code ---------------------------
 # This code references a background script, "EPROcompile.R" which essentially just reads in the individual
@@ -46,15 +46,15 @@ source(here::here("scripts", "misc-helpers", "EPROcompile.R"))
 # --> saves in Environment as wcviEPRO. Note that it is filtered down to just Chinook at a later stage. 
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== II. NPAFC LOAD =====================
+# ===================== NPAFC LOAD =====================
 
 # We have to load our marks file because EPRO only joins results to hatch code, not to stock ID, which is not super helpful
 
 # *** This list.files() part can be tricky - it will always take the top file "[1]" which was necessary to code in because sometimes
-# multiple files are added with new dates. You may need to update the [1] if it isn't the right file
+# multiple files are added with new dates. You may need to update the [1] if it isn't the right file in future
 NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/Spec_Projects/Thermal_Mark_Project/Marks/",
                                             pattern = "^All Canadian Marks in NPAFC Database",    
                                             full.names = TRUE)[1]) %>% 
@@ -92,10 +92,10 @@ NPAFC <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DFO-MPO/GRO
   print()
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== III. JOIN EPRO + NPAFC =====================
+# ===================== JOIN EPRO + NPAFC =====================
 # This step joins the NPAFC mark records to the EPRO file based on hatchcode and BY
 
 ## Join wcviEPRO to NPAFC master mark file ---------------------------
@@ -107,15 +107,16 @@ wcviCNepro_w_NPAFC <- left_join(wcviEPRO %>%
                                 na_matches = "never")
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== IV. CWT LOAD =====================
+# ===================== CWT LOAD =====================
 # Like thermal marks, EPRO only joins results to tag codes, not stock IDs. So again, we need to be able to link tag codes to stock IDs.
 
 ## Option 1: Load function to query MRPIS CWT releases --------------------------- 
 # Run this if it hasn't been refreshed in a while - maybe do once/yr (**VERY SLOW**)
   # source(here::here("scripts","functions","pullChinookCWTReleases.R"))
+# Note: This relies on the saaWeb package and a saaWeb.config file. the config file should be in the repository and work fine, but if you run into errors Nick Komick is the person to ask. 
 # --> saves as CN_relTagCodes in Environment, and also exports an excel copy to the network drive
 
 
@@ -138,10 +139,10 @@ CN_relTagCodes <- readxl::read_excel(path=list.files(path = "//ENT.dfo-mpo.ca/DF
   # --> it means you don't have enough memory. Try closing a lot of windows, and clicking the donut memory icon up by your Global Environment to free up unused memory
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== V. JOIN EPRO+NPAFC + CWT ===================== 
+# ===================== JOIN EPRO+NPAFC + CWT ===================== 
 # This step joins the EPRO file (which now includes thermal mark IDs) to the CWT stock IDs.
 
 
@@ -152,22 +153,10 @@ wcviCNepro_w_NPAFC.MRP <- left_join(wcviCNepro_w_NPAFC ,
                                     relationship="many-to-one")
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== VI. LOAD PBT INVENTORY =====================
-# ignore for now
-
-# ======================== Load PBT inventory ========================  
-# Run PBT source code -------------------------   
-# source(here::here("scripts", "misc-helpers", "CalcReliablePBT.R"))   -- NOT NEEDED?
-# saves a few dataframes 
-
-
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-
-
-# ===================== VI. LOAD GSI DATA (OPPORTUNISTIC) =====================
+# ===================== LOAD GSI DATA (OPPORTUNISTIC) =====================
 # This is a manual stage if you know you have escapement GSI results that aren't in EPRO (EPRO can't handle GSI results right now).
 # This was created manually in 2024 for San Juan deadpitch GSI specifically. Until the workflow of getting escapement biodata into CREST is fully formed, this is a bit of a manual step unfortunately.
 
@@ -201,10 +190,10 @@ wcviCNepro_w_NPAFC.MRP.GSI <- left_join(wcviCNepro_w_NPAFC.MRP,
                                           TRUE ~ `(R) TOTAL AGE: PBT`))
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ===================== VII. ASSIGN FINAL STOCK ID and ORIGIN =====================
+# ===================== ASSIGN FINAL STOCK ID and ORIGIN =====================
 # This is where the final rollups/stock/age IDs required for the run reconstruction happen
 
 
@@ -485,53 +474,19 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
   print()
 
 
-# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-#                                                                                 PBT SUMMARY 
-
-# In years prior to RY 2024, PBT was not always tracked at the individual fish level; rather, it was collected from a group of fish (say, over a week), 
-#   stratified by sex, and submitted in bulk. I think this varied depending on the hatchery facility. 
-#   Seeing as tracking this detail down is currently beyond the scope of this exercise, instead supplementary tabs are provided that show the PBT stock and
-#   origin summaries for the years with full returns. These summaries are provided on secondary tabs in the exported Excel file. 
-#   The purpose is for analysts to be able to assess the stock/origin composition of the otolith/CWT/scale dataset, and compare it to the PBT dataset for
-#   whatever years are available. 
-#   For simplicity, this is only done for stock-years with a reliable, complete PBT baseline (i.e., ages 2-6 were all PBTed at > 70% tag rate). Therefore,
-#   it is a minimal summary as PBT is relatively new. 
-
-# PBTsummary <- left_join(PBTresults %>% 
-#                           group_by(MGL_Brood_Collection, MGL_oYear, MGL_Offspring_Age, MGL_Parental_Collection) %>% 
-#                           summarize(n=n()) %>% 
-#                           ungroup() %>%
-#                           rename(BY = MGL_oYear,
-#                                  Broodstock_collection = MGL_Brood_Collection,
-#                                  Resolved_age = MGL_Offspring_Age,
-#                                  Resolved_hatchery_PBTorigin = MGL_Parental_Collection) %>%
-#                           mutate(`(R) STOCK` = gsub(gsub(Broodstock_collection, pattern=" River", replacement=""),
-#                                                     pattern=" Creek", replacement="")),
-#                         PBTreliableShort %>% 
-#                           select(-c(fullPBT_BYid)) %>%
-#                           mutate(flag = "RETURN YEAR WITH FULL PBT BASELINE"),
-#                         by=c("BY" = "firstFullReturnYr",
-#                              "(R) STOCK")
-# )
-
-
-#############################################################################################################################################################
-
-#                                                                           VIII. QC and readme
-
- 
 # ================== QC ================== 
- 
-#  Extract PBT parental records ---------------------------
+
+## Extract PBT parental records ---------------------------
   # --> Can't do this yet as EPRO file doesn't go back far enough (EPRO records only back to ~2021 at best)
 # PBT_parents <- esc_biodata_PADS_otoNPAFC_headsCWT %>% 
 #   filter(`(R) DNA NUM` %in% c(SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_mFish),]$MGL_mFish, 
 #                               SC_PBT_SEP[!is.na(SC_PBT_SEP$MGL_dFish),]$MGL_dFish))
 
 
-# QC flags ---------------------------
+## QC flags ---------------------------
 # There is brood year data and a useable hatch code but the Otolith stock ID didn't populate (e.g., R code errors)
 # qc_noOtoID <- wcviCNepro_w_Results %>%
 #   filter(!is.na(`(R) RESOLVED BROOD YEAR`) & !is.na(`(R) HATCHCODE`) & `(R) HATCHCODE` %notin% c("Destroyed", "Not Marked", "No Sample") & is.na(NPAFC_STOCK_1)) %>%
@@ -563,7 +518,7 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
 #   print()
 # 
 # 
-# # QC summary Report ---------------------------
+## QC summary Report ---------------------------
 # qc_summary <- data.frame(qc_flagName = c("QC- No Oto ID",
 #                                          "QC- Oto sample no result",
 #                                          "QC- No CWT ID",
@@ -590,6 +545,8 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
 #                                          paste0("for ", paste(unique(wcviCNepro_w_Results$`(R) RETURN YEAR`), collapse = " ") ))) %>% 
 #   print()
 
+
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
 # ================== README ================== 
@@ -621,17 +578,15 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
         ))
 
 
-#############################################################################################################################################################
-
-#                                                                           X. EXPORT 
+# ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 
-# ================== Create excel file ==================
+# ================== CREATE WORKBOOK ==================
 
-# Create empty workbook ---------------------------
+## Create empty workbook ---------------------------
 R_OUT_EPRO.NPAFC <- openxlsx::createWorkbook()
 
-# Add empty tabs to the workbook ---------------------------
+## Add empty tabs to the workbook ---------------------------
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "readme")
 openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "All Facilities w RESULTS")
 #openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "PBT Summary")
@@ -643,7 +598,7 @@ openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "All Facilities w RESULTS")
 # openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- Stock IDs disagree")
 # openxlsx::addWorksheet(R_OUT_EPRO.NPAFC, "QC- Ages disagree")
 
-# Write data to tabs ---------------------------
+## Write data to tabs ---------------------------
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="readme", x=readme)
 openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="All Facilities w RESULTS", x=wcviCNepro_w_Results)
 #openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="PBT Summary", x=PBTsummary)
@@ -657,8 +612,8 @@ openxlsx::writeData(R_OUT_EPRO.NPAFC, sheet="All Facilities w RESULTS", x=wcviCN
 
 
 
-# ================== Export ================== 
-# To github repo ---------------------------
+# ================== EXPORT ================== 
+## To github repo ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
                        file=paste0(here::here("outputs"), 
                                    "/R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS ",
@@ -670,17 +625,7 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
                        returnValue=T)
 
 
-# To SharePoint ---------------------------
-  # Discontinue sharepoint export, too confusing with different syncing to different local computers - commit to git and DFO network 
-    # openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
-    #                        file=paste0(epro_dir, 
-    #                                    "/R_OUT - All EPRO facilities master WITH RESULTS ",
-    #                                    analysis_year,
-    #                                    ".xlsx"),
-    #                        overwrite=T,
-    #                        returnValue=T)
-
-# To DFO Network drive ---------------------------
+## To DFO Network drive ---------------------------
 openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
                        file=paste0("//ENT.dfo-mpo.ca/DFO-MPO/GROUP/PAC/PBS/Operations/SCA/SCD_Stad/WCVI/CHINOOK/WCVI_TERMINAL_RUN/Annual_data_summaries_for_RunRecons/EPROcompile_base-files/2-Export-from-R",
                                    "/R_OUT - All Adult Biosampling ALL FACILITIES WITH RESULTS ",
@@ -692,7 +637,15 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
                        returnValue=T)
 
 
-
+## To SharePoint ---------------------------
+  # Discontinue sharepoint export, too confusing with different syncing to different local computers - commit to git and DFO network only
+    # openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC, 
+    #                        file=paste0(epro_dir, 
+    #                                    "/R_OUT - All EPRO facilities master WITH RESULTS ",
+    #                                    analysis_year,
+    #                                    ".xlsx"),
+    #                        overwrite=T,
+    #                        returnValue=T)
 
 
 
@@ -701,7 +654,7 @@ openxlsx::saveWorkbook(R_OUT_EPRO.NPAFC,
 # /END!
 
 
-# Cleaup for source() call purposes--------------
+# Cleaup for source() call purposes:
 #remove(list=c("CN_relTagCodes", "NPAFC", "readme", "wcviCNepro_w_NPAFC", "wcviCNepro_w_NPAFC.MRP", "wcviEPRO", "analysis_year", "R_OUT_EPRO.NPAFC", "%notin%"))
 
 

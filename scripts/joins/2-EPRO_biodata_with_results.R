@@ -449,7 +449,13 @@ wcviCNepro_w_Results <- wcviCNepro_w_NPAFC.MRP.GSI %>%
                                         is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) #& is.na(`(R) STOCK ID: GSI`) 
                                           & !is.na(`(R) STOCK ID: OTOLITH`) ~ `(R) STOCK ID: OTOLITH`,                                                  # if no cwt, no pbt, take otolith
                                         is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: OTOLITH`) & !is.na(`(R) STOCK ID: GSI`) ~ `(R) STOCK ID: GSI`,
-                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: OTOLITH`) & is.na(`(R) STOCK ID: GSI`) & grepl("Natural", `(R) RESOLVED ORIGIN`, ignore.case=T) ~ paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", replacement="", Spawning.Stock.Name), 6, -1)), 
+                                        is.na(`(R) STOCK ID: CWT`) & is.na(`(R) STOCK ID: PBT`) & is.na(`(R) STOCK ID: OTOLITH`) & 
+                                          is.na(`(R) STOCK ID: GSI`) & grepl("Natural", `(R) RESOLVED ORIGIN`, ignore.case=T) ~ 
+                                          paste0(stringr::str_to_title(str_sub(gsub(pattern=" R Fall Chinook", 
+                                                                                    replacement="", 
+                                                                                    gsub(pattern=" Cr Fall Chinook",
+                                                                                         replacement="",
+                                                                                         Spawning.Stock.Name)), 6, -1)), 
                                                                          " (assumed)"), 
                                         TRUE ~ "Unknown"),
     

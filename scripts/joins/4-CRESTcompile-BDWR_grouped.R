@@ -96,7 +96,7 @@ termRun_RecSubGroups <- readxl::read_excel(path=here::here("data", "lookups", "L
 ## Focal streams in each area to highlight ---------------------------
 # As mentioned above, this is probably a bit outdated with new GSI groups
 focal_a22 <- c("CONUMA", "NITINAT", "ROBERTSON", "SAN JUAN")
-focal_a23 <- c("CONUMA", "NITIANT", "ROBERTSON")
+focal_a23 <- c("CONUMA", "NITINAT", "ROBERTSON")
 #focal_a25 <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")   # added gold, leiner, tahsis Aug 2025 PLB request
 #focal_a25XTRA <- c("GOLD", "LEINER", "TAHSIS")   # added gold, leiner, tahsis Aug 2025 PLB request
 #focal_a25ALL <- c("BEDWELL", "BURMAN", "CONUMA", "KAOUK", "MARBLE", "NITINAT", "ROBERTSON", "SAN JUAN")    

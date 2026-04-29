@@ -22,7 +22,7 @@ gc() #free up memory and report the memory usage.
 
 
 # Define analysis year:
-#analysis_year <- 2023
+analysis_year <- 2025
 
 
 
@@ -49,7 +49,7 @@ library(tidyverse)
 
 
 # Option 1:   Run compile file to compile year-specific files (annual or semi-annual, not required every time *SLOW*) ------------------
-# source(here::here("scripts", "misc-helpers", "HeadRcvyCompile.R"))
+source(here::here("scripts", "misc-helpers", "HeadRcvyCompile.R"))
   # saves as CN_headRcvy
 
 

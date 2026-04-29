@@ -35,7 +35,7 @@ library(tidyverse)
 
 # Helpers -------------
 "%notin%" <- Negate("%in%")
-analysis_year <- 2024
+analysis_year <- 2025
 
 
 
